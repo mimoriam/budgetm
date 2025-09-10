@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -43,20 +44,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Login',
-                        style: Theme.of(context).textTheme.displayLarge,
-                      ),
+                      Text('Login', style: Theme.of(context).textTheme.displayLarge),
                       const SizedBox(height: 8),
                       Text(
                         'Enter your email and password to log in',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 24),
-                      Text(
-                        'Email',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                      Text('Email', style: Theme.of(context).textTheme.bodyMedium),
                       const SizedBox(height: 8),
                       FormBuilderTextField(
                         name: 'email',
@@ -70,10 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ]),
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        'Password',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                      Text('Password', style: Theme.of(context).textTheme.bodyMedium),
                       const SizedBox(height: 8),
                       FormBuilderTextField(
                         name: 'password',
@@ -112,13 +104,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               controlAffinity: ListTileControlAffinity.leading,
                               contentPadding: EdgeInsets.zero,
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                              ),
+                              decoration: const InputDecoration(border: InputBorder.none),
                             ),
                           ),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                              );
+                            },
                             child: const Text('Forgot Password?'),
                           ),
                         ],
@@ -128,11 +123,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            if (_formKey.currentState?.saveAndValidate() ??
-                                false) {
-                              debugPrint(
-                                _formKey.currentState?.value.toString(),
-                              );
+                            if (_formKey.currentState?.saveAndValidate() ?? false) {
+                              debugPrint(_formKey.currentState?.value.toString());
                             }
                           },
                           child: const Text('Login'),
@@ -168,9 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SignupScreen(),
-                                ),
+                                MaterialPageRoute(builder: (context) => const SignupScreen()),
                               );
                             },
                             child: const Text('Sign Up'),
