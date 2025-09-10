@@ -106,7 +106,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildIndicator(int index) {
     return AnimatedContainer(
-      // Change: Shortened duration and simpler curve for better performance.
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       margin: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -127,7 +126,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         if (_currentPage == _onboardingData.length - 1) {
           _onOnboardingDone();
         } else {
-          // Change: Shortened duration and simpler curve for a quicker, lag-free transition.
           _pageController.nextPage(
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeInOut,
@@ -170,30 +168,24 @@ class OnboardingPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 40.0,
-      ), // Adjusted padding for better alignment
+      padding: const EdgeInsets.symmetric(horizontal: 40.0),
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
-        // Change 1: Align all children in the column to the left.
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Spacer(flex: 2),
-          // Centering the image within the left-aligned column
           Center(child: Image.asset(imagePath, height: 460)),
           const Spacer(flex: 1),
           Text(
             title,
             style: Theme.of(context).textTheme.displayLarge,
-            // Change 2: Explicitly set text alignment to left (good practice).
             textAlign: TextAlign.left,
           ),
           const SizedBox(height: 16),
           Text(
             description,
             style: Theme.of(context).textTheme.bodyLarge,
-            // Change 3: Explicitly set text alignment to left.
             textAlign: TextAlign.left,
           ),
           const Spacer(flex: 3),

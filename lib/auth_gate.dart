@@ -1,3 +1,4 @@
+import 'package:budgetm/screens/auth/login/login_screen.dart';
 import 'package:flutter/material.dart';
 
 class AuthGate extends StatelessWidget {
@@ -5,6 +6,6 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return LoginScreen();
   }
 }
