@@ -70,6 +70,34 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.lightBackgroundColor,
       textTheme: _lightTextTheme,
       useMaterial3: true,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.lightLime,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide.none,
+        ),
+        prefixIconColor: AppColors.secondaryTextColorLight,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.buttonBackground,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: _lightTextTheme.labelLarge?.copyWith(color: Colors.white),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.gradientEnd,
+          textStyle: _lightTextTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
       colorScheme: const ColorScheme.light(
         primary: AppColors.gradientEnd,
         secondary: AppColors.gradientStart,
@@ -85,6 +113,34 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.darkBackgroundColor,
       textTheme: _darkTextTheme,
       useMaterial3: true,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.darkGreyBackground,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide.none,
+        ),
+        prefixIconColor: AppColors.secondaryTextColorDark,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.buttonBackground,
+          foregroundColor: AppColors.primaryTextColorLight,
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: _darkTextTheme.labelLarge,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.gradientEnd,
+          textStyle: _darkTextTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
       colorScheme: const ColorScheme.dark(
         primary: AppColors.gradientEnd,
         secondary: AppColors.gradientStart,
