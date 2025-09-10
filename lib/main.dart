@@ -1,15 +1,24 @@
 import 'package:budgetm/auth_gate.dart';
+import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
+import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/viewmodels/theme_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
   final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
   final bool onboardingDone =
       await asyncPrefs.getBool('onboardingDone') ?? false;
 
-  runApp(MyApp(onboardingDone: onboardingDone));
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: MyApp(onboardingDone: onboardingDone),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -19,10 +28,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(),
-      home: onboardingDone ? AuthGate() : const SizedBox(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme(),
+          darkTheme: AppTheme.darkTheme(),
+          // themeMode: themeProvider.themeMode,
+          themeMode: ThemeMode.light,
+          home: onboardingDone ? const AuthGate() : const OnboardingScreen(),
+        );
+      },
     );
   }
 }
