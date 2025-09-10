@@ -277,6 +277,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  hugeicons:
+    dependency: "direct main"
+    description:
+      name: hugeicons
+      sha256: f5f2ed21f90895c5bc5baaab215ff733390e5d327fceb24a84508ef7def85606
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
+  iconly:
+    dependency: "direct main"
+    description:
+      name: iconly
+      sha256: "22f16dd28984d232891299ead9d9b75ae5a32b4d9cdf63e8e574f1ceb11dcbd9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   image:
     dependency: transitive
     description:
@@ -437,6 +453,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  onboarding:
+    dependency: "direct main"
+    description:
+      name: onboarding
+      sha256: bda49643bea9cb05a5da79f3314a2042f454ca76a61235c35e8fa0b7d6ec56e8
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.2"
   path:
     dependency: transitive
     description:
