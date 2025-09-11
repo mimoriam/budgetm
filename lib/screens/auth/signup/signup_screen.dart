@@ -1,8 +1,9 @@
+import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/screens/auth/first_time_settings/choose_theme_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_button/sign_in_button.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -297,20 +298,24 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 18),
                             ),
-                            onPressed: () {
+                            onPressed: () async {
                               if (_formKey.currentState?.saveAndValidate() ??
                                   false) {
                                 debugPrint(
                                   _formKey.currentState?.value.toString(),
                                 );
-                                // After successful signup, navigate to choose theme
-                                if (mounted) {
-                                  Navigator.pushReplacement(
+                                // Simulate successful signup and login
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.setBool('isLoggedIn', true);
+
+                                if (context.mounted) {
+                                  Navigator.pushAndRemoveUntil(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ChooseThemeScreen(),
+                                      builder: (context) => const AuthGate(),
                                     ),
+                                    (route) => false,
                                   );
                                 }
                               }

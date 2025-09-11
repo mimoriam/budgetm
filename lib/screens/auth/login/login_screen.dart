@@ -1,8 +1,7 @@
+import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/screens/auth/first_time_settings/choose_theme_screen.dart';
 import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
-import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -243,30 +242,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                   _formKey.currentState?.value.toString(),
                                 );
 
-                                // Simulate successful login & check if theme is already set
+                                // Simulate successful login
                                 final prefs =
                                     await SharedPreferences.getInstance();
-                                final bool themeChosen =
-                                    prefs.getBool('theme_chosen') ?? false;
+                                await prefs.setBool('isLoggedIn', true);
 
                                 if (context.mounted) {
-                                  if (themeChosen) {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const HomeScreen(),
-                                      ),
-                                    );
-                                  } else {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ChooseThemeScreen(),
-                                      ),
-                                    );
-                                  }
+                                  // Navigate to AuthGate to determine next screen
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const AuthGate(),
+                                    ),
+                                    (route) => false,
+                                  );
                                 }
                               }
                             },

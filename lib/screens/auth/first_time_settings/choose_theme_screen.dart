@@ -176,17 +176,9 @@ class _ChooseThemeScreenState extends State<ChooseThemeScreen> {
                                       await SharedPreferences.getInstance();
                                   await prefs.setBool('theme_chosen', true);
                                   themeProvider.setThemeMode(_selectedTheme);
-                                  // if (context.mounted) {
-                                  //   Navigator.pushAndRemoveUntil(
-                                  //     context,
-                                  //     MaterialPageRoute(
-                                  //       builder: (context) => const AuthGate(),
-                                  //     ),
-                                  //     (route) => false,
-                                  //   );
-                                  // }
                                   if (context.mounted) {
-                                    Navigator.of(context).push(
+                                    Navigator.pushReplacement(
+                                      context,
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             const SelectCurrencyScreen(),

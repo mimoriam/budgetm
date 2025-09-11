@@ -48,6 +48,7 @@ dependencies:
   onboarding: ^4.0.2
   provider: ^6.1.5+1
   permission_handler: ^12.0.1
+  persistent_bottom_nav_bar: ^6.2.1
   shared_preferences: ^2.5.3
   sign_in_button: ^4.0.1
   tap_debouncer: ^2.2.0

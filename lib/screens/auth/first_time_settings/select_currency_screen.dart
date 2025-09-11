@@ -1,4 +1,3 @@
-import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:flutter/material.dart';
