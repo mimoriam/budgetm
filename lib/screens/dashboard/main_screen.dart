@@ -24,10 +24,10 @@ class _MainScreenState extends State<MainScreen> {
   List<Widget> _buildScreens() {
     return [
       const HomeScreen(),
-      const PlaceholderScreen(title: 'Transactions'),
-      const PlaceholderScreen(title: 'Budget'),
-      const PlaceholderScreen(title: 'Wallet'),
-      const PlaceholderScreen(title: 'Store'),
+      Container(), // Placeholder for Transactions
+      Container(), // Placeholder for Budget
+      Container(), // Placeholder for Wallet
+      Container(), // Placeholder for Store
     ];
   }
 
@@ -45,11 +45,11 @@ class _MainScreenState extends State<MainScreen> {
       ),
       PersistentBottomNavBarItem(
         icon: HugeIcon(
-          icon: HugeIcons.strokeRoundedEarRings01,
+          icon: HugeIcons.strokeRoundedDollar02,
           color: AppColors.primaryTextColorLight,
         ),
         inactiveIcon: HugeIcon(
-          icon: HugeIcons.strokeRounded0Circle,
+          icon: HugeIcons.strokeRoundedDollar02,
           color: Colors.grey,
         ),
         title: ("Transactions"),
@@ -59,11 +59,11 @@ class _MainScreenState extends State<MainScreen> {
       ),
       PersistentBottomNavBarItem(
         icon: HugeIcon(
-          icon: HugeIcons.strokeRoundedChart01,
+          icon: HugeIcons.strokeRoundedChartUp,
           color: AppColors.primaryTextColorLight,
         ),
         inactiveIcon: HugeIcon(
-          icon: HugeIcons.strokeRoundedChart01,
+          icon: HugeIcons.strokeRoundedChartUp,
           color: Colors.grey,
         ),
         title: ("Budget"),
@@ -116,32 +116,19 @@ class _MainScreenState extends State<MainScreen> {
       stateManagement: true,
       hideNavigationBarWhenKeyboardAppears: true,
       popBehaviorOnSelectedNavBarItemPress: PopBehavior.all,
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: NavBarDecoration(
         borderRadius: BorderRadius.circular(30.0),
         colorBehindNavBar: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 10,
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 8,
           ),
         ],
       ),
       navBarStyle: NavBarStyle.style6,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-    );
-  }
-}
-
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const PlaceholderScreen({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('This is the $title screen')),
     );
   }
 }

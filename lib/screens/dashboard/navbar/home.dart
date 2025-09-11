@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
       type: TransactionType.income,
       date: DateTime(2025, 8, 10),
       icon: HugeIcon(
-        icon: HugeIcons.strokeRoundedTable,
+        icon: HugeIcons.strokeRoundedTicket01,
         size: 24,
         color: Colors.blue.shade800,
       ),
@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       type: TransactionType.income,
       date: DateTime(2025, 8, 12),
       icon: HugeIcon(
-        icon: HugeIcons.strokeRoundedBaby01,
+        icon: HugeIcons.strokeRoundedShoppingCart01,
         size: 24,
         color: Colors.indigo.shade800,
       ),
@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
       type: TransactionType.expense,
       date: DateTime(2025, 8, 12),
       icon: HugeIcon(
-        icon: HugeIcons.strokeRounded1stBrecket,
+        icon: HugeIcons.strokeRoundedAddressBook,
         size: 24,
         color: Colors.purple.shade800,
       ),
@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
         (month) => month.year == now.year && month.month == now.month,
       );
       if (_selectedMonthIndex == -1) {
-        _selectedMonthIndex = 0;
+        _selectedMonthIndex = _months.length - 13; // Default to current month
       }
     });
 
@@ -118,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _scrollToSelectedMonth() {
     if (_selectedMonthIndex != -1) {
       final screenWidth = MediaQuery.of(context).size.width;
-      final itemWidth = 90.0; // Approximate width of a month chip
+      const itemWidth = 90.0;
       final offset =
           (_selectedMonthIndex * itemWidth) -
           (screenWidth / 2) +
@@ -178,61 +178,65 @@ class _HomeScreenState extends State<HomeScreen> {
     return SliverAppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      toolbarHeight: 80,
+      toolbarHeight: 120,
       pinned: true,
       automaticallyImplyLeading: false,
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+      title: Center(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const CircleAvatar(
-                radius: 22,
-                backgroundImage: AssetImage('images/avatar.png'),
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 24,
+                    backgroundImage: AssetImage('images/avatar.png'),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'August Balance',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '\$ 75,259.00',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'August Balance',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.black54,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    '\$ 75,259.00',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                    ),
-                  ),
+                  _buildAppBarButton(HugeIcons.strokeRoundedFilter),
+                  _buildAppBarButton(HugeIcons.strokeRoundedChartAverage),
+                  _buildAppBarButton(HugeIcons.strokeRoundedSchoolBell01),
                 ],
               ),
             ],
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildAppBarButton(HugeIcons.strokeRoundedFilter),
-              _buildAppBarButton(HugeIcons.strokeRounded0Circle),
-              _buildAppBarButton(HugeIcons.strokeRounded3dScale),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildAppBarButton(List<List<dynamic>> icon) {
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       margin: const EdgeInsets.only(left: 8),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.5),
@@ -241,14 +245,14 @@ class _HomeScreenState extends State<HomeScreen> {
       child: IconButton(
         padding: EdgeInsets.zero,
         onPressed: () {},
-        icon: HugeIcon(icon: icon, color: Colors.black87, size: 22),
+        icon: HugeIcon(icon: icon, color: Colors.black87, size: 24),
       ),
     );
   }
 
   Widget _buildMonthSelector() {
     return SizedBox(
-      height: 50,
+      height: 45,
       child: ListView.builder(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
@@ -264,28 +268,19 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
             child: Container(
-              width: 95,
+              width: 90,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.buttonBackground
                     : Colors.white.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(25),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppColors.gradientEnd.withOpacity(0.5),
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : [],
               ),
               child: Center(
                 child: Text(
                   DateFormat('MMM yyyy').format(month),
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black54,
+                    color: isSelected ? Colors.black : Colors.black54,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -300,34 +295,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBalanceCards() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildInfoCard(
-                'Income',
-                '+ \$3,456.98',
-                Colors.green,
-                HugeIcons.strokeRoundedArrowDown01,
-              ),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildInfoCard(
+              'Income',
+              '+ \$3,456.98',
+              Colors.green,
+              HugeIcons.strokeRoundedChartUp,
+              AppColors.incomeBackground,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildInfoCard(
-                'Expense',
-                '- \$567.25',
-                Colors.red,
-                HugeIcons.strokeRoundedArrowUp01,
-              ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildInfoCard(
+              'Expense',
+              '- \$567.25',
+              Colors.red,
+              HugeIcons.strokeRoundedChartDown,
+              AppColors.expenseBackground,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -337,35 +327,39 @@ class _HomeScreenState extends State<HomeScreen> {
     String amount,
     Color color,
     List<List<dynamic>> icon,
+    Color backgroundColor,
   ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(28),
       ),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                amount,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  amount,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
-          HugeIcon(icon: icon, color: color, size: 24),
+          const SizedBox(width: 8),
+          HugeIcon(icon: icon, color: color, size: 30),
         ],
       ),
     );
@@ -408,9 +402,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                ...groupedTransactions[date]!
-                    .map((tx) => _buildTransactionItem(tx))
-                    .toList(),
+                ...groupedTransactions[date]!.map(
+                  (tx) => _buildTransactionItem(tx),
+                ),
               ],
             );
           }).toList(),
@@ -426,6 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.08),
