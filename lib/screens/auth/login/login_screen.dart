@@ -1,5 +1,4 @@
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -16,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _obscureText = true;
+  bool _rememberMe = false; // State for the regular checkbox
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.gradientStart, AppColors.gradientEnd],
+            colors: [AppColors.gradientStart, AppColors.gradientEnd2],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -31,53 +31,108 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Container(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(20.0),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.background,
-                  borderRadius: BorderRadius.circular(24.0),
+                  gradient: const LinearGradient(
+                    colors: [AppColors.gradientStart2, AppColors.gradientEnd3],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(30.0),
+                  border: Border.all(
+                    color: AppColors.lightGreyBackground.withOpacity(0.5),
+                  ),
                 ),
                 child: FormBuilder(
                   key: _formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Login', style: Theme.of(context).textTheme.displayLarge),
+                      Text(
+                        'Login',
+                        style: Theme.of(context).textTheme.displayLarge,
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 8),
+                      // 1. Subheading color changed to grey
                       Text(
                         'Enter your email and password to log in',
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.secondaryTextColorLight,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 24),
-                      Text('Email', style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 30),
                       FormBuilderTextField(
                         name: 'email',
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.email_outlined),
-                          hintText: 'Loisbecket@gmail.com',
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          hintText: 'Email',
+                          // 2. Hint style updated
+                          hintStyle: const TextStyle(
+                            color: AppColors.secondaryTextColorLight,
+                            fontSize: 14,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          // 3. Border added for inactive state
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: const BorderSide(
+                              color: AppColors.lightGreyBackground,
+                              width: 1.0,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).primaryColor,
+                              width: 1.0,
+                            ),
+                          ),
                         ),
                         validator: FormBuilderValidators.compose([
                           FormBuilderValidators.required(),
                           FormBuilderValidators.email(),
                         ]),
                       ),
-                      const SizedBox(height: 16),
-                      Text('Password', style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       FormBuilderTextField(
                         name: 'password',
                         obscureText: _obscureText,
                         decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.lock_outline),
-                          hintText: '********',
+                          hintText: 'Password',
+                          // 2. Hint style updated
+                          hintStyle: const TextStyle(
+                            color: AppColors.secondaryTextColorLight,
+                            fontSize: 14,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          // 3. Border added for inactive state
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: const BorderSide(
+                              color: AppColors.lightGreyBackground,
+                              width: 1.0,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).primaryColor,
+                              width: 1.0,
+                            ),
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureText
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
+                              color: AppColors.lightGreyBackground,
                             ),
                             onPressed: () {
                               setState(() {
@@ -91,79 +146,137 @@ class _LoginScreenState extends State<LoginScreen> {
                           FormBuilderValidators.minLength(6),
                         ]),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
+                      // 4. Row styling updated
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Transform.scale(
+                            scale: 0.8,
+                            child: Checkbox(
+                              value: _rememberMe,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rememberMe = value ?? false;
+                                });
+                              },
+                            ),
+                          ),
+                          const Text(
+                            'Remember me',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppColors.gradientEnd,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                            ),
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState?.saveAndValidate() ??
+                                false) {
+                              debugPrint(
+                                _formKey.currentState?.value.toString(),
+                              );
+                            }
+                          },
+                          child: const Text('Login'),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      const Row(
                         children: [
                           Expanded(
-                            child: FormBuilderCheckbox(
-                              name: 'remember_me',
-                              title: Text(
-                                'Remember me',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                            child: Divider(
+                              color: AppColors.lightGreyBackground,
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              'Or login with',
+                              style: TextStyle(
+                                color: AppColors.secondaryTextColorLight,
                               ),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                              decoration: const InputDecoration(border: InputBorder.none),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: AppColors.lightGreyBackground,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 45,
+                        child: SignInButton(
+                          Buttons.google,
+                          onPressed: () {},
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 45,
+                        child: SignInButton(
+                          Buttons.apple,
+                          onPressed: () {},
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // 5. "Don't have an account" text styled
+                          const Text(
+                            "Don't have an account?",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.secondaryTextColorLight,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           TextButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                                MaterialPageRoute(
+                                  builder: (context) => const SignupScreen(),
+                                ),
                               );
                             },
-                            child: const Text('Forgot Password?'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_formKey.currentState?.saveAndValidate() ?? false) {
-                              debugPrint(_formKey.currentState?.value.toString());
-                            }
-                          },
-                          child: const Text('Login'),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Row(
-                        children: [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Text('Or login with'),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SignInButton(Buttons.google, onPressed: () {}),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SignInButton(Buttons.apple, onPressed: () {}),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Don't have an account?"),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const SignupScreen()),
-                              );
-                            },
-                            child: const Text('Sign Up'),
+                            child: const Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                decoration: TextDecoration.underline,
+                                fontWeight: FontWeight.bold,
+                                decorationColor: AppColors.gradientEnd,
+                              ),
+                            ),
                           ),
                         ],
                       ),
