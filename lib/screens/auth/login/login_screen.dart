@@ -1,9 +1,12 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/screens/auth/first_time_settings/choose_theme_screen.dart';
 import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_button/sign_in_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -233,12 +236,38 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(30.0),
                               ),
                             ),
-                            onPressed: () {
+                            onPressed: () async {
                               if (_formKey.currentState?.saveAndValidate() ??
                                   false) {
                                 debugPrint(
                                   _formKey.currentState?.value.toString(),
                                 );
+
+                                // Simulate successful login & check if theme is already set
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                final bool themeChosen =
+                                    prefs.getBool('theme_chosen') ?? false;
+
+                                if (context.mounted) {
+                                  if (themeChosen) {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const HomeScreen(),
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ChooseThemeScreen(),
+                                      ),
+                                    );
+                                  }
+                                }
                               }
                             },
                             child: const Text('Login'),

@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/screens/auth/first_time_settings/choose_theme_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -302,6 +303,16 @@ class _SignupScreenState extends State<SignupScreen> {
                                 debugPrint(
                                   _formKey.currentState?.value.toString(),
                                 );
+                                // After successful signup, navigate to choose theme
+                                if (mounted) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ChooseThemeScreen(),
+                                    ),
+                                  );
+                                }
                               }
                             },
                             child: Text(

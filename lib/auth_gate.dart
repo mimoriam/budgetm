@@ -1,6 +1,6 @@
 import 'package:budgetm/screens/auth/first_time_settings/choose_theme_screen.dart';
-import 'package:budgetm/screens/auth/first_time_settings/select_currency_screen.dart';
 import 'package:budgetm/screens/auth/login/login_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,33 +12,40 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  bool? _themeChosen;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkThemePreference();
-  }
-
-  Future<void> _checkThemePreference() async {
+  Future<Map<String, bool>> _checkAuthAndTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _themeChosen = prefs.getBool('theme_chosen') ?? false;
-    });
+    final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    final bool themeChosen = prefs.getBool('theme_chosen') ?? false;
+    return {'isLoggedIn': isLoggedIn, 'themeChosen': themeChosen};
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_themeChosen == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    return FutureBuilder<Map<String, bool>>(
+      future: _checkAuthAndTheme(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    if (_themeChosen!) {
-      // In a real app, you'd check auth status here
-      // For now, we'll just go to the login screen
-      return const LoginScreen();
-    } else {
-      return const ChooseThemeScreen();
-    }
+        if (snapshot.hasData) {
+          final bool isLoggedIn = snapshot.data!['isLoggedIn']!;
+          final bool themeChosen = snapshot.data!['themeChosen']!;
+
+          if (isLoggedIn) {
+            if (themeChosen) {
+              return const HomeScreen();
+            } else {
+              return const ChooseThemeScreen();
+            }
+          }
+        }
+
+        // Default to login screen if not logged in or if there's an error
+        return const LoginScreen();
+      },
+    );
   }
 }
