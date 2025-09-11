@@ -24,4 +24,6 @@ class AppColors {
   static const secondaryTextColorLight = Color(0xFF6B7280);
   static const secondaryTextColorDark = Color(0xFF9CA3AF);
   static const lightLime = Color(0xFFF5F5F5);
+
+  static const errorColor = Color(0xFFD32F2F);
 }

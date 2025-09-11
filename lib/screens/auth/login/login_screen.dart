@@ -86,6 +86,20 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 1.0,
                             ),
                           ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: const BorderSide(
+                              color: AppColors.errorColor,
+                              width: 1.0,
+                            ),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: const BorderSide(
+                              color: AppColors.errorColor,
+                              width: 1.0,
+                            ),
+                          ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30.0),
                             borderSide: BorderSide(
@@ -118,6 +132,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(30.0),
                             borderSide: const BorderSide(
                               color: AppColors.lightGreyBackground,
+                              width: 1.0,
+                            ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: const BorderSide(
+                              color: AppColors.errorColor,
+                              width: 1.0,
+                            ),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                            borderSide: const BorderSide(
+                              color: AppColors.errorColor,
                               width: 1.0,
                             ),
                           ),
@@ -273,12 +301,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           TextButton(
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SignupScreen(),
-                                ),
-                              );
+                              if (context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SignupScreen(),
+                                  ),
+                                );
+                              }
                             },
                             child: const Text(
                               'Sign Up',
