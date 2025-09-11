@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -167,7 +168,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const Spacer(),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              if (context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ForgotPasswordScreen(),
+                                  ),
+                                );
+                              }
+                            },
                             child: const Text(
                               'Forgot Password?',
                               style: TextStyle(
