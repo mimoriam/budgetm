@@ -1,7 +1,7 @@
 import 'package:budgetm/screens/auth/first_time_settings/choose_theme_screen.dart';
 import 'package:budgetm/screens/auth/first_time_settings/select_currency_screen.dart';
 import 'package:budgetm/screens/auth/login/login_screen.dart';
-import 'package:budgetm/screens/dashboard/navbar/home.dart';
+import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -48,7 +48,7 @@ class _AuthGateState extends State<AuthGate> {
             } else if (!currencyChosen) {
               return const SelectCurrencyScreen();
             } else {
-              return const HomeScreen();
+              return const MainScreen();
             }
           }
         }

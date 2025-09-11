@@ -247,6 +247,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                     await SharedPreferences.getInstance();
                                 await prefs.setBool('isLoggedIn', true);
 
+                                // Store the first login timestamp if it doesn't exist
+                                if (prefs.getString('firstLoginDate') == null) {
+                                  await prefs.setString(
+                                    'firstLoginDate',
+                                    DateTime.now().toIso8601String(),
+                                  );
+                                }
+
                                 if (context.mounted) {
                                   // Navigate to AuthGate to determine next screen
                                   Navigator.pushAndRemoveUntil(
