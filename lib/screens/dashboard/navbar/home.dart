@@ -26,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
       date: DateTime(2025, 8, 10),
       icon: HugeIcon(
         icon: HugeIcons.strokeRoundedShoppingBag01,
-        size: 24,
+        size: 22,
         color: Colors.orange.shade800,
       ),
       iconBackgroundColor: Colors.orange.shade100,
@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
       date: DateTime(2025, 8, 10),
       icon: HugeIcon(
         icon: HugeIcons.strokeRoundedTicket01,
-        size: 24,
+        size: 22,
         color: Colors.blue.shade800,
       ),
       iconBackgroundColor: Colors.blue.shade100,
@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
       date: DateTime(2025, 8, 12),
       icon: HugeIcon(
         icon: HugeIcons.strokeRoundedShoppingCart01,
-        size: 24,
+        size: 22,
         color: Colors.indigo.shade800,
       ),
       iconBackgroundColor: Colors.indigo.shade100,
@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
       date: DateTime(2025, 8, 12),
       icon: HugeIcon(
         icon: HugeIcons.strokeRoundedAddressBook,
-        size: 24,
+        size: 22,
         color: Colors.purple.shade800,
       ),
       iconBackgroundColor: Colors.purple.shade100,
@@ -117,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _scrollToSelectedMonth() {
     if (_selectedMonthIndex != -1) {
       final screenWidth = MediaQuery.of(context).size.width;
-      const itemWidth = 90.0;
+      const itemWidth = 85.0; // Adjusted width
       final offset =
           (_selectedMonthIndex * itemWidth) -
           (screenWidth / 2) +
@@ -139,12 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {},
-      //   backgroundColor: AppColors.gradientEnd,
-      //   shape: const CircleBorder(),
-      //   child: const Icon(Icons.add, color: Colors.white),
-      // ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -162,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [_buildMonthSelector(), _buildBalanceCards()],
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
             _buildTransactionSection(),
           ],
         ),
@@ -174,42 +168,42 @@ class _HomeScreenState extends State<HomeScreen> {
     return SliverAppBar(
       backgroundColor: AppColors.gradientStart,
       elevation: 0,
-      toolbarHeight: 120,
+      toolbarHeight: 100,
       pinned: true,
       floating: true,
       snap: true,
       automaticallyImplyLeading: false,
       title: Center(
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
+          padding: const EdgeInsets.only(bottom: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   const CircleAvatar(
-                    radius: 24,
+                    radius: 22,
                     backgroundImage: AssetImage('images/avatar.png'),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         'August Balance',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.black54,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       const Text(
                         '\$ 75,259.00',
                         style: TextStyle(
                           color: Colors.black,
                           fontWeight: FontWeight.bold,
-                          fontSize: 24,
+                          fontSize: 22,
                         ),
                       ),
                     ],
@@ -233,9 +227,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAppBarButton(List<List<dynamic>> icon) {
     return Container(
-      width: 44,
-      height: 44,
-      margin: const EdgeInsets.only(left: 8),
+      width: 40,
+      height: 40,
+      margin: const EdgeInsets.only(left: 6),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.5),
         shape: BoxShape.circle,
@@ -243,14 +237,14 @@ class _HomeScreenState extends State<HomeScreen> {
       child: IconButton(
         padding: EdgeInsets.zero,
         onPressed: () {},
-        icon: HugeIcon(icon: icon, color: Colors.black87, size: 24),
+        icon: HugeIcon(icon: icon, color: Colors.black87, size: 22),
       ),
     );
   }
 
   Widget _buildMonthSelector() {
     return SizedBox(
-      height: 45,
+      height: 40,
       child: ListView.builder(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
@@ -266,13 +260,13 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
             child: Container(
-              width: 90,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 85,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.buttonBackground
                     : Colors.white.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text(
@@ -280,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     color: isSelected ? Colors.black : Colors.black54,
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -293,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBalanceCards() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
         children: [
           Expanded(
@@ -305,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
               AppColors.incomeBackground,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: _buildInfoCard(
               'Expense',
@@ -328,10 +322,10 @@ class _HomeScreenState extends State<HomeScreen> {
     Color backgroundColor,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
@@ -341,14 +335,14 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
                   amount,
                   style: TextStyle(
                     color: color,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -356,8 +350,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          HugeIcon(icon: icon, color: color, size: 30),
+          const SizedBox(width: 4),
+          HugeIcon(icon: icon, color: color, size: 28),
         ],
       ),
     );
@@ -377,12 +371,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Container(
-        padding: const EdgeInsets.only(top: 24),
+        padding: const EdgeInsets.only(top: 16),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(40),
-            topRight: Radius.circular(40),
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
           ),
         ),
         child: Column(
@@ -392,13 +386,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
                     child: Text(
                       date.toUpperCase(),
                       style: const TextStyle(
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -408,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               );
             }).toList(),
-            const SizedBox(height: 80), // To avoid FAB overlap
+            const SizedBox(height: 70), // To avoid FAB overlap
           ],
         ),
       ),
@@ -417,31 +411,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTransactionItem(Transaction transaction) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 2,
-            blurRadius: 10,
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 8,
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: transaction.iconBackgroundColor,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: transaction.icon,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,13 +444,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   transaction.title,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   transaction.description,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
@@ -468,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? Colors.green
                   : Colors.red,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 15,
             ),
           ),
         ],

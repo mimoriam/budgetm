@@ -32,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   List<PersistentBottomNavBarItem> _navBarsItems() {
-    const textStyle = TextStyle(fontWeight: FontWeight.w500, fontSize: 12);
+    const textStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 12);
 
     return [
       PersistentBottomNavBarItem(
@@ -40,13 +40,14 @@ class _MainScreenState extends State<MainScreen> {
         inactiveIcon: const Icon(IconlyLight.home),
         title: ("Home"),
         activeColorPrimary: Colors.white,
+        activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
         icon: HugeIcon(
           icon: HugeIcons.strokeRoundedDollar02,
-          color: Colors.white,
+          color: Colors.black,
         ),
         inactiveIcon: HugeIcon(
           icon: HugeIcons.strokeRoundedDollar02,
@@ -54,27 +55,29 @@ class _MainScreenState extends State<MainScreen> {
         ),
         title: ("Transactions"),
         activeColorPrimary: Colors.white,
+        activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
         icon: HugeIcon(
           icon: HugeIcons.strokeRoundedChartUp,
-          color: Colors.white,
+          color: Colors.black,
         ),
         inactiveIcon: HugeIcon(
           icon: HugeIcons.strokeRoundedChartUp,
-          color: Colors.black,
+          color: Colors.black54,
         ),
         title: ("Budget"),
         activeColorPrimary: Colors.white,
+        activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
         icon: HugeIcon(
           icon: HugeIcons.strokeRoundedWallet02,
-          color: Colors.white,
+          color: Colors.black,
         ),
         inactiveIcon: HugeIcon(
           icon: HugeIcons.strokeRoundedWallet02,
@@ -82,13 +85,14 @@ class _MainScreenState extends State<MainScreen> {
         ),
         title: ("Wallet"),
         activeColorPrimary: Colors.white,
+        activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
         icon: HugeIcon(
           icon: HugeIcons.strokeRoundedShoppingBag01,
-          color: Colors.white,
+          color: Colors.black,
         ),
         inactiveIcon: HugeIcon(
           icon: HugeIcons.strokeRoundedShoppingBag01,
@@ -96,6 +100,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
         title: ("Store"),
         activeColorPrimary: Colors.white,
+        activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
         textStyle: textStyle,
       ),
@@ -110,19 +115,20 @@ class _MainScreenState extends State<MainScreen> {
       screens: _buildScreens(),
       items: _navBarsItems(),
       confineToSafeArea: true,
-      backgroundColor: AppColors.gradientEnd,
+      backgroundColor: AppColors.bottomBarColor,
       handleAndroidBackButtonPress: true,
       resizeToAvoidBottomInset: true,
       stateManagement: true,
       hideNavigationBarWhenKeyboardAppears: true,
       navBarHeight: kBottomNavigationBarHeight + 20,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+      padding: const EdgeInsets.only(left: 6),
       decoration: NavBarDecoration(
         borderRadius: BorderRadius.circular(40.0),
-        colorBehindNavBar: AppColors.gradientEnd,
+        colorBehindNavBar: AppColors.gradientStart,
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 30.0, right: 10),
+        padding: const EdgeInsets.only(bottom: 26.0, right: 0),
         child: FloatingActionButton(
           onPressed: () {},
           backgroundColor: AppColors.gradientEnd,

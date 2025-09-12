@@ -19,6 +19,8 @@ class AppColors {
   static const expenseBackground = Color(0xFFFDE8E8);
 
   // Theme colors
+
+  static const bottomBarColor = Color(0xFFE4Ec9C);
   static const lightBackgroundColor = Color(0xFFFFFFFF);
   static const darkBackgroundColor = Color(0xFF121212);
   static const primaryTextColorLight = Color(0xFF1A1A1A);
