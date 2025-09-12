@@ -1,7 +1,11 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/models/goal.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+
+import 'goals_detailed/goals_detailed_screen.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -12,6 +16,36 @@ class GoalsScreen extends StatefulWidget {
 
 class _GoalsScreenState extends State<GoalsScreen> {
   bool _isPendingSelected = true;
+
+  final List<Goal> _pendingGoals = [
+    Goal(
+      title: 'Home',
+      currentAmount: 24000,
+      totalAmount: 100000,
+      date: DateTime(2025, 12, 31),
+      icon: HugeIcons.strokeRoundedHome01,
+    ),
+    Goal(
+      title: 'Home',
+      description: 'Here is your descriptionn goes',
+      currentAmount: 24000,
+      totalAmount: 100000,
+      date: DateTime(2026, 6, 30),
+      icon: HugeIcons.strokeRoundedHome01,
+    ),
+  ];
+
+  final List<Goal> _fulfilledGoals = [
+    Goal(
+      title: 'New Car',
+      description: 'Tesla Model Y',
+      currentAmount: 50000,
+      totalAmount: 50000,
+      date: DateTime(2025, 8, 16),
+      icon: HugeIcons.strokeRoundedCar01,
+      isFulfilled: true,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -230,21 +264,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ),
           ),
-          _buildGoalItem(
-            icon: HugeIcons.strokeRoundedHome01,
-            title: 'Home',
-            savedAmount: 20.00,
-            currentAmount: 24000,
-            totalAmount: 100000,
-          ),
-          _buildGoalItem(
-            icon: HugeIcons.strokeRoundedHome01,
-            title: 'Home',
-            description: 'Here is your descriptionn goes',
-            savedAmount: 20.00,
-            currentAmount: 24000,
-            totalAmount: 100000,
-          ),
+          ..._pendingGoals.map((goal) => _buildGoalItem(goal)),
         ],
       ),
     );
@@ -267,133 +287,135 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ),
           ),
-          _buildGoalItem(
-            icon: HugeIcons.strokeRoundedCar01,
-            title: 'New Car',
-            description: 'Tesla Model Y',
-            savedAmount: 50000.00,
-            currentAmount: 50000,
-            totalAmount: 50000,
-            isFulfilled: true,
-          ),
+          ..._fulfilledGoals.map((goal) => _buildGoalItem(goal)),
         ],
       ),
     );
   }
 
-  Widget _buildGoalItem({
-    required List<List<dynamic>> icon,
-    required String title,
-    String? description,
-    required double savedAmount,
-    required double currentAmount,
-    required double totalAmount,
-    bool isFulfilled = false,
-  }) {
-    final double progress = totalAmount > 0 ? currentAmount / totalAmount : 0;
+  Widget _buildGoalItem(Goal goal) {
+    final double progress = goal.totalAmount > 0
+        ? goal.currentAmount / goal.totalAmount
+        : 0;
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
       decimalDigits: 2,
     );
     final totalFormat = NumberFormat.compactCurrency(symbol: '\$');
-    final progressColor = isFulfilled ? Colors.green : AppColors.gradientEnd;
+    final progressColor = goal.isFulfilled
+        ? Colors.green
+        : AppColors.gradientEnd;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 1,
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: progressColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: GoalDetailScreen(goal: goal),
+          withNavBar: false, // Hides the bottom navigation bar
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              spreadRadius: 1,
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: progressColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: HugeIcon(
+                    icon: goal.icon,
+                    size: 24,
+                    color: progressColor,
+                  ),
                 ),
-                child: HugeIcon(icon: icon, size: 24, color: progressColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    if (description != null) ...[
-                      const SizedBox(height: 4),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        description,
+                        goal.title,
                         style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
+                      if (goal.description != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          goal.description!,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              if (isFulfilled)
-                const Icon(Icons.check_circle, color: Colors.green, size: 28)
-              else
-                Text(
-                  currencyFormat.format(savedAmount),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Colors.grey.shade200,
-                color: progressColor,
-                minHeight: 6,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+                if (goal.isFulfilled)
+                  const Icon(Icons.check_circle, color: Colors.green, size: 28)
+                else
                   Text(
-                    totalFormat.format(totalAmount),
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  Text(
-                    '${(progress * 100).toInt()}%',
-                    style: TextStyle(
+                    currencyFormat.format(20.00), // Placeholder saved amount
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: isFulfilled ? Colors.green : Colors.black,
+                      fontSize: 16,
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey.shade200,
+                  color: progressColor,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      totalFormat.format(goal.totalAmount),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: goal.isFulfilled ? Colors.green : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
