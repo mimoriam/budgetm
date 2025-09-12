@@ -17,9 +17,7 @@ class AppColors {
   static const buttonBackground = gradientEnd;
   static const incomeBackground = Color(0xFFE6F9E8);
   static const expenseBackground = Color(0xFFFDE8E8);
-
-  // Theme colors
-
+  static const aiGradientStart = Color(0xFFCADCFA);
   static const bottomBarColor = Color(0xFFE4Ec9C);
   static const lightBackgroundColor = Color(0xFFFFFFFF);
   static const darkBackgroundColor = Color(0xFF121212);
