@@ -1,8 +1,10 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/transaction.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -213,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildAppBarButton(HugeIcons.strokeRoundedFilter),
+                  _buildAppBarButton(HugeIcons.strokeRoundedAiWebBrowsing),
                   _buildAppBarButton(HugeIcons.strokeRoundedChartAverage),
                   _buildAppBarButton(HugeIcons.strokeRoundedSchoolBell01),
                 ],
@@ -410,62 +412,74 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTransactionItem(Transaction transaction) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: transaction.iconBackgroundColor,
-              borderRadius: BorderRadius.circular(14),
+    return InkWell(
+      onTap: () {
+        if (transaction.type == TransactionType.expense) {
+          PersistentNavBarNavigator.pushNewScreen(
+            context,
+            screen: ExpenseDetailScreen(transaction: transaction),
+            withNavBar: false,
+            pageTransitionAnimation: PageTransitionAnimation.cupertino,
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 1,
+              blurRadius: 8,
             ),
-            child: transaction.icon,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  transaction.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: transaction.iconBackgroundColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: transaction.icon,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    transaction.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  transaction.description,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    transaction.description,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Text(
-            '${transaction.type == TransactionType.income ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}',
-            style: TextStyle(
-              color: transaction.type == TransactionType.income
-                  ? Colors.green
-                  : Colors.red,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+            Text(
+              '${transaction.type == TransactionType.income ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: transaction.type == TransactionType.income
+                    ? Colors.green
+                    : Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
