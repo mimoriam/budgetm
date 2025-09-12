@@ -13,6 +13,9 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  // FIX: Declare a Future variable in the state.
+  late Future<Map<String, bool>> _checkStatusFuture;
+
   Future<Map<String, bool>> _checkLoginAndSetupStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
@@ -27,9 +30,17 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // FIX: Initialize the future in initState. This ensures it only runs once.
+    _checkStatusFuture = _checkLoginAndSetupStatus();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, bool>>(
-      future: _checkLoginAndSetupStatus(),
+      // FIX: Use the state variable instead of calling the function directly.
+      future: _checkStatusFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
