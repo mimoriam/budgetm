@@ -133,8 +133,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         }
       },
       child: Container(
-        width: 60,
-        height: 60,
+        width: 44,
+        height: 44,
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(

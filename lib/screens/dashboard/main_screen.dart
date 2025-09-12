@@ -111,24 +111,17 @@ class _MainScreenState extends State<MainScreen> {
       items: _navBarsItems(),
       confineToSafeArea: true,
       backgroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       handleAndroidBackButtonPress: true,
       resizeToAvoidBottomInset: true,
       stateManagement: true,
       hideNavigationBarWhenKeyboardAppears: true,
       popBehaviorOnSelectedNavBarItemPress: PopBehavior.all,
-      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: NavBarDecoration(
         borderRadius: BorderRadius.circular(30.0),
         colorBehindNavBar: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-          ),
-        ],
       ),
-      navBarStyle: NavBarStyle.style6,
+      navBarStyle: NavBarStyle.style7,
     );
   }
 }

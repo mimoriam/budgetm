@@ -176,10 +176,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   SliverAppBar _buildAppBar(BuildContext context) {
     return SliverAppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.gradientStart,
       elevation: 0,
       toolbarHeight: 120,
       pinned: true,
+      floating: true,
+      snap: true,
       automaticallyImplyLeading: false,
       title: Center(
         child: Padding(
