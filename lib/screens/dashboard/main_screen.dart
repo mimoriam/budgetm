@@ -1,5 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/screens/dashboard/navbar/goals/create_goal/create_goal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
@@ -17,24 +19,22 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late PersistentTabController _controller;
-  late List<Widget> _screens;
   bool _isFabMenuOpen = false;
+  bool _isAiMode = false;
+
+  void _toggleAiMode() {
+    setState(() {
+      _isAiMode = !_isAiMode;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _controller = PersistentTabController(initialIndex: 0);
-    _screens = _buildScreens();
-  }
-
-  List<Widget> _buildScreens() {
-    return [
-      const HomeScreen(),
-      Container(), // Placeholder for Transactions
-      Container(), // Placeholder for Budget
-      const GoalsScreen(),
-      Container(), // Placeholder for Store
-    ];
+    _controller.addListener(() {
+      setState(() {});
+    });
   }
 
   List<PersistentBottomNavBarItem> _navBarsItems() {
@@ -121,13 +121,20 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      HomeScreen(isAiMode: _isAiMode, onToggleAiMode: _toggleAiMode),
+      Container(), // Placeholder for Transactions
+      Container(), // Placeholder for Budget
+      const GoalsScreen(),
+      Container(), // Placeholder for Store
+    ];
     return Scaffold(
       body: Stack(
         children: [
           PersistentTabView(
             context,
             controller: _controller,
-            screens: _screens,
+            screens: screens,
             items: _navBarsItems(),
             confineToSafeArea: true,
             backgroundColor: AppColors.bottomBarColor,
@@ -157,44 +164,8 @@ class _MainScreenState extends State<MainScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (_isFabMenuOpen) ...[
-                  _buildFabMenuItem(
-                    label: "Income",
-                    icon: HugeIcons.strokeRoundedChartUp,
-                    color: Colors.green,
-                    onPressed: () {
-                      _toggleFabMenu();
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const AddTransactionScreen(
-                          transactionType: TransactionType.income,
-                        ),
-                        withNavBar: false,
-                        pageTransitionAnimation:
-                            PageTransitionAnimation.cupertino,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildFabMenuItem(
-                    label: "Expense",
-                    icon: HugeIcons.strokeRoundedChartDown,
-                    color: Colors.red,
-                    onPressed: () {
-                      _toggleFabMenu();
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const AddTransactionScreen(
-                          transactionType: TransactionType.expense,
-                        ),
-                        withNavBar: false,
-                        pageTransitionAnimation:
-                            PageTransitionAnimation.cupertino,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                if (_isFabMenuOpen) ..._buildFabMenuItemsForCurrentScreen(),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: 40,
                   height: 40,
@@ -215,6 +186,111 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildFabMenuItemsForCurrentScreen() {
+    switch (_controller.index) {
+      case 0: // Home
+        if (_isAiMode) {
+          return [
+            _buildFabMenuItem(
+              label: "Budget",
+              icon: HugeIcons.strokeRoundedDollar02,
+              color: Colors.blue,
+              onPressed: () {
+                _toggleFabMenu();
+                _controller.jumpToTab(1);
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildFabMenuItem(
+              label: "Expense",
+              icon: HugeIcons.strokeRoundedChartDown,
+              color: Colors.red,
+              onPressed: () {
+                _toggleFabMenu();
+                PersistentNavBarNavigator.pushNewScreen(
+                  context,
+                  screen: const AddTransactionScreen(
+                    transactionType: TransactionType.expense,
+                  ),
+                  withNavBar: false,
+                  pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                );
+              },
+            ),
+          ];
+        }
+        return [
+          _buildFabMenuItem(
+            label: "Income",
+            icon: HugeIcons.strokeRoundedChartUp,
+            color: Colors.green,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddTransactionScreen(
+                  transactionType: TransactionType.income,
+                ),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildFabMenuItem(
+            label: "Expense",
+            icon: HugeIcons.strokeRoundedChartDown,
+            color: Colors.red,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddTransactionScreen(
+                  transactionType: TransactionType.expense,
+                ),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+        ];
+      case 3: // Goals
+        return [
+          _buildFabMenuItem(
+            label: "Pending Goal",
+            icon: HugeIcons.strokeRoundedClock01,
+            color: Colors.orange,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const CreateGoalScreen(goalType: GoalType.pending),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildFabMenuItem(
+            label: "Fulfilled Goal",
+            icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+            color: Colors.green,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const CreateGoalScreen(goalType: GoalType.fulfilled),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+        ];
+      default:
+        return [];
+    }
   }
 
   Widget _buildFabMenuItem({

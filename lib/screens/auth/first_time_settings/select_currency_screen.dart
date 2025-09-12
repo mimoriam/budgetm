@@ -1,5 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/screens/dashboard/navbar/home.dart';
+import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -200,7 +200,7 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            const HomeScreen(),
+                                            const MainScreen(),
                                       ),
                                       (route) => false,
                                     );

@@ -9,7 +9,13 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isAiMode;
+  final VoidCallback onToggleAiMode;
+  const HomeScreen({
+    super.key,
+    required this.isAiMode,
+    required this.onToggleAiMode,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -19,7 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late ScrollController _scrollController;
   List<DateTime> _months = [];
   int _selectedMonthIndex = 0;
-  bool _isAiMode = false;
 
   final List<Transaction> _transactions = [
     Transaction(
@@ -143,13 +148,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // This will ensure status bar icons are dark and visible
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
 
     return Scaffold(
       // We use a TweenAnimationBuilder to smoothly animate the gradient color
       body: TweenAnimationBuilder<Color?>(
         tween: ColorTween(
-          end: _isAiMode ? AppColors.aiGradientStart : AppColors.gradientStart,
+          end: widget.isAiMode
+              ? AppColors.aiGradientStart
+              : AppColors.gradientStart,
         ),
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeOut,
@@ -238,11 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildAppBarButton(
                     HugeIcons.strokeRoundedAiWebBrowsing,
-                    onPressed: () {
-                      setState(() {
-                        _isAiMode = !_isAiMode;
-                      });
-                    },
+                    onPressed: widget.onToggleAiMode,
                   ),
                   _buildAppBarButton(HugeIcons.strokeRoundedChartAverage),
                   _buildAppBarButton(HugeIcons.strokeRoundedSchoolBell01),
