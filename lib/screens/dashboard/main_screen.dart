@@ -58,7 +58,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedDollar02,
           color: Colors.black,
         ),
-        title: ("Transactions"),
+        title: ("Budget"),
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -73,7 +73,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedChartUp,
           color: Colors.black54,
         ),
-        title: ("Budget"),
+        title: ("Balance"),
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -88,7 +88,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedWallet02,
           color: Colors.black,
         ),
-        title: ("Wallet"),
+        title: ("Goals"),
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -103,7 +103,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedShoppingBag01,
           color: Colors.black,
         ),
-        title: ("Store"),
+        title: ("Personal"),
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -146,6 +146,7 @@ class _MainScreenState extends State<MainScreen> {
           if (_isFabMenuOpen)
             GestureDetector(
               onTap: _toggleFabMenu, // Close menu on tap outside
+              behavior: HitTestBehavior.opaque,
               child: Container(color: Colors.black54.withOpacity(0.5)),
             ),
           Positioned(
@@ -195,6 +196,7 @@ class _MainScreenState extends State<MainScreen> {
                 ],
                 FloatingActionButton(
                   onPressed: _toggleFabMenu,
+                  elevation: 1,
                   backgroundColor: AppColors.gradientEnd,
                   shape: const CircleBorder(),
                   child: Icon(
@@ -224,13 +226,6 @@ class _MainScreenState extends State<MainScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: Text(
             label,
@@ -244,6 +239,7 @@ class _MainScreenState extends State<MainScreen> {
         FloatingActionButton(
           heroTag: null,
           mini: true,
+          elevation: 1,
           onPressed: onPressed,
           backgroundColor: color,
           shape: const CircleBorder(),
