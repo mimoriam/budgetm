@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/plan_income/plan_income_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -130,7 +131,13 @@ class _MainScreenState extends State<MainScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 26.0, right: 0),
         child: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {
+            PersistentNavBarNavigator.pushNewScreen(
+              context,
+              screen: const PlanIncomeScreen(),
+              withNavBar: false,
+            );
+          },
           backgroundColor: AppColors.gradientEnd,
           shape: const CircleBorder(),
           child: const Icon(Icons.add, color: Colors.white),
