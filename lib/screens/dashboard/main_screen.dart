@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
-import 'package:budgetm/screens/dashboard/navbar/home/plan_income/plan_income_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -15,18 +16,16 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late PersistentTabController _controller;
-  // FIX: Declare the list of screens as a state variable
   late List<Widget> _screens;
+  bool _isFabMenuOpen = false;
 
   @override
   void initState() {
     super.initState();
     _controller = PersistentTabController(initialIndex: 0);
-    // FIX: Initialize the screens list once in initState
     _screens = _buildScreens();
   }
 
-  // FIX: This method now just returns the list of screens
   List<Widget> _buildScreens() {
     return [
       const HomeScreen(),
@@ -113,44 +112,144 @@ class _MainScreenState extends State<MainScreen> {
     ];
   }
 
+  void _toggleFabMenu() {
+    setState(() {
+      _isFabMenuOpen = !_isFabMenuOpen;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return PersistentTabView(
-      context,
-      controller: _controller,
-      // FIX: Use the state variable _screens
-      screens: _screens,
-      items: _navBarsItems(),
-      confineToSafeArea: true,
-      backgroundColor: AppColors.bottomBarColor,
-      handleAndroidBackButtonPress: true,
-      resizeToAvoidBottomInset: true,
-      stateManagement: true,
-      hideNavigationBarWhenKeyboardAppears: true,
-      navBarHeight: kBottomNavigationBarHeight + 20,
-      margin: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-      padding: const EdgeInsets.only(left: 6),
-      decoration: NavBarDecoration(
-        borderRadius: BorderRadius.circular(40.0),
-        colorBehindNavBar: AppColors.gradientStart,
+    return Scaffold(
+      body: Stack(
+        children: [
+          PersistentTabView(
+            context,
+            controller: _controller,
+            screens: _screens,
+            items: _navBarsItems(),
+            confineToSafeArea: true,
+            backgroundColor: AppColors.bottomBarColor,
+            handleAndroidBackButtonPress: true,
+            resizeToAvoidBottomInset: true,
+            stateManagement: true,
+            hideNavigationBarWhenKeyboardAppears: true,
+            navBarHeight: kBottomNavigationBarHeight + 20,
+            margin: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+            padding: const EdgeInsets.only(left: 6),
+            decoration: NavBarDecoration(
+              borderRadius: BorderRadius.circular(40.0),
+              colorBehindNavBar: AppColors.gradientStart,
+            ),
+            navBarStyle: NavBarStyle.style7,
+          ),
+          if (_isFabMenuOpen)
+            GestureDetector(
+              onTap: _toggleFabMenu, // Close menu on tap outside
+              child: Container(color: Colors.black54.withOpacity(0.5)),
+            ),
+          Positioned(
+            bottom: 100,
+            right: 20,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_isFabMenuOpen) ...[
+                  _buildFabMenuItem(
+                    label: "Income",
+                    icon: HugeIcons.strokeRoundedChartUp,
+                    color: Colors.green,
+                    onPressed: () {
+                      _toggleFabMenu();
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const AddTransactionScreen(
+                          transactionType: TransactionType.income,
+                        ),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFabMenuItem(
+                    label: "Expense",
+                    icon: HugeIcons.strokeRoundedChartDown,
+                    color: Colors.red,
+                    onPressed: () {
+                      _toggleFabMenu();
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const AddTransactionScreen(
+                          transactionType: TransactionType.expense,
+                        ),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
+                FloatingActionButton(
+                  onPressed: _toggleFabMenu,
+                  backgroundColor: AppColors.gradientEnd,
+                  shape: const CircleBorder(),
+                  child: Icon(
+                    _isFabMenuOpen ? Icons.close : Icons.add,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 26.0, right: 0),
-        child: FloatingActionButton(
-          onPressed: () {
-            PersistentNavBarNavigator.pushNewScreen(
-              context,
-              screen: const PlanIncomeScreen(),
-              withNavBar: false,
-              pageTransitionAnimation: PageTransitionAnimation.cupertino,
-            );
-          },
-          backgroundColor: AppColors.gradientEnd,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add, color: Colors.white),
+    );
+  }
+
+  Widget _buildFabMenuItem({
+    required String label,
+    required List<List<dynamic>> icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
         ),
-      ),
-      navBarStyle: NavBarStyle.style7,
+        const SizedBox(width: 12),
+        FloatingActionButton(
+          heroTag: null,
+          mini: true,
+          onPressed: onPressed,
+          backgroundColor: color,
+          shape: const CircleBorder(),
+          child: HugeIcon(icon: icon, color: Colors.white, size: 20),
+        ),
+      ],
     );
   }
 }

@@ -1,18 +1,21 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
-class PlanIncomeScreen extends StatefulWidget {
-  const PlanIncomeScreen({super.key});
+class AddTransactionScreen extends StatefulWidget {
+  final TransactionType transactionType;
+
+  const AddTransactionScreen({super.key, required this.transactionType});
 
   @override
-  State<PlanIncomeScreen> createState() => _PlanIncomeScreenState();
+  State<AddTransactionScreen> createState() => _AddTransactionScreenState();
 }
 
-class _PlanIncomeScreenState extends State<PlanIncomeScreen> {
+class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isMoreOptionsVisible = false;
 
@@ -131,103 +134,12 @@ class _PlanIncomeScreenState extends State<PlanIncomeScreen> {
                       const SizedBox(height: 10),
                       _buildMoreOptionsToggle(),
                       const SizedBox(height: 10),
-
-                      // Collapsible Section for more options
                       AnimatedSize(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                         child: Visibility(
                           visible: _isMoreOptionsVisible,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: _buildFormSection(
-                                      context,
-                                      'Date',
-                                      FormBuilderDateTimePicker(
-                                        name: 'date',
-                                        initialValue: DateTime.now(),
-                                        inputType: InputType.date,
-                                        format: DateFormat('dd/MM/yyyy'),
-                                        style: const TextStyle(fontSize: 13),
-                                        decoration: _inputDecoration(
-                                          suffixIcon:
-                                              HugeIcons.strokeRoundedCalendar01,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    flex: 2,
-                                    child: _buildFormSection(
-                                      context,
-                                      'Time',
-                                      FormBuilderDateTimePicker(
-                                        name: 'time',
-                                        initialValue: DateTime.now(),
-                                        inputType: InputType.time,
-                                        format: DateFormat('h:mm a'),
-                                        style: const TextStyle(fontSize: 13),
-                                        decoration: _inputDecoration(
-                                          suffixIcon:
-                                              HugeIcons.strokeRoundedClock01,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              _buildFormSection(
-                                context,
-                                'Repeat',
-                                FormBuilderDropdown(
-                                  name: 'repeat',
-                                  initialValue: "Don't Repeat",
-                                  decoration: _inputDecoration(),
-                                  items:
-                                      [
-                                            "Don't Repeat",
-                                            'Daily',
-                                            'Weekly',
-                                            'Monthly',
-                                            'Yearly',
-                                          ]
-                                          .map(
-                                            (repeat) => DropdownMenuItem(
-                                              value: repeat,
-                                              child: Text(
-                                                repeat,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              _buildFormSection(
-                                context,
-                                'Notes',
-                                FormBuilderTextField(
-                                  name: 'notes',
-                                  style: const TextStyle(fontSize: 13),
-                                  decoration: _inputDecoration(
-                                    hintText: 'Notes',
-                                  ),
-                                  maxLines: 2,
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: _buildMoreOptions(),
                         ),
                       ),
                     ],
@@ -239,6 +151,172 @@ class _PlanIncomeScreenState extends State<PlanIncomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMoreOptions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.transactionType == TransactionType.expense)
+          FormBuilderSwitch(
+            name: 'paid',
+            title: const Text('Paid'),
+            initialValue: true,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            controlAffinity: ListTileControlAffinity.trailing,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: _buildFormSection(
+                context,
+                'Date',
+                FormBuilderDateTimePicker(
+                  name: 'date',
+                  initialValue: DateTime.now(),
+                  inputType: InputType.date,
+                  format: DateFormat('dd/MM/yyyy'),
+                  style: const TextStyle(fontSize: 13),
+                  decoration: _inputDecoration(
+                    suffixIcon: HugeIcons.strokeRoundedCalendar01,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: _buildFormSection(
+                context,
+                'Time',
+                FormBuilderDateTimePicker(
+                  name: 'time',
+                  initialValue: DateTime.now(),
+                  inputType: InputType.time,
+                  format: DateFormat('h:mm a'),
+                  style: const TextStyle(fontSize: 13),
+                  decoration: _inputDecoration(
+                    suffixIcon: HugeIcons.strokeRoundedClock01,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Repeat',
+          FormBuilderDropdown(
+            name: 'repeat',
+            initialValue: "Don't Repeat",
+            decoration: _inputDecoration(),
+            items: ["Don't Repeat", 'Daily', 'Weekly', 'Monthly', 'Yearly']
+                .map(
+                  (repeat) => DropdownMenuItem(
+                    value: repeat,
+                    child: Text(repeat, style: const TextStyle(fontSize: 13)),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+        if (widget.transactionType == TransactionType.expense) ...[
+          const SizedBox(height: 8),
+          _buildFormSection(
+            context,
+            'Remind',
+            FormBuilderDropdown(
+              name: 'remind',
+              initialValue: "Don't Remind",
+              decoration: _inputDecoration(),
+              items:
+                  [
+                        "Don't Remind",
+                        '1 day before',
+                        '2 days before',
+                        '1 week before',
+                      ]
+                      .map(
+                        (remind) => DropdownMenuItem(
+                          value: remind,
+                          child: Text(
+                            remind,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      )
+                      .toList(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFormSection(
+                  context,
+                  'Choose an Icon',
+                  FormBuilderDropdown(
+                    name: 'icon',
+                    decoration: _inputDecoration(hintText: 'Select Icon'),
+                    items: ['Shopping', 'Food', 'Transport']
+                        .map(
+                          (icon) => DropdownMenuItem(
+                            value: icon,
+                            child: Text(
+                              icon,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildFormSection(
+                  context,
+                  'Color',
+                  FormBuilderDropdown(
+                    name: 'color',
+                    decoration: _inputDecoration(hintText: 'Select Color'),
+                    items: ['Red', 'Green', 'Blue']
+                        .map(
+                          (color) => DropdownMenuItem(
+                            value: color,
+                            child: Text(
+                              color,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Notes',
+          FormBuilderTextField(
+            name: 'notes',
+            style: const TextStyle(fontSize: 13),
+            decoration: _inputDecoration(hintText: 'Notes'),
+            maxLines: 2,
+          ),
+        ),
+      ],
     );
   }
 
@@ -285,7 +363,7 @@ class _PlanIncomeScreenState extends State<PlanIncomeScreen> {
 
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.gradientStart, AppColors.gradientEnd2],
@@ -293,15 +371,15 @@ class _PlanIncomeScreenState extends State<PlanIncomeScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(22),
-          bottomRight: Radius.circular(22),
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
         ),
         border: Border.all(color: Colors.grey.shade300, width: 1.0),
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6),
           child: Row(
             children: [
               GestureDetector(
@@ -326,7 +404,9 @@ class _PlanIncomeScreenState extends State<PlanIncomeScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Plan an income',
+                widget.transactionType == TransactionType.income
+                    ? 'Plan an income'
+                    : 'Plan an expense',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -435,8 +515,6 @@ class _PlanIncomeScreenState extends State<PlanIncomeScreen> {
             child: ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState?.saveAndValidate() ?? false) {
-                  // When the section is hidden, its fields are not in the widget tree,
-                  // so they won't be included in the form's value.
                   debugPrint(_formKey.currentState?.value.toString());
                   Navigator.of(context).pop();
                 }
