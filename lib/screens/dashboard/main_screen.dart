@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
       const HomeScreen(),
       Container(), // Placeholder for Transactions
       Container(), // Placeholder for Budget
-      Container(), // Placeholder for Wallet
+      const GoalsScreen(),
       Container(), // Placeholder for Store
     ];
   }
@@ -139,7 +140,7 @@ class _MainScreenState extends State<MainScreen> {
             padding: const EdgeInsets.only(left: 6),
             decoration: NavBarDecoration(
               borderRadius: BorderRadius.circular(40.0),
-              colorBehindNavBar: AppColors.gradientStart,
+              colorBehindNavBar: Colors.transparent,
             ),
             navBarStyle: NavBarStyle.style7,
           ),
@@ -194,14 +195,18 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   const SizedBox(height: 24),
                 ],
-                FloatingActionButton(
-                  onPressed: _toggleFabMenu,
-                  elevation: 1,
-                  backgroundColor: AppColors.gradientEnd,
-                  shape: const CircleBorder(),
-                  child: Icon(
-                    _isFabMenuOpen ? Icons.close : Icons.add,
-                    color: Colors.white,
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: FloatingActionButton(
+                    onPressed: _toggleFabMenu,
+                    elevation: 1,
+                    backgroundColor: AppColors.gradientEnd,
+                    shape: const CircleBorder(),
+                    child: Icon(
+                      _isFabMenuOpen ? Icons.close : Icons.add,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
