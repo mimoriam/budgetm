@@ -90,7 +90,6 @@ class _HomeScreenState extends State<HomeScreen> {
     List<DateTime> generatedMonths = [];
     DateTime currentDate = DateTime(firstLoginDate.year, firstLoginDate.month);
 
-    // Generate months from first login to 12 months in the future from now
     while (currentDate.isBefore(
       DateTime(now.year, now.month).add(const Duration(days: 365)),
     )) {
@@ -104,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
         (month) => month.year == now.year && month.month == now.month,
       );
       if (_selectedMonthIndex == -1) {
-        _selectedMonthIndex = _months.length - 13; // Default to current month
+        _selectedMonthIndex = _months.length - 13;
       }
     });
 
@@ -140,12 +139,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: AppColors.gradientEnd,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {},
+      //   backgroundColor: AppColors.gradientEnd,
+      //   shape: const CircleBorder(),
+      //   child: const Icon(Icons.add, color: Colors.white),
+      // ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -164,10 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
-            _buildTransactionList(),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 80), // To avoid FAB overlap
-            ),
+            _buildTransactionSection(),
           ],
         ),
       ),
@@ -367,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  SliverToBoxAdapter _buildTransactionList() {
+  SliverFillRemaining _buildTransactionSection() {
     Map<String, List<Transaction>> groupedTransactions = {};
     for (var tx in _transactions) {
       String dateKey = DateFormat('MMM d, yyyy').format(tx.date);
@@ -378,7 +374,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     List<String> sortedKeys = groupedTransactions.keys.toList();
 
-    return SliverToBoxAdapter(
+    return SliverFillRemaining(
+      hasScrollBody: false,
       child: Container(
         padding: const EdgeInsets.only(top: 24),
         decoration: const BoxDecoration(
@@ -389,27 +386,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: Column(
-          children: sortedKeys.map((date) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                  child: Text(
-                    date.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+          children: [
+            ...sortedKeys.map((date) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                    child: Text(
+                      date.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-                ),
-                ...groupedTransactions[date]!.map(
-                  (tx) => _buildTransactionItem(tx),
-                ),
-              ],
-            );
-          }).toList(),
+                  ...groupedTransactions[date]!.map(
+                    (tx) => _buildTransactionItem(tx),
+                  ),
+                ],
+              );
+            }).toList(),
+            const SizedBox(height: 80), // To avoid FAB overlap
+          ],
         ),
       ),
     );
