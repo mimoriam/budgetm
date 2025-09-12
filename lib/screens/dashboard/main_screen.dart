@@ -15,13 +15,18 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late PersistentTabController _controller;
+  // FIX: Declare the list of screens as a state variable
+  late List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
     _controller = PersistentTabController(initialIndex: 0);
+    // FIX: Initialize the screens list once in initState
+    _screens = _buildScreens();
   }
 
+  // FIX: This method now just returns the list of screens
   List<Widget> _buildScreens() {
     return [
       const HomeScreen(),
@@ -113,7 +118,8 @@ class _MainScreenState extends State<MainScreen> {
     return PersistentTabView(
       context,
       controller: _controller,
-      screens: _buildScreens(),
+      // FIX: Use the state variable _screens
+      screens: _screens,
       items: _navBarsItems(),
       confineToSafeArea: true,
       backgroundColor: AppColors.bottomBarColor,
@@ -136,6 +142,7 @@ class _MainScreenState extends State<MainScreen> {
               context,
               screen: const PlanIncomeScreen(),
               withNavBar: false,
+              pageTransitionAnimation: PageTransitionAnimation.cupertino,
             );
           },
           backgroundColor: AppColors.gradientEnd,
