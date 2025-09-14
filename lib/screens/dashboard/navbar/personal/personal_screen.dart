@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'add_borrowed/add_borrowed.dart';
 import 'add_lent/add_lent.dart';
+import 'detailed_item/detailed_item_screen.dart';
 
 class PersonalScreen extends StatefulWidget {
   const PersonalScreen({super.key});
@@ -379,98 +380,115 @@ class _PersonalScreenState extends State<PersonalScreen > {
         ? AppColors.gradientEnd
         : Colors.grey;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 1,
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: progressColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
+    // Determine the item type based on the current selection
+    String itemType = 'subscription';
+    if (_isBorrowedSelected) {
+      itemType = 'borrowed';
+    } else if (_isLentSelected) {
+      itemType = 'lent';
+    }
+
+    return GestureDetector(
+      onTap: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: DetailedItemScreen(itemType: itemType),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              spreadRadius: 1,
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: progressColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: HugeIcon(
+                    icon: subscription.icon,
+                    size: 24,
+                    color: progressColor,
+                  ),
                 ),
-                child: HugeIcon(
-                  icon: subscription.icon,
-                  size: 24,
-                  color: progressColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subscription.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    if (subscription.description != null) ...[
-                      const SizedBox(height: 4),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        subscription.description!,
+                        subscription.title,
                         style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
+                      if (subscription.description != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subscription.description!,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              Text(
-                subscription.isActive
-                    ? currencyFormat.format(subscription.amount)
-                    : 'Returned',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Next billing: ${dateFormat.format(subscription.nextBillingDate)}',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              if (subscription.isActive)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.gradientEnd.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    'Active',
-                    style: TextStyle(
-                      color: AppColors.gradientEnd,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                ),
+                Text(
+                  subscription.isActive
+                      ? currencyFormat.format(subscription.amount)
+                      : 'Returned',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Next billing: ${dateFormat.format(subscription.nextBillingDate)}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                if (subscription.isActive)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gradientEnd.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                )
-              else
+                    child: const Text(
+                      'Active',
+                      style: TextStyle(
+                        color: AppColors.gradientEnd,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                else
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -486,9 +504,10 @@ class _PersonalScreenState extends State<PersonalScreen > {
                     ),
                   ),
                 ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
