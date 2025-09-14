@@ -5,6 +5,9 @@ import 'package:budgetm/screens/dashboard/navbar/goals/create_goal/create_goal_s
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/personal/add_borrowed/add_borrowed.dart';
+import 'package:budgetm/screens/dashboard/navbar/personal/add_lent/add_lent.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -126,7 +129,7 @@ class _MainScreenState extends State<MainScreen> {
       Container(), // Placeholder for Transactions
       Container(), // Placeholder for Budget
       const GoalsScreen(),
-      Container(), // Placeholder for Store
+      PersonalScreen()
     ];
     return Scaffold(
       body: Stack(
@@ -282,6 +285,48 @@ class _MainScreenState extends State<MainScreen> {
               PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: const CreateGoalScreen(goalType: GoalType.fulfilled),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+        ];
+      case 4: // Personal
+        return [
+          _buildFabMenuItem(
+            label: "Add Subscription",
+            icon: HugeIcons.strokeRoundedDollar02, // TODO: Change to appropriate icon
+            color: Colors.blue,
+            onPressed: () {
+              _toggleFabMenu();
+              // TODO: Navigate to Add Subscription screen
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildFabMenuItem(
+            label: "Add Borrowed",
+            icon: HugeIcons.strokeRoundedDollar02, // TODO: Change to appropriate icon
+            color: Colors.green,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddBorrowedScreen(),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildFabMenuItem(
+            label: "Add Lent",
+            icon: HugeIcons.strokeRoundedDollar02, // TODO: Change to appropriate icon
+            color: Colors.orange,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddLentScreen(),
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
