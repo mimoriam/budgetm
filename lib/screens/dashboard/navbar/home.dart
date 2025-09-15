@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/transaction.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/analytics/analytics_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -263,7 +264,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ).toggleAiMode,
                     isActive: vacationProvider.isVacationMode,
                   ),
-                  _buildAppBarButton(HugeIcons.strokeRoundedChartAverage),
+                  _buildAppBarButton(
+                    HugeIcons.strokeRoundedChartAverage,
+                    onPressed: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const AnalyticsScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
+                  ),
                   _buildAppBarButton(HugeIcons.strokeRoundedSchoolBell01),
                 ],
               ),
