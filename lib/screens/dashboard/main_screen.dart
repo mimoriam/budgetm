@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/create_goal/create_goal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
@@ -122,8 +123,8 @@ class _MainScreenState extends State<MainScreen> {
     final vacationProvider = context.watch<VacationProvider>();
     final screens = [
       const HomeScreen(),
-      Container(), // Placeholder for Transactions
-      Container(), // Placeholder for Budget
+      BudgetScreen(),
+      Container(),
       const GoalsScreen(),
       const PersonalScreen(),
     ];

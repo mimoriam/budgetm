@@ -1,6 +1,8 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/screens/dashboard/profile/categories/add_category/add_category_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
@@ -12,7 +14,7 @@ class CategoryScreen extends StatefulWidget {
 class _CategoryScreenState extends State<CategoryScreen> {
   bool _isExpenseSelected = true;
 
-  List<Map<String, dynamic>> _expenseCategories = [
+  final List<Map<String, dynamic>> _expenseCategories = [
     {'icon': HugeIcons.strokeRoundedShoppingBag01, 'name': 'Super Market'},
     {'icon': HugeIcons.strokeRoundedTShirt, 'name': 'Clothing'},
     {'icon': HugeIcons.strokeRoundedHome01, 'name': 'Home'},
@@ -21,7 +23,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
     {'icon': HugeIcons.strokeRoundedGift, 'name': 'Gifts'},
   ];
 
-  List<Map<String, dynamic>> _incomeCategories = [
+  final List<Map<String, dynamic>> _incomeCategories = [
     {'icon': HugeIcons.strokeRoundedDollar02, 'name': 'Salary'},
     {'icon': HugeIcons.strokeRoundedChartUp, 'name': 'Investments'},
     {'icon': HugeIcons.strokeRoundedBriefcase01, 'name': 'Business'},
@@ -30,12 +32,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentList = _isExpenseSelected
-        ? _expenseCategories
-        : _incomeCategories;
+    final currentList =
+    _isExpenseSelected ? _expenseCategories : _incomeCategories;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: _buildCustomAppBar(context),
       body: Column(
         children: [
@@ -69,7 +70,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
         padding: const EdgeInsets.only(bottom: 20.0), // Uplift FAB
         child: FloatingActionButton(
           onPressed: () {
-            // TODO: Add new category logic
+            PersistentNavBarNavigator.pushNewScreen(
+              context,
+              screen: const AddCategoryScreen(),
+              withNavBar: false,
+              pageTransitionAnimation: PageTransitionAnimation.cupertino,
+            );
           },
           backgroundColor: AppColors.gradientEnd,
           shape: const CircleBorder(),
@@ -81,7 +87,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   PreferredSizeWidget _buildCustomAppBar(BuildContext context) {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(80),
+      preferredSize: const Size.fromHeight(100),
       child: Container(
         padding: const EdgeInsets.only(top: 12, bottom: 12),
         decoration: BoxDecoration(
@@ -178,14 +184,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       child: _buildChip(
                         'Expense',
                         _isExpenseSelected,
-                        () => setState(() => _isExpenseSelected = true),
+                            () => setState(() => _isExpenseSelected = true),
                       ),
                     ),
                     Expanded(
                       child: _buildChip(
                         'Income',
                         !_isExpenseSelected,
-                        () => setState(() => _isExpenseSelected = false),
+                            () => setState(() => _isExpenseSelected = false),
                       ),
                     ),
                   ],
@@ -223,15 +229,16 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }) {
     return Container(
       key: key,
-      margin: const EdgeInsets.symmetric(vertical: 2.0), // compact margin
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
       child: ListTile(
-        dense: true, // make list tile more compact
-        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+        dense: true,
+        contentPadding:
+        const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -240,7 +247,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ),
           child: HugeIcon(icon: iconData, size: 22, color: Colors.black87),
         ),
-        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
+        title:
+        Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
         trailing: const HugeIcon(
           icon: HugeIcons.strokeRoundedDragDropVertical,
           color: Colors.grey,
