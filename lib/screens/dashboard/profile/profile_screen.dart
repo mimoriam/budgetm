@@ -1,6 +1,10 @@
+// lib/screens/dashboard/profile/profile_screen.dart
+
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -68,7 +72,19 @@ class ProfileScreen extends StatelessWidget {
                   _buildSectionHeader('ACCOUNT'),
                   _buildProfileMenuItem(Icons.person_outline, 'Edit profile'),
                   _buildProfileMenuItem(Icons.lock_outline, 'Change Password'),
-                  _buildProfileMenuItem(Icons.category_outlined, 'Categories'),
+                  _buildProfileMenuItem(
+                    Icons.category_outlined,
+                    'Categories',
+                    onTap: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const CategoryScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
+                  ),
                   _buildProfileMenuItem(
                     Icons.attach_money_outlined,
                     'Currency',
@@ -269,11 +285,7 @@ class ProfileScreen extends StatelessWidget {
         size: 16,
         color: Colors.grey,
       ),
-      onTap:
-          onTap ??
-          () {
-            // TODO: Implement navigation for this item
-          },
+      onTap: onTap,
     );
   }
 }

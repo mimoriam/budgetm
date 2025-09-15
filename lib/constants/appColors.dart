@@ -7,11 +7,8 @@ class AppColors {
   static const darkGreyBackground = Color(0xFF6B7280);
   static const lightGreyBackground = Color(0xFF9CA3AF);
   static const gradientStart = Color(0xFFFBFFB9);
-
   static const gradientEnd2 = Color(0xFFF2FF8F);
-
   static const gradientStart2 = Color(0xFFFBFFD8);
-
   static const gradientEnd3 = Color(0xFFF7FFB5);
   static const gradientEnd = Color(0xFFC6D90F);
   static const buttonBackground = gradientEnd;
@@ -26,6 +23,6 @@ class AppColors {
   static const secondaryTextColorLight = Color(0xFF6B7280);
   static const secondaryTextColorDark = Color(0xFF9CA3AF);
   static const lightLime = Color(0xFFF5F5F5);
-
+  static const incomeGreen = Color(0xFF22C55E);
   static const errorColor = Color(0xFFD32F2F);
 }
