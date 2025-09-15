@@ -2,6 +2,7 @@ import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/viewmodels/theme_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,8 +15,11 @@ Future<void> main() async {
       await asyncPrefs.getBool('onboardingDone') ?? false;
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => VacationProvider()),
+      ],
       child: MyApp(onboardingDone: onboardingDone),
     ),
   );

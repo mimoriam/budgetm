@@ -1,21 +1,18 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
+import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
-  final bool isAiMode;
-  final VoidCallback onToggleAiMode;
-  const HomeScreen({
-    super.key,
-    required this.isAiMode,
-    required this.onToggleAiMode,
-  });
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -105,16 +102,17 @@ class _HomeScreenState extends State<HomeScreen> {
       generatedMonths.add(currentDate);
       currentDate = DateTime(currentDate.year, currentDate.month + 1);
     }
-
-    setState(() {
-      _months = generatedMonths;
-      _selectedMonthIndex = _months.indexWhere(
-        (month) => month.year == now.year && month.month == now.month,
-      );
-      if (_selectedMonthIndex == -1) {
-        _selectedMonthIndex = _months.length - 13;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        _months = generatedMonths;
+        _selectedMonthIndex = _months.indexWhere(
+          (month) => month.year == now.year && month.month == now.month,
+        );
+        if (_selectedMonthIndex == -1) {
+          _selectedMonthIndex = _months.length - 13;
+        }
+      });
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -147,14 +145,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // This will ensure status bar icons are dark and visible
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    final vacationProvider = context.watch<VacationProvider>();
 
     return Scaffold(
-      // We use a TweenAnimationBuilder to smoothly animate the gradient color
       body: TweenAnimationBuilder<Color?>(
         tween: ColorTween(
-          end: widget.isAiMode
+          end: vacationProvider.isAiMode
               ? AppColors.aiGradientStart
               : AppColors.gradientStart,
         ),
@@ -173,8 +170,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 stops: const [0.3, 1.0],
               ),
             ),
-            // The child is the main content of our screen, which doesn't
-            // need to be rebuilt during the animation.
             child: child,
           );
         },
@@ -195,6 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   SliverAppBar _buildAppBar(BuildContext context) {
+    final vacationProvider = context.watch<VacationProvider>();
     return SliverAppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -211,9 +207,20 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Row(
                 children: [
-                  const CircleAvatar(
-                    radius: 22,
-                    backgroundImage: AssetImage('images/avatar.png'),
+                  GestureDetector(
+                    onTap: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const ProfileScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
+                    child: const CircleAvatar(
+                      radius: 22,
+                      backgroundImage: AssetImage('images/backgrounds/onboarding1.png'),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Column(
@@ -245,7 +252,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildAppBarButton(
                     HugeIcons.strokeRoundedAiWebBrowsing,
-                    onPressed: widget.onToggleAiMode,
+                    onPressed: Provider.of<VacationProvider>(
+                      context,
+                      listen: false,
+                    ).toggleAiMode,
+                    isActive: vacationProvider.isVacationMode,
                   ),
                   _buildAppBarButton(HugeIcons.strokeRoundedChartAverage),
                   _buildAppBarButton(HugeIcons.strokeRoundedSchoolBell01),
@@ -261,14 +272,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAppBarButton(
     List<List<dynamic>> icon, {
     VoidCallback? onPressed,
+    bool isActive = false,
   }) {
     return Container(
       width: 40,
       height: 40,
       margin: const EdgeInsets.only(left: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
+        color: isActive
+            ? AppColors.gradientEnd.withOpacity(0.7)
+            : Colors.white.withOpacity(0.5),
         shape: BoxShape.circle,
+        border: isActive
+            ? Border.all(color: AppColors.gradientEnd, width: 2)
+            : null,
       ),
       child: IconButton(
         padding: EdgeInsets.zero,
