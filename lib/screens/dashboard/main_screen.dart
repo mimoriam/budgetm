@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/screens/dashboard/navbar/budget/add_budget/add_budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/create_goal/create_goal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
@@ -330,6 +331,23 @@ class _MainScreenState extends State<MainScreen> {
               PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: const AddLentScreen(),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+        ];
+      case 1: // Budget
+        return [
+          _buildFabMenuItem(
+            label: "Add Budget",
+            icon: HugeIcons.strokeRoundedAddCircle,
+            color: Colors.blue,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddBudgetScreen(),
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
