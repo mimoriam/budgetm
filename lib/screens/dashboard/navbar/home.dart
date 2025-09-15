@@ -145,7 +145,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    // SystemChrome.setSystemUIOverlayStyle(
+    //   SystemUiOverlayStyle(statusBarColor: Colors.red, statusBarIconBrightness: Brightness.dark),
+    // );
     final vacationProvider = context.watch<VacationProvider>();
 
     return Scaffold(
@@ -192,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
   SliverAppBar _buildAppBar(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
     return SliverAppBar(
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
       backgroundColor: Colors.transparent,
       elevation: 0,
       toolbarHeight: 100,
@@ -219,7 +222,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: const CircleAvatar(
                       radius: 22,
-                      backgroundImage: AssetImage('images/backgrounds/onboarding1.png'),
+                      backgroundImage: AssetImage(
+                        'images/backgrounds/onboarding1.png',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
