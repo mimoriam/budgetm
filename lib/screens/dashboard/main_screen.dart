@@ -1,15 +1,16 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/screens/dashboard/navbar/balance/balance_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/add_budget/add_budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/create_goal/create_goal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
-import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/add_borrowed/add_borrowed.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/add_lent/add_lent.dart';
+import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -35,6 +36,16 @@ class _MainScreenState extends State<MainScreen> {
     _controller.addListener(() {
       setState(() {});
     });
+  }
+
+  List<Widget> _buildScreens() {
+    return [
+      const HomeScreen(),
+      const BudgetScreen(),
+      const BalanceScreen(),
+      const GoalsScreen(),
+      const PersonalScreen(),
+    ];
   }
 
   List<PersistentBottomNavBarItem> _navBarsItems() {
@@ -122,20 +133,13 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
-    final screens = [
-      const HomeScreen(),
-      BudgetScreen(),
-      Container(),
-      const GoalsScreen(),
-      const PersonalScreen(),
-    ];
     return Scaffold(
       body: Stack(
         children: [
           PersistentTabView(
             context,
             controller: _controller,
-            screens: screens,
+            screens: _buildScreens(),
             items: _navBarsItems(),
             confineToSafeArea: true,
             backgroundColor: AppColors.bottomBarColor,
@@ -260,6 +264,35 @@ class _MainScreenState extends State<MainScreen> {
             },
           ),
         ];
+      case 1: // Budget
+        return [
+          _buildFabMenuItem(
+            label: "Add Budget",
+            icon: HugeIcons.strokeRoundedAddCircle,
+            color: Colors.blue,
+            onPressed: () {
+              _toggleFabMenu();
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddBudgetScreen(),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
+            },
+          ),
+        ];
+      case 2: // Balance
+        return [
+          _buildFabMenuItem(
+            label: "Add Account",
+            icon: HugeIcons.strokeRoundedAddCircle,
+            color: Colors.blue,
+            onPressed: () {
+              _toggleFabMenu();
+              // TODO: Navigate to Add Account screen
+            },
+          ),
+        ];
       case 3: // Goals
         return [
           _buildFabMenuItem(
@@ -331,23 +364,6 @@ class _MainScreenState extends State<MainScreen> {
               PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: const AddLentScreen(),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
-        ];
-      case 1: // Budget
-        return [
-          _buildFabMenuItem(
-            label: "Add Budget",
-            icon: HugeIcons.strokeRoundedAddCircle,
-            color: Colors.blue,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const AddBudgetScreen(),
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
