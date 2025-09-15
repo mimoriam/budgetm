@@ -8,10 +8,12 @@ import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transactio
 import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/add_borrowed/add_borrowed.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/add_lent/add_lent.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -23,13 +25,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   late PersistentTabController _controller;
   bool _isFabMenuOpen = false;
-  bool _isAiMode = false;
-
-  void _toggleAiMode() {
-    setState(() {
-      _isAiMode = !_isAiMode;
-    });
-  }
 
   @override
   void initState() {
@@ -124,12 +119,13 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final vacationProvider = context.watch<VacationProvider>();
     final screens = [
-      HomeScreen(isAiMode: _isAiMode, onToggleAiMode: _toggleAiMode),
+      const HomeScreen(),
       Container(), // Placeholder for Transactions
       Container(), // Placeholder for Budget
       const GoalsScreen(),
-      PersonalScreen()
+      const PersonalScreen(),
     ];
     return Scaffold(
       body: Stack(
@@ -167,7 +163,8 @@ class _MainScreenState extends State<MainScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (_isFabMenuOpen) ..._buildFabMenuItemsForCurrentScreen(),
+                if (_isFabMenuOpen)
+                  ..._buildFabMenuItemsForCurrentScreen(vacationProvider),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: 40,
@@ -191,10 +188,12 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  List<Widget> _buildFabMenuItemsForCurrentScreen() {
+  List<Widget> _buildFabMenuItemsForCurrentScreen(
+    VacationProvider vacationProvider,
+  ) {
     switch (_controller.index) {
       case 0: // Home
-        if (_isAiMode) {
+        if (vacationProvider.isAiMode) {
           return [
             _buildFabMenuItem(
               label: "Budget",
@@ -295,7 +294,8 @@ class _MainScreenState extends State<MainScreen> {
         return [
           _buildFabMenuItem(
             label: "Add Subscription",
-            icon: HugeIcons.strokeRoundedDollar02, // TODO: Change to appropriate icon
+            icon: HugeIcons
+                .strokeRoundedDollar02, // TODO: Change to appropriate icon
             color: Colors.blue,
             onPressed: () {
               _toggleFabMenu();
@@ -305,7 +305,8 @@ class _MainScreenState extends State<MainScreen> {
           const SizedBox(height: 16),
           _buildFabMenuItem(
             label: "Add Borrowed",
-            icon: HugeIcons.strokeRoundedDollar02, // TODO: Change to appropriate icon
+            icon: HugeIcons
+                .strokeRoundedDollar02, // TODO: Change to appropriate icon
             color: Colors.green,
             onPressed: () {
               _toggleFabMenu();
@@ -320,7 +321,8 @@ class _MainScreenState extends State<MainScreen> {
           const SizedBox(height: 16),
           _buildFabMenuItem(
             label: "Add Lent",
-            icon: HugeIcons.strokeRoundedDollar02, // TODO: Change to appropriate icon
+            icon: HugeIcons
+                .strokeRoundedDollar02, // TODO: Change to appropriate icon
             color: Colors.orange,
             onPressed: () {
               _toggleFabMenu();
