@@ -257,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildAppBarButton(
-                    HugeIcons.strokeRoundedAiWebBrowsing,
+                    HugeIcons.strokeRoundedAirplaneMode,
                     onPressed: Provider.of<VacationProvider>(
                       context,
                       listen: false,
@@ -265,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     isActive: vacationProvider.isVacationMode,
                   ),
                   _buildAppBarButton(
-                    HugeIcons.strokeRoundedChartAverage,
+                    HugeIcons.strokeRoundedAnalytics02,
                     onPressed: () {
                       PersistentNavBarNavigator.pushNewScreen(
                         context,
@@ -276,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
-                  _buildAppBarButton(HugeIcons.strokeRoundedSchoolBell01),
+                  _buildAppBarButton(HugeIcons.strokeRoundedStar),
                 ],
               ),
             ],

@@ -3,6 +3,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/export_data/export_data_screen.dart';
+import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -116,7 +117,19 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildSectionHeader('SUPPORT'),
                   _buildProfileMenuItem(Icons.help_outline, 'Help & Support'),
-                  _buildProfileMenuItem(Icons.star_outline, 'Feedback'),
+                  _buildProfileMenuItem(
+                    Icons.star_outline,
+                    'Feedback',
+                    onTap: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const FeedbackScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
+                  ),
                   const SizedBox(height: 12),
                   _buildSectionHeader('DANGER ZONE'),
                   _buildProfileMenuItem(
