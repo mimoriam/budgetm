@@ -1,6 +1,7 @@
 // lib/screens/dashboard/profile/profile_screen.dart
 
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/screens/dashboard/navbar/personal/export_data/export_data_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
@@ -92,6 +93,15 @@ class ProfileScreen extends StatelessWidget {
                   _buildProfileMenuItem(
                     Icons.cloud_upload_outlined,
                     'Import & Export Data',
+                    onTap: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const ExportDataScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   _buildSectionHeader('LEGAL'),
