@@ -94,28 +94,28 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   fontSize: 22,
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Navigate to Set Budget screen
-                },
-                icon: const Icon(Icons.add, color: Colors.white, size: 18),
-                label: const Text('Set Budget'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gradientEnd,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  textStyle: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
+              // ElevatedButton.icon(
+              //   onPressed: () {
+              //     // TODO: Navigate to Set Budget screen
+              //   },
+              //   icon: const Icon(Icons.add, color: Colors.white, size: 18),
+              //   label: const Text('Set Budget'),
+              //   style: ElevatedButton.styleFrom(
+              //     backgroundColor: AppColors.gradientEnd,
+              //     foregroundColor: Colors.white,
+              //     shape: RoundedRectangleBorder(
+              //       borderRadius: BorderRadius.circular(20),
+              //     ),
+              //     padding: const EdgeInsets.symmetric(
+              //       horizontal: 14,
+              //       vertical: 10,
+              //     ),
+              //     textStyle: const TextStyle(
+              //       fontWeight: FontWeight.bold,
+              //       fontSize: 12,
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

@@ -1,4 +1,3 @@
-
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:flutter/material.dart';
@@ -205,31 +204,24 @@ class GoalDetailScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Positioned(
-                left: 14,
-                child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.gradientStart,
-                          AppColors.gradientEnd,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedArrowLeft01,
-                      color: Colors.white,
-                      size: 14,
-                    ),
+                  ),
+                  child: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedArrowLeft01,
+                    color: Colors.white,
+                    size: 14,
                   ),
                 ),
               ),
