@@ -1,8 +1,8 @@
 // lib/screens/dashboard/profile/profile_screen.dart
 
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/screens/dashboard/navbar/personal/export_data/export_data_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
+import 'package:budgetm/screens/dashboard/profile/export_data/export_data_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
