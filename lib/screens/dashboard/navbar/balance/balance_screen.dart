@@ -87,28 +87,28 @@ class _BalanceScreenState extends State<BalanceScreen> {
                   fontSize: 22,
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Navigate to Add Account screen
-                },
-                icon: const Icon(Icons.add, color: Colors.white, size: 18),
-                label: const Text('Add Account'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gradientEnd,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  textStyle: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
+              // ElevatedButton.icon(
+              //   onPressed: () {
+              //     // TODO: Navigate to Add Account screen
+              //   },
+              //   icon: const Icon(Icons.add, color: Colors.white, size: 18),
+              //   label: const Text('Add Account'),
+              //   style: ElevatedButton.styleFrom(
+              //     backgroundColor: AppColors.gradientEnd,
+              //     foregroundColor: Colors.white,
+              //     shape: RoundedRectangleBorder(
+              //       borderRadius: BorderRadius.circular(20),
+              //     ),
+              //     padding: const EdgeInsets.symmetric(
+              //       horizontal: 14,
+              //       vertical: 10,
+              //     ),
+              //     textStyle: const TextStyle(
+              //       fontWeight: FontWeight.bold,
+              //       fontSize: 12,
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

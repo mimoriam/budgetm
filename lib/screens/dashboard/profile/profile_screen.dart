@@ -2,6 +2,7 @@
 
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
+import 'package:budgetm/screens/dashboard/profile/currency/currency_rates.dart';
 import 'package:budgetm/screens/dashboard/profile/export_data/export_data_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -90,6 +91,15 @@ class ProfileScreen extends StatelessWidget {
                   _buildProfileMenuItem(
                     Icons.attach_money_outlined,
                     'Currency',
+                    onTap: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const CurrencyRatesScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
                   ),
                   _buildProfileMenuItem(
                     Icons.cloud_upload_outlined,
