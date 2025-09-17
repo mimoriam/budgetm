@@ -1,18 +1,27 @@
 // lib/screens/dashboard/profile/profile_screen.dart
 
+import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/currency/currency_rates.dart';
 import 'package:budgetm/screens/dashboard/profile/export_data/export_data_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
+import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final FirebaseAuthService _authService = FirebaseAuthService();
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +159,30 @@ class ProfileScreen extends StatelessWidget {
                   _buildProfileMenuItem(
                     Icons.logout,
                     'Logout',
-                    // color: Colors.red,
+                    color: Colors.red,
+                    onTap: () async {
+                      try {
+                        await _authService.signOut();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AuthGate(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error signing out: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
                   ),
                 ],
               ),

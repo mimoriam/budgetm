@@ -2,6 +2,7 @@ import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
+import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -19,7 +20,63 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _obscureText = true;
   bool _rememberMe = false; // State for the regular checkbox
-
+  bool _isLoadingLogin = false; // State for email/password login loading indicator
+  bool _isLoadingGoogle = false; // State for Google Sign-In loading indicator
+  final FirebaseAuthService _authService = FirebaseAuthService();
+   
+  void _handleGoogleSignIn() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoadingGoogle = true;
+    });
+     
+     try {
+       final user = await _authService.signInWithGoogle();
+       
+       if (user != null) {
+         // Successful login
+         final prefs = await SharedPreferences.getInstance();
+         await prefs.setBool('isLoggedIn', true);
+         
+         // Store the first login timestamp if it doesn't exist
+         if (prefs.getString('firstLoginDate') == null) {
+           await prefs.setString(
+             'firstLoginDate',
+             DateTime.now().toIso8601String(),
+           );
+         }
+         
+         if (mounted) {
+           // Navigate to AuthGate to determine next screen
+           Navigator.pushAndRemoveUntil(
+             context,
+             MaterialPageRoute(
+               builder: (context) => const AuthGate(),
+             ),
+             (route) => false,
+           );
+         }
+       }
+     } catch (e) {
+       // Handle Google Sign-In errors
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Text(e.toString()),
+             backgroundColor: AppColors.errorColor,
+           ),
+         );
+       }
+     } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingGoogle = false;
+        });
+      }
+     }
+   }
+ 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -235,39 +292,79 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(30.0),
                               ),
                             ),
-                            onPressed: () async {
-                              if (_formKey.currentState?.saveAndValidate() ??
-                                  false) {
-                                debugPrint(
-                                  _formKey.currentState?.value.toString(),
-                                );
-
-                                // Simulate successful login
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.setBool('isLoggedIn', true);
-
-                                // Store the first login timestamp if it doesn't exist
-                                if (prefs.getString('firstLoginDate') == null) {
-                                  await prefs.setString(
-                                    'firstLoginDate',
-                                    DateTime.now().toIso8601String(),
-                                  );
-                                }
-
-                                if (context.mounted) {
-                                  // Navigate to AuthGate to determine next screen
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const AuthGate(),
+                            onPressed: _isLoadingLogin
+                                ? null
+                                : () async {
+                                    if (_formKey.currentState?.saveAndValidate() ??
+                                        false) {
+                                      if (!mounted) return;
+                                      setState(() {
+                                        if (!mounted) return;
+                                        _isLoadingLogin = true;
+                                      });
+                                      
+                                      // Get email and password from form
+                                      final email = _formKey.currentState?.fields['email']?.value as String;
+                                      final password = _formKey.currentState?.fields['password']?.value as String;
+                                      
+                                      try {
+                                        // Sign in with email and password
+                                        final user = await _authService.signInWithEmailAndPassword(email, password);
+                                        
+                                        if (user != null) {
+                                          // Successful login
+                                          final prefs = await SharedPreferences.getInstance();
+                                          await prefs.setBool('isLoggedIn', true);
+                                          
+                                          // Store the first login timestamp if it doesn't exist
+                                          if (prefs.getString('firstLoginDate') == null) {
+                                            await prefs.setString(
+                                              'firstLoginDate',
+                                              DateTime.now().toIso8601String(),
+                                            );
+                                          }
+                                          
+                                          if (context.mounted) {
+                                            // Navigate to AuthGate to determine next screen
+                                            Navigator.pushAndRemoveUntil(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => const AuthGate(),
+                                              ),
+                                              (route) => false,
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        // Handle login errors
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(e.toString()),
+                                              backgroundColor: AppColors.errorColor,
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            if (!mounted) return;
+                                            _isLoadingLogin = false;
+                                          });
+                                        }
+                                      }
+                                    }
+                                  },
+                            child: _isLoadingLogin
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
-                                    (route) => false,
-                                  );
-                                }
-                              }
-                            },
-                            child: const Text('Login'),
+                                  )
+                                : const Text('Login'),
                           ),
                         ),
                         const SizedBox(height: 30),
@@ -298,13 +395,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         SizedBox(
                           width: double.infinity,
                           height: 45,
-                          child: SignInButton(
-                            Buttons.google,
-                            onPressed: () {},
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                          ),
+                          child: _isLoadingGoogle
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : SignInButton(
+                                  Buttons.google,
+                                  onPressed: () {
+                                    _handleGoogleSignIn();
+                                  },
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30.0),
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(

@@ -1,5 +1,7 @@
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/services/firebase_auth_service.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -16,6 +18,10 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _obscureText = true;
+  bool _isLoading = false; // State for loading indicator
+  bool _isLoadingGoogle = false; // State for Google Sign-In loading indicator
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   void _togglePasswordVisibility() {
     setState(() {
@@ -298,33 +304,79 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 18),
                             ),
-                            onPressed: () async {
-                              if (_formKey.currentState?.saveAndValidate() ??
-                                  false) {
-                                debugPrint(
-                                  _formKey.currentState?.value.toString(),
-                                );
-                                // Simulate successful signup and login
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.setBool('isLoggedIn', true);
-
-                                if (context.mounted) {
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const AuthGate(),
+                            onPressed: _isLoading
+                                ? null
+                                : () async {
+                                    if (_formKey.currentState?.saveAndValidate() ??
+                                        false) {
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
+                                      
+                                      // Get form values
+                                      final name = _formKey.currentState?.fields['name']?.value as String;
+                                      final email = _formKey.currentState?.fields['email']?.value as String;
+                                      final password = _formKey.currentState?.fields['password']?.value as String;
+                                      
+                                      try {
+                                        // Register with email and password
+                                        final user = await _authService.signUpWithEmailAndPassword(email, password);
+                                        
+                                        if (user != null) {
+                                          // Save user data to Firestore
+                                          await _firestoreService.saveUserData(user.uid, {
+                                            'uid': user.uid,
+                                            'email': email,
+                                            'name': name,
+                                          });
+                                          
+                                          // Successful signup and login
+                                          final prefs = await SharedPreferences.getInstance();
+                                          await prefs.setBool('isLoggedIn', true);
+                                          
+                                          if (context.mounted) {
+                                            Navigator.pushAndRemoveUntil(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => const AuthGate(),
+                                              ),
+                                              (route) => false,
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        // Handle registration errors
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(e.toString()),
+                                              backgroundColor: AppColors.errorColor,
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        if (context.mounted) {
+                                          setState(() {
+                                            _isLoading = false;
+                                          });
+                                        }
+                                      }
+                                    }
+                                  },
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
-                                    (route) => false,
-                                  );
-                                }
-                              }
-                            },
-                            child: Text(
-                              'Sign Up',
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(color: Colors.white),
-                            ),
+                                  )
+                                : Text(
+                                    'Sign Up',
+                                    style: Theme.of(context).textTheme.labelLarge
+                                        ?.copyWith(color: Colors.white),
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 30),
@@ -358,7 +410,56 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: SignInButton(
                             Buttons.google,
                             text: "Continue with Google",
-                            onPressed: () {},
+                            onPressed: _isLoading || _isLoadingGoogle
+                                ? () {}
+                                : () async {
+                                    setState(() {
+                                      _isLoadingGoogle = true;
+                                    });
+
+                                    try {
+                                      final user = await _authService.signInWithGoogle();
+
+                                      if (user != null) {
+                                        // Save user data to Firestore
+                                        await _firestoreService.saveUserData(user.uid, {
+                                          'uid': user.uid,
+                                          'email': user.email ?? '',
+                                          'name': user.displayName ?? '',
+                                        });
+
+                                        // Successful signup and login
+                                        final prefs = await SharedPreferences.getInstance();
+                                        await prefs.setBool('isLoggedIn', true);
+
+                                        if (mounted) {
+                                          Navigator.pushAndRemoveUntil(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const AuthGate(),
+                                            ),
+                                            (route) => false,
+                                          );
+                                        }
+                                      }
+                                    } catch (e) {
+                                      // Handle Google Sign-In errors
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(e.toString()),
+                                            backgroundColor: AppColors.errorColor,
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isLoadingGoogle = false;
+                                        });
+                                      }
+                                    }
+                                  },
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30.0),
                               side: const BorderSide(
@@ -374,7 +475,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: SignInButton(
                             Buttons.apple,
                             text: "Continue with Apple",
-                            onPressed: () {},
+                            onPressed: _isLoading || _isLoadingGoogle ? () {} : () {},
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30.0),
                               side: const BorderSide(

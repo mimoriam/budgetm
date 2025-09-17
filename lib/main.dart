@@ -1,5 +1,4 @@
 import 'package:budgetm/auth_gate.dart';
-import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/viewmodels/theme_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -12,14 +11,10 @@ import 'package:budgetm/firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-);
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-
-  final bool onboardingDone =
-      await asyncPrefs.getBool('onboardingDone') ?? false;
+  final bool onboardingDone = prefs.getBool('onboardingDone') ?? false;
 
   runApp(
     MultiProvider(
@@ -47,7 +42,8 @@ class MyApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme(),
           // themeMode: themeProvider.themeMode,
           themeMode: ThemeMode.light,
-          home: onboardingDone ? const AuthGate() : const OnboardingScreen(),
+          // home: onboardingDone ? const AuthGate() : const OnboardingScreen(),
+          home: AuthGate(),
         );
       },
     );

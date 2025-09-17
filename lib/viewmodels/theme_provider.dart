@@ -11,8 +11,8 @@ class ThemeProvider with ChangeNotifier {
   }
 
   void _loadTheme() async {
-    final prefs = SharedPreferencesAsync();
-    final theme = await prefs.getString('themeMode');
+    final prefs = await SharedPreferences.getInstance();
+    final theme = prefs.getString('themeMode');
     if (theme == 'light') {
       _themeMode = ThemeMode.light;
     } else if (theme == 'dark') {
@@ -22,17 +22,17 @@ class ThemeProvider with ChangeNotifier {
     }
     notifyListeners();
   }
-
-  Future<void> setThemeMode(ThemeMode mode) async {
-    _themeMode = mode;
-    final prefs = SharedPreferencesAsync();
-    if (mode == ThemeMode.light) {
-      await prefs.setString('themeMode', 'light');
-    } else if (mode == ThemeMode.dark) {
-      await prefs.setString('themeMode', 'dark');
-    } else {
-      await prefs.remove('themeMode');
-    }
-    notifyListeners();
+Future<void> setThemeMode(ThemeMode mode) async {
+  _themeMode = mode;
+  final prefs = await SharedPreferences.getInstance();
+  if (mode == ThemeMode.light) {
+    await prefs.setString('themeMode', 'light');
+  } else if (mode == ThemeMode.dark) {
+    await prefs.setString('themeMode', 'dark');
+  } else {
+    await prefs.remove('themeMode');
   }
+  notifyListeners();
+}
+
 }

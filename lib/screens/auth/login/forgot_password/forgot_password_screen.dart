@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -13,6 +14,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
+  bool _isLoading = false; // State for loading indicator
+  final FirebaseAuthService _authService = FirebaseAuthService();
 
   @override
   Widget build(BuildContext context) {
@@ -179,19 +182,67 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   vertical: 18,
                                 ),
                               ),
-                              onPressed: () {
-                                if (_formKey.currentState?.saveAndValidate() ??
-                                    false) {
-                                  debugPrint(
-                                    _formKey.currentState?.value.toString(),
-                                  );
-                                }
-                              },
-                              child: Text(
-                                'Confirm',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(color: Colors.white),
-                              ),
+                              onPressed: _isLoading
+                                  ? null
+                                  : () async {
+                                      if (_formKey.currentState?.saveAndValidate() ??
+                                          false) {
+                                        setState(() {
+                                          _isLoading = true;
+                                        });
+                                        
+                                        // Get email from form
+                                        final email = _formKey.currentState?.fields['email']?.value as String;
+                                        
+                                        try {
+                                          // Send password reset email
+                                          await _authService.sendPasswordResetEmail(email);
+                                          
+                                          // Show success message
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Password reset email sent. Please check your inbox.'),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                            
+                                            // Navigate back to login screen
+                                            Navigator.of(context).pop();
+                                          }
+                                        } catch (e) {
+                                          // Handle errors
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(e.toString()),
+                                                backgroundColor: AppColors.errorColor,
+                                              ),
+                                            );
+                                          }
+                                        } finally {
+                                          if (context.mounted) {
+                                            setState(() {
+                                              _isLoading = false;
+                                            });
+                                          }
+                                        }
+                                      }
+                                    },
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : Text(
+                                      'Confirm',
+                                      style: Theme.of(context).textTheme.labelLarge
+                                          ?.copyWith(color: Colors.white),
+                                    ),
                             ),
                           ),
                         ],
