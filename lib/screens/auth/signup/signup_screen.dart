@@ -462,9 +462,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   },
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30.0),
-                              side: const BorderSide(
-                                color: AppColors.lightGreyBackground,
-                              ),
+                              side: BorderSide.none
                             ),
                           ),
                         ),
@@ -478,9 +476,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             onPressed: _isLoading || _isLoadingGoogle ? () {} : () {},
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30.0),
-                              side: const BorderSide(
-                                color: AppColors.lightGreyBackground,
-                              ),
+                              side: BorderSide.none
                             ),
                           ),
                         ),

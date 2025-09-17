@@ -16,32 +16,47 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  // SharedPreferences keys
+  static const String _ONBOARDING_DONE_KEY = 'onboardingDone';
+  static const String _THEME_CHOSEN_KEY = 'theme_chosen';
+  static const String _USER_CURRENCY_KEY = 'user_currency';
+
   final FirebaseAuthService _authService = FirebaseAuthService();
   bool? _cachedAuthStatus;
   Map<String, bool>? _cachedSetupStatus;
-
-  Future<bool> _isOnboardingCompleted() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('onboardingDone') ?? false;
+  bool? _cachedOnboardingStatus;
+  bool _preferencesLoaded = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _initPreferences();
   }
 
-  Future<Map<String, bool>> _checkSetupStatus() async {
-    // Return cached setup status if available
-    if (_cachedSetupStatus != null) {
-      return _cachedSetupStatus!;
-    }
-    
+  Future<void> _initPreferences() async {
     final prefs = await SharedPreferences.getInstance();
-    final bool themeChosen = prefs.getBool('theme_chosen') ?? false;
-    final bool currencyChosen = (prefs.getString('user_currency') != null);
-
+    _cachedOnboardingStatus = prefs.getBool(_ONBOARDING_DONE_KEY) ?? false;
+    
+    final bool themeChosen = prefs.getBool(_THEME_CHOSEN_KEY) ?? false;
+    final bool currencyChosen = (prefs.getString(_USER_CURRENCY_KEY) != null);
+    
     _cachedSetupStatus = {
       'themeChosen': themeChosen,
       'currencyChosen': currencyChosen,
     };
-
-    return _cachedSetupStatus!;
+    
+    setState(() {
+      _preferencesLoaded = true;
+    });
   }
+
+  bool _isOnboardingCompleted() {
+    return _cachedOnboardingStatus ?? false;
+  }
+
+  Map<String, bool> _checkSetupStatus() {
+    return _cachedSetupStatus ?? {'themeChosen': false, 'currencyChosen': false};
+ }
 
   // Check if user is authenticated without triggering loading indicators
   bool _isUserAuthenticated() {
@@ -63,110 +78,74 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isOnboardingCompleted(),
-      builder: (context, onboardingSnapshot) {
-        if (onboardingSnapshot.connectionState == ConnectionState.waiting) {
-          // Only show minimal loading for initial onboarding check
-          return const Scaffold(body: SizedBox.shrink());
-        }
-
-        // If onboarding is not completed, show OnboardingScreen
-        if (onboardingSnapshot.data != true) {
-          return const OnboardingScreen();
-        }
-
-        // For already authenticated users, try to navigate directly without loading indicators
-        if (_isUserAuthenticated()) {
-          return FutureBuilder<Map<String, bool>>(
-            future: _checkSetupStatus(),
-            builder: (context, setupSnapshot) {
-              // Only show loading indicator for initial setup check
-              if (setupSnapshot.connectionState == ConnectionState.waiting && _cachedSetupStatus == null) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              if (setupSnapshot.hasData || _cachedSetupStatus != null) {
-                final data = setupSnapshot.data ?? _cachedSetupStatus!;
-                final bool themeChosen = data['themeChosen']!;
-                final bool currencyChosen = data['currencyChosen']!;
-
-                // If setup is complete, navigate directly to MainScreen
-                if (themeChosen && currencyChosen) {
-                  return const MainScreen();
-                }
-                
-                // Incomplete setup flows
-                if (!themeChosen) {
-                  return const ChooseThemeScreen();
-                } else if (!currencyChosen) {
-                  return const SelectCurrencyScreen();
-                } else {
-                  // Setup is complete, go to MainScreen
-                  return const MainScreen();
-                }
-              }
-
-              // Default to main screen if there's an error checking setup status
-              return const MainScreen();
-            },
+    // If preferences haven't been loaded yet, show a loading indicator
+    if (!_preferencesLoaded) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    // If onboarding is not completed, show OnboardingScreen
+    if (!_isOnboardingCompleted()) {
+      return const OnboardingScreen();
+    }
+    
+    // For already authenticated users, try to navigate directly without loading indicators
+    if (_isUserAuthenticated()) {
+      final setupStatus = _checkSetupStatus();
+      final bool themeChosen = setupStatus['themeChosen']!;
+      final bool currencyChosen = setupStatus['currencyChosen']!;
+      
+      // If setup is complete, navigate directly to MainScreen
+      if (themeChosen && currencyChosen) {
+        return const MainScreen();
+      }
+      
+      // Incomplete setup flows
+      if (!themeChosen) {
+        return const ChooseThemeScreen();
+      } else if (!currencyChosen) {
+        return const SelectCurrencyScreen();
+      } else {
+        // Setup is complete, go to MainScreen
+        return const MainScreen();
+      }
+    }
+    
+    // If user is not authenticated, use StreamBuilder for real-time updates
+    return StreamBuilder<User?>(
+      stream: _authService.userChanges(),
+      builder: (context, authSnapshot) {
+        // Show loading indicator only during initial connection
+        if (authSnapshot.connectionState == ConnectionState.waiting && authSnapshot.data == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-
-        // If user is not authenticated, use StreamBuilder for real-time updates
-        // Only show loading indicator for initial connection
-        return StreamBuilder<User?>(
-          stream: _authService.userChanges(),
-          builder: (context, authSnapshot) {
-            // Show loading indicator only during initial connection
-            if (authSnapshot.connectionState == ConnectionState.waiting && authSnapshot.data == null) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            // If user is not logged in, navigate to LoginScreen
-            if (!authSnapshot.hasData) {
-              return const LoginScreen();
-            }
-
-            // If user is logged in, check setup status
-            // Cache the authenticated status
-            _cachedAuthStatus = true;
-            return FutureBuilder<Map<String, bool>>(
-              future: _checkSetupStatus(),
-              builder: (context, setupSnapshot) {
-                // Only show loading indicator for initial setup check
-                if (setupSnapshot.connectionState == ConnectionState.waiting && _cachedSetupStatus == null) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                if (setupSnapshot.hasData || _cachedSetupStatus != null) {
-                  final data = setupSnapshot.data ?? _cachedSetupStatus!;
-                  final bool themeChosen = data['themeChosen']!;
-                  final bool currencyChosen = data['currencyChosen']!;
-
-                  // Incomplete setup flows
-                  if (!themeChosen) {
-                    return const ChooseThemeScreen();
-                  } else if (!currencyChosen) {
-                    return const SelectCurrencyScreen();
-                  } else {
-                    // Setup is complete, go to MainScreen
-                    return const MainScreen();
-                  }
-                }
-
-                // Default to main screen if there's an error checking setup status
-                return const MainScreen();
-              },
-            );
-          },
-        );
+        
+        // If user is not logged in, navigate to LoginScreen
+        if (!authSnapshot.hasData) {
+          return const LoginScreen();
+        }
+        
+        // If user is logged in, check setup status
+        // Cache the authenticated status
+        _cachedAuthStatus = true;
+        final setupStatus = _checkSetupStatus();
+        final bool themeChosen = setupStatus['themeChosen']!;
+        final bool currencyChosen = setupStatus['currencyChosen']!;
+        
+        // Incomplete setup flows
+        if (!themeChosen) {
+          return const ChooseThemeScreen();
+        } else if (!currencyChosen) {
+          return const SelectCurrencyScreen();
+        } else {
+          // Setup is complete, go to MainScreen
+          return const MainScreen();
+        }
       },
     );
   }
@@ -174,7 +153,5 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Reset cache when dependencies change (e.g., after navigation)
-    _resetCache();
   }
 }
