@@ -3,14 +3,21 @@ import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/viewmodels/theme_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:budgetm/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+);
+
+
   final bool onboardingDone =
       await asyncPrefs.getBool('onboardingDone') ?? false;
 
