@@ -92,9 +92,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _refreshData() async {
     await _loadTransactions();
-    await _loadIncomeAndExpenses();
-    await _loadCurrentMonthTransactions();
-    await _loadUpcomingTasks();
+    await _loadIncomeAndExpensesForMonth(_months[_selectedMonthIndex]);
+    await _loadTransactionsForMonth(_months[_selectedMonthIndex]);
+    await _loadUpcomingTasksForMonth(_months[_selectedMonthIndex]);
   }
 
   Future<void> _loadMonths() async {

@@ -1,6 +1,8 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/data/local/app_database.dart';
+import 'package:provider/provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:drift/drift.dart' as drift hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -651,6 +653,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       );
       
       if (mounted) {
+        Provider.of<HomeScreenProvider>(context, listen: false).triggerRefresh();
         Navigator.of(context).pop(true); // Pass true to indicate success
       }
     } catch (e) {
