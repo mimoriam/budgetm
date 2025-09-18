@@ -3,6 +3,7 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
+import 'package:budgetm/data/local/app_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -20,63 +21,85 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _obscureText = true;
   bool _rememberMe = false; // State for the regular checkbox
-  bool _isLoadingLogin = false; // State for email/password login loading indicator
+  bool _isLoadingLogin =
+      false; // State for email/password login loading indicator
   bool _isLoadingGoogle = false; // State for Google Sign-In loading indicator
   final FirebaseAuthService _authService = FirebaseAuthService();
-   
+  final AppDatabase _appDatabase = AppDatabase();
+
   void _handleGoogleSignIn() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoadingGoogle = true;
     });
-     
-     try {
-       final user = await _authService.signInWithGoogle();
-       
-       if (user != null) {
-         // Successful login
-         final prefs = await SharedPreferences.getInstance();
-         await prefs.setBool('isLoggedIn', true);
-         
-         // Store the first login timestamp if it doesn't exist
-         if (prefs.getString('firstLoginDate') == null) {
-           await prefs.setString(
-             'firstLoginDate',
-             DateTime.now().toIso8601String(),
-           );
-         }
-         
-         if (mounted) {
-           // Navigate to AuthGate to determine next screen
-           Navigator.pushAndRemoveUntil(
-             context,
-             MaterialPageRoute(
-               builder: (context) => const AuthGate(),
-             ),
-             (route) => false,
-           );
-         }
-       }
-     } catch (e) {
-       // Handle Google Sign-In errors
-       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(
-             content: Text(e.toString()),
-             backgroundColor: AppColors.errorColor,
-           ),
-         );
-       }
-     } finally {
+
+    try {
+      final user = await _authService.signInWithGoogle();
+
+      if (user != null) {
+        // Check if this is a first-time user
+        final isFirstTime = await _authService.isFirstTimeUser(user.uid);
+
+        // Successful login
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+
+        // Store first-time user flag
+        await prefs.setBool('isFirstTimeUser', isFirstTime);
+
+        // If this is a first-time user, create a default account
+        if (isFirstTime) {
+          try {
+            await _appDatabase.createDefaultAccount('Cash', 'USD');
+          } catch (e) {
+            // Handle any errors in creating the default account
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to create default account: $e'),
+                  backgroundColor: AppColors.errorColor,
+                ),
+              );
+            }
+          }
+        }
+        // Store the first login timestamp if it doesn't exist
+        if (prefs.getString('firstLoginDate') == null) {
+          await prefs.setString(
+            'firstLoginDate',
+            DateTime.now().toIso8601String(),
+          );
+        }
+
+        if (mounted) {
+          // Navigate to AuthGate to determine next screen
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthGate()),
+            (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      // Handle Google Sign-In errors
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    } finally {
       if (mounted) {
         setState(() {
           _isLoadingGoogle = false;
         });
       }
-     }
-   }
- 
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -295,41 +318,100 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: _isLoadingLogin
                                 ? null
                                 : () async {
-                                    if (_formKey.currentState?.saveAndValidate() ??
+                                    if (_formKey.currentState
+                                            ?.saveAndValidate() ??
                                         false) {
                                       if (!mounted) return;
                                       setState(() {
                                         if (!mounted) return;
                                         _isLoadingLogin = true;
                                       });
-                                      
+
                                       // Get email and password from form
-                                      final email = _formKey.currentState?.fields['email']?.value as String;
-                                      final password = _formKey.currentState?.fields['password']?.value as String;
-                                      
+                                      final email =
+                                          _formKey
+                                                  .currentState
+                                                  ?.fields['email']
+                                                  ?.value
+                                              as String;
+                                      final password =
+                                          _formKey
+                                                  .currentState
+                                                  ?.fields['password']
+                                                  ?.value
+                                              as String;
+
                                       try {
                                         // Sign in with email and password
-                                        final user = await _authService.signInWithEmailAndPassword(email, password);
-                                        
+                                        final user = await _authService
+                                            .signInWithEmailAndPassword(
+                                              email,
+                                              password,
+                                            );
+
                                         if (user != null) {
+                                          // Check if this is a first-time user
+                                          final isFirstTime = await _authService
+                                              .isFirstTimeUser(user.uid);
+
                                           // Successful login
-                                          final prefs = await SharedPreferences.getInstance();
-                                          await prefs.setBool('isLoggedIn', true);
-                                          
+                                          final prefs =
+                                              await SharedPreferences.getInstance();
+                                          await prefs.setBool(
+                                            'isLoggedIn',
+                                            true,
+                                          );
+
+                                          // Store first-time user flag
+                                          await prefs.setBool(
+                                            'isFirstTimeUser',
+                                            isFirstTime,
+                                          );
+
+                                          // If this is a first-time user, create a default account
+                                          if (isFirstTime) {
+                                            try {
+                                              await _appDatabase
+                                                  .createDefaultAccount(
+                                                    'Cash',
+                                                    'USD',
+                                                  );
+                                            } catch (e) {
+                                              // Handle any errors in creating the default account
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Failed to create default account: $e',
+                                                    ),
+                                                    backgroundColor:
+                                                        AppColors.errorColor,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          }
+
                                           // Store the first login timestamp if it doesn't exist
-                                          if (prefs.getString('firstLoginDate') == null) {
+                                          if (prefs.getString(
+                                                'firstLoginDate',
+                                              ) ==
+                                              null) {
                                             await prefs.setString(
                                               'firstLoginDate',
                                               DateTime.now().toIso8601String(),
                                             );
                                           }
-                                          
+
                                           if (context.mounted) {
                                             // Navigate to AuthGate to determine next screen
                                             Navigator.pushAndRemoveUntil(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => const AuthGate(),
+                                                builder: (context) =>
+                                                    const AuthGate(),
                                               ),
                                               (route) => false,
                                             );
@@ -338,10 +420,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                       } catch (e) {
                                         // Handle login errors
                                         if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
                                               content: Text(e.toString()),
-                                              backgroundColor: AppColors.errorColor,
+                                              backgroundColor:
+                                                  AppColors.errorColor,
                                             ),
                                           );
                                         }
@@ -361,7 +446,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                     ),
                                   )
                                 : const Text('Login'),

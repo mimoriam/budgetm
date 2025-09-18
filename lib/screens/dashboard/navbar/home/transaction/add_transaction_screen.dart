@@ -1,5 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/data/local/app_database.dart';
+import 'package:drift/drift.dart' as drift hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -18,6 +20,48 @@ class AddTransactionScreen extends StatefulWidget {
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isMoreOptionsVisible = false;
+  late AppDatabase _database;
+  List<Account> _accounts = [];
+  String? _selectedAccountId;
+
+  @override
+  void initState() {
+    super.initState();
+    _database = AppDatabase();
+    _loadAccounts();
+  }
+
+  Future<void> _loadAccounts() async {
+    try {
+      // Get all accounts
+      final accounts = await _database.select(_database.accounts).get();
+      
+      // If no accounts exist, create a default one
+      if (accounts.isEmpty) {
+        final defaultAccount = await _database.createDefaultAccountIfNeeded();
+        if (defaultAccount != null) {
+          setState(() {
+            _accounts = [defaultAccount];
+            _selectedAccountId = defaultAccount.id;
+          });
+        }
+      } else {
+        // Find the default account or select the first one
+        final defaultAccount = accounts.firstWhere(
+          (account) => account.isDefault,
+          orElse: () => accounts.first,
+        );
+        
+        setState(() {
+          _accounts = accounts;
+          _selectedAccountId = defaultAccount.id;
+        });
+      }
+    } catch (e) {
+      // Handle error
+      debugPrint('Error loading accounts: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,20 +156,31 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   hintText: 'Select',
                                 ),
                                 isDense: true,
-                                items: ['Bank', 'Cash']
+                                valueTransformer: (value) => value?.id,
+                                items: _accounts
                                     .map(
                                       (account) => DropdownMenuItem(
                                         value: account,
                                         child: Text(
-                                          account,
+                                          account.name,
                                           style: const TextStyle(fontSize: 13),
                                         ),
                                       ),
                                     )
                                     .toList(),
+                                initialValue: _accounts.isNotEmpty
+                                    ? _accounts.firstWhere(
+                                        (account) => account.id == _selectedAccountId,
+                                        orElse: () => _accounts.first)
+                                    : null,
                                 validator: FormBuilderValidators.required(
                                   errorText: 'Please select an account',
                                 ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedAccountId = value?.id;
+                                  });
+                                },
                               ),
                             ),
                           ),
@@ -515,8 +570,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             child: ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState?.saveAndValidate() ?? false) {
-                  debugPrint(_formKey.currentState?.value.toString());
-                  Navigator.of(context).pop();
+                  _saveTransaction();
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -538,5 +592,70 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _saveTransaction() async {
+    try {
+      final formData = _formKey.currentState!.value;
+      
+      // Get the selected account
+      final selectedAccount = _accounts.firstWhere(
+        (account) => account.id == _selectedAccountId,
+      );
+      
+      // Calculate the transaction date with time
+      // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
+      final date = formData['date'] as DateTime? ?? DateTime.now();
+      final time = formData['time'] as DateTime?;
+      final transactionDate = time != null
+          ? DateTime(
+              date.year,
+              date.month,
+              date.day,
+              time.hour,
+              time.minute,
+            )
+          : date;
+      
+      // Create transaction companion
+      final transactionCompanion = TransactionsCompanion.insert(
+        description: formData['name'] as String,
+        amount: double.parse(formData['amount'] as String),
+        type: widget.transactionType == TransactionType.income ? 'income' : 'expense',
+        date: transactionDate,
+        category: 'General', // TODO: Implement category selection
+        accountId: drift.Value(_selectedAccountId),
+        time: drift.Value((formData['time'] as DateTime?)?.toIso8601String()),
+        repeat: drift.Value(formData['repeat'] as String?),
+        remind: drift.Value(formData['remind'] as String?),
+        icon: drift.Value(formData['icon'] as String?),
+        color: drift.Value(formData['color'] as String?),
+        notes: drift.Value(formData['notes'] as String?),
+        paid: drift.Value(widget.transactionType == TransactionType.expense ? formData['paid'] as bool? : null),
+      );
+      
+      // Insert transaction
+      await _database.into(_database.transactions).insert(transactionCompanion);
+      
+      // Update account balance
+      final amount = double.parse(formData['amount'] as String);
+      final newBalance = widget.transactionType == TransactionType.income
+          ? selectedAccount.balance + amount
+          : selectedAccount.balance - amount;
+      
+      await _database.update(_database.accounts).replace(
+        selectedAccount.copyWithCompanion(
+          AccountsCompanion(balance: drift.Value(newBalance)),
+        ),
+      );
+      
+      if (mounted) {
+        Navigator.of(context).pop(true); // Pass true to indicate success
+      }
+    } catch (e) {
+      // Handle error
+      debugPrint('Error saving transaction: $e');
+      // TODO: Show error message to user
+    }
   }
 }

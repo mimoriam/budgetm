@@ -17,3 +17,4 @@ This file provides a high-level overview of the project and the expected product
 
 *   
 2025-09-17 07:28:0 - Initial project analysis completed. This is a Flutter-based personal finance management application with features for tracking income, expenses, budgets, goals, and personal finances (borrowed/lent money). The app includes onboarding, authentication, theme selection, and currency selection flows. It uses Provider for state management and SharedPreferences for local data storage.
+[2025-09-18 1:18:00] - Fixed "table 'accounts' has more than one primary key" error by removing redundant PRIMARY KEY declaration in account_model.dart and updating app_database.dart schema version

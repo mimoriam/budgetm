@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:budgetm/services/firestore_service.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirestoreService _firestoreService = FirestoreService();
 
   /// Registers a new user with email and password
   Future<User?> signUpWithEmailAndPassword(String email, String password) async {
@@ -123,5 +125,17 @@ class FirebaseAuthService {
   /// Returns a stream that emits User objects when the user's sign-in state changes
   Stream<User?> userChanges() {
     return _auth.userChanges();
+  }
+  
+  /// Checks if the user is logging in for the first time
+  /// Returns true if the user document doesn't exist in Firestore, false otherwise
+  Future<bool> isFirstTimeUser(String uid) async {
+    try {
+      final exists = await _firestoreService.doesUserDocumentExist(uid);
+      return !exists; // If document doesn't exist, it's a first-time user
+    } catch (e) {
+      // If there's an error checking, we assume it's not a first-time user
+      return false;
+    }
   }
 }

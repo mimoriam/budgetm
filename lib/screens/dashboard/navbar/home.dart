@@ -9,6 +9,7 @@ import 'package:budgetm/screens/dashboard/navbar/home/analytics/analytics_screen
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -16,6 +17,13 @@ import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// Data structure to hold a transaction with its associated account
+class TransactionWithAccount {
+  final Transaction transaction;
+  final Account? account;
+
+  TransactionWithAccount({required this.transaction, this.account});
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,7 +32,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late ScrollController _scrollController;
  late AppDatabase _database;
   List<DateTime> _months = [];
@@ -33,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Transaction> _transactions = [];
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
+   List<TransactionWithAccount> _transactionsWithAccounts = [];
   List<Task> _upcomingTasks = [];
 
   @override
@@ -45,6 +54,30 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadIncomeAndExpenses();
     _loadCurrentMonthTransactions();
     _loadUpcomingTasks();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh data when app resumes
+    if (state == AppLifecycleState.resumed) {
+      _refreshData();
+    }
+  }
+
+  Future<void> _refreshData() async {
+    await _loadTransactions();
+    await _loadIncomeAndExpenses();
+    await _loadCurrentMonthTransactions();
+    await _loadUpcomingTasks();
   }
 
   Future<void> _loadMonths() async {
@@ -84,9 +117,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadTransactions() async {
+    // Load all transactions
     final transactions = await _database.select(_database.transactions).get();
+    
+    // Load all accounts for mapping
+    final accounts = await _database.select(_database.accounts).get();
+    final accountMap = {for (var account in accounts) account.id: account};
+    
+    // Create TransactionWithAccount objects
+    final transactionsWithAccounts = transactions.map((transaction) {
+      return TransactionWithAccount(
+        transaction: transaction,
+        account: transaction.accountId != null ? accountMap[transaction.accountId] : null,
+      );
+    }).toList();
+    
     setState(() {
       _transactions = transactions;
+      _transactionsWithAccounts = transactionsWithAccounts;
     });
   }
 
@@ -127,9 +175,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final transactionsQuery = _database.select(_database.transactions)
       ..where((tbl) => tbl.date.isBetweenValues(startOfMonth, endOfMonth));
     final transactions = await transactionsQuery.get();
+    
+    // Load all accounts for mapping
+    final accounts = await _database.select(_database.accounts).get();
+    final accountMap = {for (var account in accounts) account.id: account};
+    
+    // Create TransactionWithAccount objects
+    final transactionsWithAccounts = transactions.map((transaction) {
+      return TransactionWithAccount(
+        transaction: transaction,
+        account: transaction.accountId != null ? accountMap[transaction.accountId] : null,
+      );
+    }).toList();
 
     setState(() {
       _transactions = transactions;
+      _transactionsWithAccounts = transactionsWithAccounts;
     });
   }
 
@@ -178,13 +239,26 @@ class _HomeScreenState extends State<HomeScreen> {
    Future<void> _loadTransactionsForMonth(DateTime month) async {
      final startOfMonth = DateTime(month.year, month.month, 1);
      final endOfMonth = DateTime(month.year, month.month + 1, 0);
- 
+
      final transactionsQuery = _database.select(_database.transactions)
        ..where((tbl) => tbl.date.isBetweenValues(startOfMonth, endOfMonth));
      final transactions = await transactionsQuery.get();
- 
+     
+     // Load all accounts for mapping
+     final accounts = await _database.select(_database.accounts).get();
+     final accountMap = {for (var account in accounts) account.id: account};
+     
+     // Create TransactionWithAccount objects
+     final transactionsWithAccounts = transactions.map((transaction) {
+       return TransactionWithAccount(
+         transaction: transaction,
+         account: transaction.accountId != null ? accountMap[transaction.accountId] : null,
+       );
+     }).toList();
+
      setState(() {
        _transactions = transactions;
+       _transactionsWithAccounts = transactionsWithAccounts;
      });
    }
  
@@ -218,11 +292,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -230,6 +299,16 @@ class _HomeScreenState extends State<HomeScreen> {
     //   SystemUiOverlayStyle(statusBarColor: Colors.red, statusBarIconBrightness: Brightness.dark),
     // );
     final vacationProvider = context.watch<VacationProvider>();
+    final homeScreenProvider = context.watch<HomeScreenProvider>();
+    
+    // Check if we should refresh the data
+    if (homeScreenProvider.shouldRefresh) {
+      _refreshData();
+      // Mark refresh as complete
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        homeScreenProvider.completeRefresh();
+      });
+    }
 
     return Scaffold(
       body: TweenAnimationBuilder<Color?>(
@@ -521,9 +600,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   SliverFillRemaining _buildTransactionSection() {
-    Map<String, List<Transaction>> groupedTransactions = {};
-    for (var tx in _transactions) {
-      String dateKey = DateFormat('MMM d, yyyy').format(tx.date);
+    Map<String, List<TransactionWithAccount>> groupedTransactions = {};
+    for (var tx in _transactionsWithAccounts) {
+      String dateKey = DateFormat('MMM d, yyyy').format(tx.transaction.date);
       if (groupedTransactions[dateKey] == null) {
         groupedTransactions[dateKey] = [];
       }
@@ -574,7 +653,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTransactionItem(Transaction transaction) {
+  Widget _buildTransactionItem(TransactionWithAccount transactionWithAccount) {
+    final transaction = transactionWithAccount.transaction;
+    final account = transactionWithAccount.account;
+    
     return InkWell(
       onTap: () {
         // TODO: Handle tap
@@ -618,7 +700,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    transaction.category, // Use category as description
+                    account != null
+                        ? '${transaction.category} • ${account.name}'
+                        : transaction.category,
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],

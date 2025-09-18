@@ -71,6 +71,83 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
+    'account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timeMeta = const VerificationMeta('time');
+  @override
+  late final GeneratedColumn<String> time = GeneratedColumn<String>(
+    'time',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _repeatMeta = const VerificationMeta('repeat');
+  @override
+  late final GeneratedColumn<String> repeat = GeneratedColumn<String>(
+    'repeat',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _remindMeta = const VerificationMeta('remind');
+  @override
+  late final GeneratedColumn<String> remind = GeneratedColumn<String>(
+    'remind',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _paidMeta = const VerificationMeta('paid');
+  @override
+  late final GeneratedColumn<bool> paid = GeneratedColumn<bool>(
+    'paid',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("paid" IN (0, 1))',
+    ),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -79,6 +156,14 @@ class $TransactionsTable extends Transactions
     type,
     date,
     category,
+    accountId,
+    time,
+    repeat,
+    remind,
+    icon,
+    color,
+    notes,
+    paid,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -138,6 +223,54 @@ class $TransactionsTable extends Transactions
     } else if (isInserting) {
       context.missing(_categoryMeta);
     }
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    }
+    if (data.containsKey('time')) {
+      context.handle(
+        _timeMeta,
+        time.isAcceptableOrUnknown(data['time']!, _timeMeta),
+      );
+    }
+    if (data.containsKey('repeat')) {
+      context.handle(
+        _repeatMeta,
+        repeat.isAcceptableOrUnknown(data['repeat']!, _repeatMeta),
+      );
+    }
+    if (data.containsKey('remind')) {
+      context.handle(
+        _remindMeta,
+        remind.isAcceptableOrUnknown(data['remind']!, _remindMeta),
+      );
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('paid')) {
+      context.handle(
+        _paidMeta,
+        paid.isAcceptableOrUnknown(data['paid']!, _paidMeta),
+      );
+    }
     return context;
   }
 
@@ -171,6 +304,38 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}category'],
       )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_id'],
+      ),
+      time: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time'],
+      ),
+      repeat: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}repeat'],
+      ),
+      remind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remind'],
+      ),
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      ),
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      paid: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}paid'],
+      ),
     );
   }
 
@@ -187,6 +352,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String type;
   final DateTime date;
   final String category;
+  final String? accountId;
+  final String? time;
+  final String? repeat;
+  final String? remind;
+  final String? icon;
+  final String? color;
+  final String? notes;
+  final bool? paid;
   const Transaction({
     required this.id,
     required this.description,
@@ -194,6 +367,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.type,
     required this.date,
     required this.category,
+    this.accountId,
+    this.time,
+    this.repeat,
+    this.remind,
+    this.icon,
+    this.color,
+    this.notes,
+    this.paid,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -204,6 +385,30 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['type'] = Variable<String>(type);
     map['date'] = Variable<DateTime>(date);
     map['category'] = Variable<String>(category);
+    if (!nullToAbsent || accountId != null) {
+      map['account_id'] = Variable<String>(accountId);
+    }
+    if (!nullToAbsent || time != null) {
+      map['time'] = Variable<String>(time);
+    }
+    if (!nullToAbsent || repeat != null) {
+      map['repeat'] = Variable<String>(repeat);
+    }
+    if (!nullToAbsent || remind != null) {
+      map['remind'] = Variable<String>(remind);
+    }
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
+    }
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<String>(color);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || paid != null) {
+      map['paid'] = Variable<bool>(paid);
+    }
     return map;
   }
 
@@ -215,6 +420,24 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       type: Value(type),
       date: Value(date),
       category: Value(category),
+      accountId: accountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountId),
+      time: time == null && nullToAbsent ? const Value.absent() : Value(time),
+      repeat: repeat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(repeat),
+      remind: remind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remind),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      paid: paid == null && nullToAbsent ? const Value.absent() : Value(paid),
     );
   }
 
@@ -230,6 +453,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       type: serializer.fromJson<String>(json['type']),
       date: serializer.fromJson<DateTime>(json['date']),
       category: serializer.fromJson<String>(json['category']),
+      accountId: serializer.fromJson<String?>(json['accountId']),
+      time: serializer.fromJson<String?>(json['time']),
+      repeat: serializer.fromJson<String?>(json['repeat']),
+      remind: serializer.fromJson<String?>(json['remind']),
+      icon: serializer.fromJson<String?>(json['icon']),
+      color: serializer.fromJson<String?>(json['color']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      paid: serializer.fromJson<bool?>(json['paid']),
     );
   }
   @override
@@ -242,6 +473,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'type': serializer.toJson<String>(type),
       'date': serializer.toJson<DateTime>(date),
       'category': serializer.toJson<String>(category),
+      'accountId': serializer.toJson<String?>(accountId),
+      'time': serializer.toJson<String?>(time),
+      'repeat': serializer.toJson<String?>(repeat),
+      'remind': serializer.toJson<String?>(remind),
+      'icon': serializer.toJson<String?>(icon),
+      'color': serializer.toJson<String?>(color),
+      'notes': serializer.toJson<String?>(notes),
+      'paid': serializer.toJson<bool?>(paid),
     };
   }
 
@@ -252,6 +491,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     String? type,
     DateTime? date,
     String? category,
+    Value<String?> accountId = const Value.absent(),
+    Value<String?> time = const Value.absent(),
+    Value<String?> repeat = const Value.absent(),
+    Value<String?> remind = const Value.absent(),
+    Value<String?> icon = const Value.absent(),
+    Value<String?> color = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    Value<bool?> paid = const Value.absent(),
   }) => Transaction(
     id: id ?? this.id,
     description: description ?? this.description,
@@ -259,6 +506,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     type: type ?? this.type,
     date: date ?? this.date,
     category: category ?? this.category,
+    accountId: accountId.present ? accountId.value : this.accountId,
+    time: time.present ? time.value : this.time,
+    repeat: repeat.present ? repeat.value : this.repeat,
+    remind: remind.present ? remind.value : this.remind,
+    icon: icon.present ? icon.value : this.icon,
+    color: color.present ? color.value : this.color,
+    notes: notes.present ? notes.value : this.notes,
+    paid: paid.present ? paid.value : this.paid,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -270,6 +525,14 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       type: data.type.present ? data.type.value : this.type,
       date: data.date.present ? data.date.value : this.date,
       category: data.category.present ? data.category.value : this.category,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      time: data.time.present ? data.time.value : this.time,
+      repeat: data.repeat.present ? data.repeat.value : this.repeat,
+      remind: data.remind.present ? data.remind.value : this.remind,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      color: data.color.present ? data.color.value : this.color,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      paid: data.paid.present ? data.paid.value : this.paid,
     );
   }
 
@@ -281,14 +544,36 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('amount: $amount, ')
           ..write('type: $type, ')
           ..write('date: $date, ')
-          ..write('category: $category')
+          ..write('category: $category, ')
+          ..write('accountId: $accountId, ')
+          ..write('time: $time, ')
+          ..write('repeat: $repeat, ')
+          ..write('remind: $remind, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
+          ..write('notes: $notes, ')
+          ..write('paid: $paid')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, description, amount, type, date, category);
+  int get hashCode => Object.hash(
+    id,
+    description,
+    amount,
+    type,
+    date,
+    category,
+    accountId,
+    time,
+    repeat,
+    remind,
+    icon,
+    color,
+    notes,
+    paid,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -298,7 +583,15 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.amount == this.amount &&
           other.type == this.type &&
           other.date == this.date &&
-          other.category == this.category);
+          other.category == this.category &&
+          other.accountId == this.accountId &&
+          other.time == this.time &&
+          other.repeat == this.repeat &&
+          other.remind == this.remind &&
+          other.icon == this.icon &&
+          other.color == this.color &&
+          other.notes == this.notes &&
+          other.paid == this.paid);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -308,6 +601,14 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> type;
   final Value<DateTime> date;
   final Value<String> category;
+  final Value<String?> accountId;
+  final Value<String?> time;
+  final Value<String?> repeat;
+  final Value<String?> remind;
+  final Value<String?> icon;
+  final Value<String?> color;
+  final Value<String?> notes;
+  final Value<bool?> paid;
   const TransactionsCompanion({
     this.id = const Value.absent(),
     this.description = const Value.absent(),
@@ -315,6 +616,14 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.type = const Value.absent(),
     this.date = const Value.absent(),
     this.category = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.time = const Value.absent(),
+    this.repeat = const Value.absent(),
+    this.remind = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.paid = const Value.absent(),
   });
   TransactionsCompanion.insert({
     this.id = const Value.absent(),
@@ -323,6 +632,14 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String type,
     required DateTime date,
     required String category,
+    this.accountId = const Value.absent(),
+    this.time = const Value.absent(),
+    this.repeat = const Value.absent(),
+    this.remind = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.paid = const Value.absent(),
   }) : description = Value(description),
        amount = Value(amount),
        type = Value(type),
@@ -335,6 +652,14 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? type,
     Expression<DateTime>? date,
     Expression<String>? category,
+    Expression<String>? accountId,
+    Expression<String>? time,
+    Expression<String>? repeat,
+    Expression<String>? remind,
+    Expression<String>? icon,
+    Expression<String>? color,
+    Expression<String>? notes,
+    Expression<bool>? paid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -343,6 +668,14 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (type != null) 'type': type,
       if (date != null) 'date': date,
       if (category != null) 'category': category,
+      if (accountId != null) 'account_id': accountId,
+      if (time != null) 'time': time,
+      if (repeat != null) 'repeat': repeat,
+      if (remind != null) 'remind': remind,
+      if (icon != null) 'icon': icon,
+      if (color != null) 'color': color,
+      if (notes != null) 'notes': notes,
+      if (paid != null) 'paid': paid,
     });
   }
 
@@ -353,6 +686,14 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String>? type,
     Value<DateTime>? date,
     Value<String>? category,
+    Value<String?>? accountId,
+    Value<String?>? time,
+    Value<String?>? repeat,
+    Value<String?>? remind,
+    Value<String?>? icon,
+    Value<String?>? color,
+    Value<String?>? notes,
+    Value<bool?>? paid,
   }) {
     return TransactionsCompanion(
       id: id ?? this.id,
@@ -361,6 +702,14 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       type: type ?? this.type,
       date: date ?? this.date,
       category: category ?? this.category,
+      accountId: accountId ?? this.accountId,
+      time: time ?? this.time,
+      repeat: repeat ?? this.repeat,
+      remind: remind ?? this.remind,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
+      notes: notes ?? this.notes,
+      paid: paid ?? this.paid,
     );
   }
 
@@ -385,6 +734,30 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (category.present) {
       map['category'] = Variable<String>(category.value);
     }
+    if (accountId.present) {
+      map['account_id'] = Variable<String>(accountId.value);
+    }
+    if (time.present) {
+      map['time'] = Variable<String>(time.value);
+    }
+    if (repeat.present) {
+      map['repeat'] = Variable<String>(repeat.value);
+    }
+    if (remind.present) {
+      map['remind'] = Variable<String>(remind.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (paid.present) {
+      map['paid'] = Variable<bool>(paid.value);
+    }
     return map;
   }
 
@@ -396,7 +769,15 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('amount: $amount, ')
           ..write('type: $type, ')
           ..write('date: $date, ')
-          ..write('category: $category')
+          ..write('category: $category, ')
+          ..write('accountId: $accountId, ')
+          ..write('time: $time, ')
+          ..write('repeat: $repeat, ')
+          ..write('remind: $remind, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
+          ..write('notes: $notes, ')
+          ..write('paid: $paid')
           ..write(')'))
         .toString();
   }
@@ -810,16 +1191,380 @@ class TasksCompanion extends UpdateCompanion<Task> {
   }
 }
 
+class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccountsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _balanceMeta = const VerificationMeta(
+    'balance',
+  );
+  @override
+  late final GeneratedColumn<double> balance = GeneratedColumn<double>(
+    'balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: Constant(0.0),
+  );
+  static const VerificationMeta _currencyMeta = const VerificationMeta(
+    'currency',
+  );
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isDefaultMeta = const VerificationMeta(
+    'isDefault',
+  );
+  @override
+  late final GeneratedColumn<bool> isDefault = GeneratedColumn<bool>(
+    'is_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_default" IN (0, 1))',
+    ),
+    defaultValue: Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    balance,
+    currency,
+    isDefault,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'accounts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Account> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('balance')) {
+      context.handle(
+        _balanceMeta,
+        balance.isAcceptableOrUnknown(data['balance']!, _balanceMeta),
+      );
+    }
+    if (data.containsKey('currency')) {
+      context.handle(
+        _currencyMeta,
+        currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_currencyMeta);
+    }
+    if (data.containsKey('is_default')) {
+      context.handle(
+        _isDefaultMeta,
+        isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Account map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Account(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      balance: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}balance'],
+      )!,
+      currency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency'],
+      )!,
+      isDefault: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_default'],
+      )!,
+    );
+  }
+
+  @override
+  $AccountsTable createAlias(String alias) {
+    return $AccountsTable(attachedDatabase, alias);
+  }
+}
+
+class Account extends DataClass implements Insertable<Account> {
+  final String id;
+  final String name;
+  final double balance;
+  final String currency;
+  final bool isDefault;
+  const Account({
+    required this.id,
+    required this.name,
+    required this.balance,
+    required this.currency,
+    required this.isDefault,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['balance'] = Variable<double>(balance);
+    map['currency'] = Variable<String>(currency);
+    map['is_default'] = Variable<bool>(isDefault);
+    return map;
+  }
+
+  AccountsCompanion toCompanion(bool nullToAbsent) {
+    return AccountsCompanion(
+      id: Value(id),
+      name: Value(name),
+      balance: Value(balance),
+      currency: Value(currency),
+      isDefault: Value(isDefault),
+    );
+  }
+
+  factory Account.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Account(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      balance: serializer.fromJson<double>(json['balance']),
+      currency: serializer.fromJson<String>(json['currency']),
+      isDefault: serializer.fromJson<bool>(json['isDefault']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'balance': serializer.toJson<double>(balance),
+      'currency': serializer.toJson<String>(currency),
+      'isDefault': serializer.toJson<bool>(isDefault),
+    };
+  }
+
+  Account copyWith({
+    String? id,
+    String? name,
+    double? balance,
+    String? currency,
+    bool? isDefault,
+  }) => Account(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    balance: balance ?? this.balance,
+    currency: currency ?? this.currency,
+    isDefault: isDefault ?? this.isDefault,
+  );
+  Account copyWithCompanion(AccountsCompanion data) {
+    return Account(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      balance: data.balance.present ? data.balance.value : this.balance,
+      currency: data.currency.present ? data.currency.value : this.currency,
+      isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Account(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('balance: $balance, ')
+          ..write('currency: $currency, ')
+          ..write('isDefault: $isDefault')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, balance, currency, isDefault);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Account &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.balance == this.balance &&
+          other.currency == this.currency &&
+          other.isDefault == this.isDefault);
+}
+
+class AccountsCompanion extends UpdateCompanion<Account> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<double> balance;
+  final Value<String> currency;
+  final Value<bool> isDefault;
+  final Value<int> rowid;
+  const AccountsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.balance = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AccountsCompanion.insert({
+    required String id,
+    required String name,
+    this.balance = const Value.absent(),
+    required String currency,
+    this.isDefault = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       currency = Value(currency);
+  static Insertable<Account> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<double>? balance,
+    Expression<String>? currency,
+    Expression<bool>? isDefault,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (balance != null) 'balance': balance,
+      if (currency != null) 'currency': currency,
+      if (isDefault != null) 'is_default': isDefault,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AccountsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<double>? balance,
+    Value<String>? currency,
+    Value<bool>? isDefault,
+    Value<int>? rowid,
+  }) {
+    return AccountsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      balance: balance ?? this.balance,
+      currency: currency ?? this.currency,
+      isDefault: isDefault ?? this.isDefault,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (balance.present) {
+      map['balance'] = Variable<double>(balance.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (isDefault.present) {
+      map['is_default'] = Variable<bool>(isDefault.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('balance: $balance, ')
+          ..write('currency: $currency, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $TasksTable tasks = $TasksTable(this);
+  late final $AccountsTable accounts = $AccountsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [transactions, tasks];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    transactions,
+    tasks,
+    accounts,
+  ];
 }
 
 typedef $$TransactionsTableCreateCompanionBuilder =
@@ -830,6 +1575,14 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required String type,
       required DateTime date,
       required String category,
+      Value<String?> accountId,
+      Value<String?> time,
+      Value<String?> repeat,
+      Value<String?> remind,
+      Value<String?> icon,
+      Value<String?> color,
+      Value<String?> notes,
+      Value<bool?> paid,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
     TransactionsCompanion Function({
@@ -839,6 +1592,14 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String> type,
       Value<DateTime> date,
       Value<String> category,
+      Value<String?> accountId,
+      Value<String?> time,
+      Value<String?> repeat,
+      Value<String?> remind,
+      Value<String?> icon,
+      Value<String?> color,
+      Value<String?> notes,
+      Value<bool?> paid,
     });
 
 class $$TransactionsTableFilterComposer
@@ -877,6 +1638,46 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get category => $composableBuilder(
     column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get time => $composableBuilder(
+    column: $table.time,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get repeat => $composableBuilder(
+    column: $table.repeat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remind => $composableBuilder(
+    column: $table.remind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get paid => $composableBuilder(
+    column: $table.paid,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -919,6 +1720,46 @@ class $$TransactionsTableOrderingComposer
     column: $table.category,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get accountId => $composableBuilder(
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get time => $composableBuilder(
+    column: $table.time,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get repeat => $composableBuilder(
+    column: $table.repeat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remind => $composableBuilder(
+    column: $table.remind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get paid => $composableBuilder(
+    column: $table.paid,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -949,6 +1790,30 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get category =>
       $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<String> get time =>
+      $composableBuilder(column: $table.time, builder: (column) => column);
+
+  GeneratedColumn<String> get repeat =>
+      $composableBuilder(column: $table.repeat, builder: (column) => column);
+
+  GeneratedColumn<String> get remind =>
+      $composableBuilder(column: $table.remind, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get paid =>
+      $composableBuilder(column: $table.paid, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager
@@ -988,6 +1853,14 @@ class $$TransactionsTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<String> category = const Value.absent(),
+                Value<String?> accountId = const Value.absent(),
+                Value<String?> time = const Value.absent(),
+                Value<String?> repeat = const Value.absent(),
+                Value<String?> remind = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<String?> color = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool?> paid = const Value.absent(),
               }) => TransactionsCompanion(
                 id: id,
                 description: description,
@@ -995,6 +1868,14 @@ class $$TransactionsTableTableManager
                 type: type,
                 date: date,
                 category: category,
+                accountId: accountId,
+                time: time,
+                repeat: repeat,
+                remind: remind,
+                icon: icon,
+                color: color,
+                notes: notes,
+                paid: paid,
               ),
           createCompanionCallback:
               ({
@@ -1004,6 +1885,14 @@ class $$TransactionsTableTableManager
                 required String type,
                 required DateTime date,
                 required String category,
+                Value<String?> accountId = const Value.absent(),
+                Value<String?> time = const Value.absent(),
+                Value<String?> repeat = const Value.absent(),
+                Value<String?> remind = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<String?> color = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool?> paid = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 id: id,
                 description: description,
@@ -1011,6 +1900,14 @@ class $$TransactionsTableTableManager
                 type: type,
                 date: date,
                 category: category,
+                accountId: accountId,
+                time: time,
+                repeat: repeat,
+                remind: remind,
+                icon: icon,
+                color: color,
+                notes: notes,
+                paid: paid,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -1247,6 +2144,200 @@ typedef $$TasksTableProcessedTableManager =
       Task,
       PrefetchHooks Function()
     >;
+typedef $$AccountsTableCreateCompanionBuilder =
+    AccountsCompanion Function({
+      required String id,
+      required String name,
+      Value<double> balance,
+      required String currency,
+      Value<bool> isDefault,
+      Value<int> rowid,
+    });
+typedef $$AccountsTableUpdateCompanionBuilder =
+    AccountsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<double> balance,
+      Value<String> currency,
+      Value<bool> isDefault,
+      Value<int> rowid,
+    });
+
+class $$AccountsTableFilterComposer
+    extends Composer<_$AppDatabase, $AccountsTable> {
+  $$AccountsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currency => $composableBuilder(
+    column: $table.currency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AccountsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AccountsTable> {
+  $$AccountsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currency => $composableBuilder(
+    column: $table.currency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AccountsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AccountsTable> {
+  $$AccountsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get balance =>
+      $composableBuilder(column: $table.balance, builder: (column) => column);
+
+  GeneratedColumn<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDefault =>
+      $composableBuilder(column: $table.isDefault, builder: (column) => column);
+}
+
+class $$AccountsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AccountsTable,
+          Account,
+          $$AccountsTableFilterComposer,
+          $$AccountsTableOrderingComposer,
+          $$AccountsTableAnnotationComposer,
+          $$AccountsTableCreateCompanionBuilder,
+          $$AccountsTableUpdateCompanionBuilder,
+          (Account, BaseReferences<_$AppDatabase, $AccountsTable, Account>),
+          Account,
+          PrefetchHooks Function()
+        > {
+  $$AccountsTableTableManager(_$AppDatabase db, $AccountsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AccountsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AccountsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AccountsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> balance = const Value.absent(),
+                Value<String> currency = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountsCompanion(
+                id: id,
+                name: name,
+                balance: balance,
+                currency: currency,
+                isDefault: isDefault,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<double> balance = const Value.absent(),
+                required String currency,
+                Value<bool> isDefault = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountsCompanion.insert(
+                id: id,
+                name: name,
+                balance: balance,
+                currency: currency,
+                isDefault: isDefault,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AccountsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AccountsTable,
+      Account,
+      $$AccountsTableFilterComposer,
+      $$AccountsTableOrderingComposer,
+      $$AccountsTableAnnotationComposer,
+      $$AccountsTableCreateCompanionBuilder,
+      $$AccountsTableUpdateCompanionBuilder,
+      (Account, BaseReferences<_$AppDatabase, $AccountsTable, Account>),
+      Account,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1255,4 +2346,6 @@ class $AppDatabaseManager {
       $$TransactionsTableTableManager(_db, _db.transactions);
   $$TasksTableTableManager get tasks =>
       $$TasksTableTableManager(_db, _db.tasks);
+  $$AccountsTableTableManager get accounts =>
+      $$AccountsTableTableManager(_db, _db.accounts);
 }

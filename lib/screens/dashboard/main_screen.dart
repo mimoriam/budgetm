@@ -12,6 +12,7 @@ import 'package:budgetm/screens/dashboard/navbar/personal/add_borrowed/add_borro
 import 'package:budgetm/screens/dashboard/navbar/personal/add_lent/add_lent.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -215,9 +216,9 @@ class _MainScreenState extends State<MainScreen> {
               label: "Expense",
               icon: HugeIcons.strokeRoundedChartDown,
               color: Colors.red,
-              onPressed: () {
+              onPressed: () async {
                 _toggleFabMenu();
-                PersistentNavBarNavigator.pushNewScreen(
+                final result = await PersistentNavBarNavigator.pushNewScreen(
                   context,
                   screen: const AddTransactionScreen(
                     transactionType: TransactionType.expense,
@@ -225,6 +226,12 @@ class _MainScreenState extends State<MainScreen> {
                   withNavBar: false,
                   pageTransitionAnimation: PageTransitionAnimation.cupertino,
                 );
+                
+                // If the transaction was successfully added, trigger a refresh of the home screen
+                if (result == true) {
+                  final homeScreenProvider = context.read<HomeScreenProvider>();
+                  homeScreenProvider.triggerRefresh();
+                }
               },
             ),
           ];
@@ -234,9 +241,9 @@ class _MainScreenState extends State<MainScreen> {
             label: "Income",
             icon: HugeIcons.strokeRoundedChartUp,
             color: Colors.green,
-            onPressed: () {
+            onPressed: () async {
               _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
+              final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: const AddTransactionScreen(
                   transactionType: TransactionType.income,
@@ -244,6 +251,12 @@ class _MainScreenState extends State<MainScreen> {
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
+              
+              // If the transaction was successfully added, trigger a refresh of the home screen
+              if (result == true) {
+                final homeScreenProvider = context.read<HomeScreenProvider>();
+                homeScreenProvider.triggerRefresh();
+              }
             },
           ),
           const SizedBox(height: 16),
@@ -251,9 +264,9 @@ class _MainScreenState extends State<MainScreen> {
             label: "Expense",
             icon: HugeIcons.strokeRoundedChartDown,
             color: Colors.red,
-            onPressed: () {
+            onPressed: () async {
               _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
+              final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: const AddTransactionScreen(
                   transactionType: TransactionType.expense,
@@ -261,6 +274,12 @@ class _MainScreenState extends State<MainScreen> {
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
+              
+              // If the transaction was successfully added, trigger a refresh of the home screen
+              if (result == true) {
+                final homeScreenProvider = context.read<HomeScreenProvider>();
+                homeScreenProvider.triggerRefresh();
+              }
             },
           ),
         ];

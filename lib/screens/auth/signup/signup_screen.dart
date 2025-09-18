@@ -2,6 +2,7 @@ import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/data/local/app_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -22,6 +23,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isLoadingGoogle = false; // State for Google Sign-In loading indicator
   final FirebaseAuthService _authService = FirebaseAuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final AppDatabase _appDatabase = AppDatabase();
 
   void _togglePasswordVisibility() {
     setState(() {
@@ -307,38 +309,93 @@ class _SignupScreenState extends State<SignupScreen> {
                             onPressed: _isLoading
                                 ? null
                                 : () async {
-                                    if (_formKey.currentState?.saveAndValidate() ??
+                                    if (_formKey.currentState
+                                            ?.saveAndValidate() ??
                                         false) {
                                       setState(() {
                                         _isLoading = true;
                                       });
-                                      
+
                                       // Get form values
-                                      final name = _formKey.currentState?.fields['name']?.value as String;
-                                      final email = _formKey.currentState?.fields['email']?.value as String;
-                                      final password = _formKey.currentState?.fields['password']?.value as String;
-                                      
+                                      final name =
+                                          _formKey
+                                                  .currentState
+                                                  ?.fields['name']
+                                                  ?.value
+                                              as String;
+                                      final email =
+                                          _formKey
+                                                  .currentState
+                                                  ?.fields['email']
+                                                  ?.value
+                                              as String;
+                                      final password =
+                                          _formKey
+                                                  .currentState
+                                                  ?.fields['password']
+                                                  ?.value
+                                              as String;
+
                                       try {
                                         // Register with email and password
-                                        final user = await _authService.signUpWithEmailAndPassword(email, password);
-                                        
+                                        final user = await _authService
+                                            .signUpWithEmailAndPassword(
+                                              email,
+                                              password,
+                                            );
+
                                         if (user != null) {
                                           // Save user data to Firestore
-                                          await _firestoreService.saveUserData(user.uid, {
-                                            'uid': user.uid,
-                                            'email': email,
-                                            'name': name,
-                                          });
-                                          
+                                          await _firestoreService
+                                              .saveUserData(user.uid, {
+                                                'uid': user.uid,
+                                                'email': email,
+                                                'name': name,
+                                              });
+
                                           // Successful signup and login
-                                          final prefs = await SharedPreferences.getInstance();
-                                          await prefs.setBool('isLoggedIn', true);
-                                          
+                                          final prefs =
+                                              await SharedPreferences.getInstance();
+                                          await prefs.setBool(
+                                            'isLoggedIn',
+                                            true,
+                                          );
+                                          // Since this is a new user, set isFirstTimeUser to true
+                                          await prefs.setBool(
+                                            'isFirstTimeUser',
+                                            true,
+                                          );
+
+                                          // Create a default account for the new user
+                                          try {
+                                            await _appDatabase
+                                                .createDefaultAccount(
+                                                  'Cash',
+                                                  'USD',
+                                                );
+                                          } catch (e) {
+                                            // Handle any errors in creating the default account
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Failed to create default account: $e',
+                                                  ),
+                                                  backgroundColor:
+                                                      AppColors.errorColor,
+                                                ),
+                                              );
+                                            }
+                                          }
+
                                           if (context.mounted) {
                                             Navigator.pushAndRemoveUntil(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => const AuthGate(),
+                                                builder: (context) =>
+                                                    const AuthGate(),
                                               ),
                                               (route) => false,
                                             );
@@ -347,10 +404,13 @@ class _SignupScreenState extends State<SignupScreen> {
                                       } catch (e) {
                                         // Handle registration errors
                                         if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
                                               content: Text(e.toString()),
-                                              backgroundColor: AppColors.errorColor,
+                                              backgroundColor:
+                                                  AppColors.errorColor,
                                             ),
                                           );
                                         }
@@ -369,12 +429,16 @@ class _SignupScreenState extends State<SignupScreen> {
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                     ),
                                   )
                                 : Text(
                                     'Sign Up',
-                                    style: Theme.of(context).textTheme.labelLarge
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
                                         ?.copyWith(color: Colors.white),
                                   ),
                           ),
@@ -418,25 +482,49 @@ class _SignupScreenState extends State<SignupScreen> {
                                     });
 
                                     try {
-                                      final user = await _authService.signInWithGoogle();
+                                      final user = await _authService
+                                          .signInWithGoogle();
 
                                       if (user != null) {
                                         // Save user data to Firestore
-                                        await _firestoreService.saveUserData(user.uid, {
-                                          'uid': user.uid,
-                                          'email': user.email ?? '',
-                                          'name': user.displayName ?? '',
-                                        });
+                                        await _firestoreService
+                                            .saveUserData(user.uid, {
+                                              'uid': user.uid,
+                                              'email': user.email ?? '',
+                                              'name': user.displayName ?? '',
+                                            });
 
                                         // Successful signup and login
-                                        final prefs = await SharedPreferences.getInstance();
+                                        final prefs =
+                                            await SharedPreferences.getInstance();
                                         await prefs.setBool('isLoggedIn', true);
+                                        // Since this is a new user, set isFirstTimeUser to true
+                                        await prefs.setBool(
+                                          'isFirstTimeUser',
+                                          true,
+                                        );
+                                         
+                                         // Create a default account for the new user
+                                         try {
+                                           await _appDatabase.createDefaultAccount('Cash', 'USD');
+                                         } catch (e) {
+                                           // Handle any errors in creating the default account
+                                           if (mounted) {
+                                             ScaffoldMessenger.of(context).showSnackBar(
+                                               SnackBar(
+                                                 content: Text('Failed to create default account: $e'),
+                                                 backgroundColor: AppColors.errorColor,
+                                               ),
+                                             );
+                                           }
+                                         }
 
                                         if (mounted) {
                                           Navigator.pushAndRemoveUntil(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => const AuthGate(),
+                                              builder: (context) =>
+                                                  const AuthGate(),
                                             ),
                                             (route) => false,
                                           );
@@ -445,10 +533,13 @@ class _SignupScreenState extends State<SignupScreen> {
                                     } catch (e) {
                                       // Handle Google Sign-In errors
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
                                             content: Text(e.toString()),
-                                            backgroundColor: AppColors.errorColor,
+                                            backgroundColor:
+                                                AppColors.errorColor,
                                           ),
                                         );
                                       }
@@ -462,7 +553,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   },
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30.0),
-                              side: BorderSide.none
+                              side: BorderSide.none,
                             ),
                           ),
                         ),
@@ -473,10 +564,12 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: SignInButton(
                             Buttons.apple,
                             text: "Continue with Apple",
-                            onPressed: _isLoading || _isLoadingGoogle ? () {} : () {},
+                            onPressed: _isLoading || _isLoadingGoogle
+                                ? () {}
+                                : () {},
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30.0),
-                              side: BorderSide.none
+                              side: BorderSide.none,
                             ),
                           ),
                         ),

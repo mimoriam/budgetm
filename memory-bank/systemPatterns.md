@@ -25,3 +25,4 @@ It is optional, but recommended to be updated as the project evolves.
   4. Conditional button rendering with CircularProgressIndicator during loading
   5. Disabling buttons during loading to prevent multiple submissions
 [2025-09-17 16:52:00] - [Implemented authentication state caching in AuthGate to prevent unnecessary CircularProgressIndicator during navigation]
+[2025-09-18 1:18:00] - Fixed "table 'accounts' has more than one primary key" error by removing redundant PRIMARY KEY declaration in account_model.dart and updating app_database.dart schema version
