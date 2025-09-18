@@ -24,3 +24,4 @@ This file records architectural and implementation decisions using a list format
 [2025-09-17 11:18:0] - Enabled Firebase Authentication local persistence by adding FirebaseAuth.instance.setPersistence(Persistence.LOCAL) in main.dart after Firebase initialization. This ensures user authentication state is persisted across app restarts.
 2025-09-17 11:45:40 - Modified login screen to use separate loading states for Google Sign-In and Email/Password login, added mounted checks for setState calls, and implemented circular progress indicators for both authentication methods.
 [2025-09-17 16:52:00] - [Optimized AuthGate to reduce unnecessary CircularProgressIndicator during navigation by implementing authentication state caching]
+[2025-09-18 09:08:51] - Added sqlite3_flutter_libs to dependencies in pubspec.yaml for Drift database integration

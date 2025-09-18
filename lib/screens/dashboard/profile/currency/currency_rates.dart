@@ -1,6 +1,10 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:provider/provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:currency_picker/currency_picker.dart';
+import 'package:currency_picker/src/currency_utils.dart';
 
 class CurrencyRatesScreen extends StatefulWidget {
   const CurrencyRatesScreen({super.key});
@@ -10,8 +14,11 @@ class CurrencyRatesScreen extends StatefulWidget {
 }
 
 class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
-  @override
+ @override
   Widget build(BuildContext context) {
+    final currencyProvider = Provider.of<CurrencyProvider>(context);
+    final selectedCurrency = currencyProvider.selectedCurrency;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -28,26 +35,14 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                 children: [
                   _buildSectionHeader('MAIN CURRENCY', showChangeButton: true),
                   _buildCurrencyCard(
-                    '🇵🇰',
-                    'Pakistani Rupee',
-                    'PKR',
+                    _getCurrencyFlag(selectedCurrency),
+                    _getCurrencyName(selectedCurrency),
+                    selectedCurrency,
                     isMain: true,
                   ),
                   const SizedBox(height: 24),
                   _buildSectionHeader('OTHERS', showAddButton: true),
-                  _buildCurrencyCard(
-                    '🇮🇳',
-                    'Indian Rupee',
-                    'INR',
-                    value: '\$10.00',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildCurrencyCard(
-                    '🇺🇸',
-                    'US - Dollar',
-                    'INR',
-                    value: '\$10.00',
-                  ),
+                  // ..._buildOtherCurrencies(currencyProvider),
                 ],
               ),
             ),
@@ -135,7 +130,9 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
             SizedBox(
               height: 28,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  _showCurrencyPicker(context);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gradientEnd,
                   foregroundColor: Colors.black,
@@ -167,6 +164,57 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildOtherCurrencies(CurrencyProvider currencyProvider) {
+    List<Widget> widgets = [];
+    
+    for (int i = 0; i < currencyProvider.otherCurrencies.length; i++) {
+      final currencyCode = currencyProvider.otherCurrencies[i];
+      final flag = _getCurrencyFlag(currencyCode);
+      final name = _getCurrencyName(currencyCode);
+      
+      widgets.add(
+        _buildCurrencyCard(
+          flag,
+          name,
+          currencyCode,
+          value: '\$10.00', // This should be replaced with actual conversion logic
+        ),
+      );
+      
+      // Add spacing between currency cards except for the last one
+      if (i < currencyProvider.otherCurrencies.length - 1) {
+        widgets.add(const SizedBox(height: 12));
+      }
+    }
+    
+    // If there are no other currencies, show a message
+    if (currencyProvider.otherCurrencies.isEmpty) {
+      widgets.add(
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.08),
+                spreadRadius: 1,
+                blurRadius: 10,
+              ),
+            ],
+          ),
+          child: const Text(
+            'No other currencies added yet',
+            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+          ),
+        ),
+      );
+    }
+    
+    return widgets;
   }
 
   Widget _buildCurrencyCard(
@@ -221,5 +269,38 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
         ],
       ),
     );
+  }
+
+  void _showCurrencyPicker(BuildContext context) {
+    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+    
+    showCurrencyPicker(
+      context: context,
+      onSelect: (Currency currency) {
+        currencyProvider.setCurrency(currency.code);
+        // The selected currency becomes the main currency, so we don't add it to other currencies
+      },
+    );
+  }
+
+  String _getCurrencyFlag(String currencyCode) {
+    try {
+      final currency = CurrencyService().findByCode(currencyCode);
+      if (currency != null) {
+        return CurrencyUtils.currencyToEmoji(currency);
+      }
+      return '🏳️';
+    } catch (e) {
+      return '🏳️';
+    }
+  }
+
+  String _getCurrencyName(String currencyCode) {
+    try {
+      final currency = CurrencyService().findByCode(currencyCode);
+      return currency?.name ?? currencyCode;
+    } catch (e) {
+      return currencyCode;
+    }
   }
 }

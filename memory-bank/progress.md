@@ -28,3 +28,9 @@ This file tracks the project's progress using a task list format.
 2025-09-17 11:16:14 - Completed removal of CircularProgressIndicator from AuthGate during initial onboarding check.
 [2025-09-17 11:18:0] - Enabled Firebase Authentication local persistence by adding FirebaseAuth.instance.setPersistence(Persistence.LOCAL) in main.dart. This ensures user authentication state is persisted across app restarts, improving user experience.
 [2025-09-17 16:52:00] - [Completed optimization of AuthGate to eliminate unnecessary CircularProgressIndicator during navigation]
+[2025-09-18 07:23:35] - Integrated CurrencyProvider into the main widget tree by wrapping MaterialApp with ChangeNotifierProvider in main.dart
+[2025-09-18 07:24:44] - Modified select_currency_screen.dart to use CurrencyProvider instead of SharedPreferences for storing selected currency
+[2025-09-18 07:26:00] - Modified currency_rates.dart to display the selected currency from CurrencyProvider
+[2025-09-18 08:02:00] - [Implemented currency selector pop-up in currency_rates.dart with change button functionality]
+[2025-09-18 09:09:09] - Added sqlite3_flutter_libs to dependencies in pubspec.yaml for Drift database integration
+[2025-09-18 09:11:55] - Created app_database.dart file with AppDatabase class that extends _$AppDatabase and includes Transactions and Tasks tables. Fixed platform-specific database initialization issue with NativeDatabase.createInBackground.

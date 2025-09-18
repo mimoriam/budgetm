@@ -2,7 +2,8 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 
 class SelectCurrencyScreen extends StatefulWidget {
   const SelectCurrencyScreen({super.key});
@@ -186,14 +187,11 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                     vertical: 18,
                                   ),
                                 ),
-                                onPressed: () async {
+                                onPressed: () {
                                   if (_selectedCurrency != null) {
-                                    final prefs =
-                                        await SharedPreferences.getInstance();
-                                    await prefs.setString(
-                                      'user_currency',
-                                      _selectedCurrency!.code,
-                                    );
+                                    final currencyProvider =
+                                        Provider.of<CurrencyProvider>(context, listen: false);
+                                    currencyProvider.setCurrency(_selectedCurrency!.code);
                                   }
                                   if (context.mounted) {
                                     Navigator.pushAndRemoveUntil(
