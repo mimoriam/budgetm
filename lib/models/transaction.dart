@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 enum TransactionType { income, expense }
 
 class Transaction {
-  final String title;
+  final int id; // Add database transaction ID
+ final String title;
   final String description;
   final double amount;
   final TransactionType type;
@@ -12,6 +13,7 @@ class Transaction {
   final Color iconBackgroundColor;
 
   Transaction({
+    required this.id, // Add database transaction ID
     required this.title,
     required this.description,
     required this.amount,

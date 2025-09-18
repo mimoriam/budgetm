@@ -25,6 +25,20 @@ class TransactionWithAccount {
   TransactionWithAccount({required this.transaction, this.account});
 }
 
+// Helper function to convert database transaction to UI transaction
+model.Transaction _convertToUiTransaction(Transaction dbTransaction) {
+  return model.Transaction(
+    id: dbTransaction.id, // Pass database transaction ID
+    title: dbTransaction.description,
+    description: dbTransaction.description,
+    amount: dbTransaction.amount,
+    type: dbTransaction.type == 'income' ? model.TransactionType.income : model.TransactionType.expense,
+    date: dbTransaction.date,
+    icon: const Icon(Icons.account_balance), // Default icon
+    iconBackgroundColor: Colors.grey.shade100, // Default color
+  );
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -599,7 +613,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  SliverFillRemaining _buildTransactionSection() {
+  Widget _buildTransactionSection() {
     Map<String, List<TransactionWithAccount>> groupedTransactions = {};
     for (var tx in _transactionsWithAccounts) {
       String dateKey = DateFormat('MMM d, yyyy').format(tx.transaction.date);
@@ -610,45 +624,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     List<String> sortedKeys = groupedTransactions.keys.toList();
 
-    return SliverFillRemaining(
-      hasScrollBody: false,
-      child: Container(
-        padding: const EdgeInsets.only(top: 16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
-          ),
-        ),
-        child: Column(
-          children: [
-            ...sortedKeys.map((date) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                    child: Text(
-                      date.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+    return SliverList(
+      delegate: SliverChildListDelegate(
+        [
+          Container(
+            padding: const EdgeInsets.only(top: 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+            ),
+            child: Column(
+              children: [
+                ...sortedKeys.map((date) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                        child: Text(
+                          date.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  ...groupedTransactions[date]!.map(
-                    (tx) => _buildTransactionItem(tx),
-                  ),
-                ],
-              );
-            }).toList(),
-            const SizedBox(height: 16),
-            _buildUpcomingTasksSection(),
-            const SizedBox(height: 70), // To avoid FAB overlap
-          ],
-        ),
+                      ...groupedTransactions[date]!.map(
+                        (tx) => _buildTransactionItem(tx),
+                      ),
+                    ],
+                  );
+                }).toList(),
+                const SizedBox(height: 16),
+                _buildUpcomingTasksSection(),
+                const SizedBox(height: 70), // To avoid FAB overlap
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -656,10 +673,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildTransactionItem(TransactionWithAccount transactionWithAccount) {
     final transaction = transactionWithAccount.transaction;
     final account = transactionWithAccount.account;
+    final uiTransaction = _convertToUiTransaction(transaction);
     
     return InkWell(
       onTap: () {
-        // TODO: Handle tap
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExpenseDetailScreen(transaction: uiTransaction),
+          ),
+        );
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

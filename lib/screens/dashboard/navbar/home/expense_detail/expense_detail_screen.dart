@@ -1,13 +1,34 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/data/local/app_database.dart' as db;
 import 'package:budgetm/models/transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
-class ExpenseDetailScreen extends StatelessWidget {
+class ExpenseDetailScreen extends StatefulWidget {
   final Transaction transaction;
 
   const ExpenseDetailScreen({super.key, required this.transaction});
+
+  @override
+  State<ExpenseDetailScreen> createState() => _ExpenseDetailScreenState();
+}
+
+class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
+  late db.AppDatabase _database;
+
+  @override
+  void initState() {
+    super.initState();
+    _database = db.AppDatabase();
+  }
+
+  Future<void> _deleteTransaction() async {
+    // Delete the transaction from the database
+    await (_database.delete(_database.transactions)
+      ..where((tbl) => tbl.id.equals(widget.transaction.id)))
+      .go();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +50,14 @@ class ExpenseDetailScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(
-                          transaction.title,
+                          widget.transaction.title,
                           style: Theme.of(
                             context,
                           ).textTheme.displayLarge?.copyWith(fontSize: 32),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          transaction.description,
+                          widget.transaction.description,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: AppColors.secondaryTextColorLight,
@@ -51,13 +72,13 @@ class ExpenseDetailScreen extends StatelessWidget {
                       _buildInfoCard(
                         context,
                         'Accumulated Amount',
-                        '\$${transaction.amount.toStringAsFixed(2)}',
+                        '\$${widget.transaction.amount.toStringAsFixed(2)}',
                       ),
                       const SizedBox(width: 16),
                       _buildInfoCard(
                         context,
                         'Total',
-                        '\$${transaction.amount.toStringAsFixed(2)}',
+                        '\$${widget.transaction.amount.toStringAsFixed(2)}',
                       ),
                     ],
                   ),
@@ -77,7 +98,7 @@ class ExpenseDetailScreen extends StatelessWidget {
                       Text(
                         DateFormat(
                           'MMMM d, yyyy',
-                        ).format(transaction.date).toUpperCase(),
+                        ).format(widget.transaction.date).toUpperCase(),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -112,9 +133,13 @@ class ExpenseDetailScreen extends StatelessWidget {
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Add delete logic
-                            Navigator.of(context).pop();
+                          onPressed: () async {
+                            // Add delete logic
+                            await _deleteTransaction();
+                            // Navigate back to the previous screen
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
