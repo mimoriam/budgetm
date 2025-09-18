@@ -17,6 +17,7 @@ import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 // Data structure to hold a transaction with its associated account
 class TransactionWithAccount {
   final Transaction transaction;
@@ -32,7 +33,9 @@ model.Transaction _convertToUiTransaction(Transaction dbTransaction) {
     title: dbTransaction.description,
     description: dbTransaction.description,
     amount: dbTransaction.amount,
-    type: dbTransaction.type == 'income' ? model.TransactionType.income : model.TransactionType.expense,
+    type: dbTransaction.type == 'income'
+        ? model.TransactionType.income
+        : model.TransactionType.expense,
     date: dbTransaction.date,
     icon: const Icon(Icons.account_balance), // Default icon
     iconBackgroundColor: Colors.grey.shade100, // Default color
@@ -48,14 +51,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late ScrollController _scrollController;
- late AppDatabase _database;
+  late AppDatabase _database;
   List<DateTime> _months = [];
   int _selectedMonthIndex = 0;
 
   List<Transaction> _transactions = [];
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
-   List<TransactionWithAccount> _transactionsWithAccounts = [];
+  List<TransactionWithAccount> _transactionsWithAccounts = [];
   List<Task> _upcomingTasks = [];
 
   @override
@@ -133,19 +136,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _loadTransactions() async {
     // Load all transactions
     final transactions = await _database.select(_database.transactions).get();
-    
+
     // Load all accounts for mapping
     final accounts = await _database.select(_database.accounts).get();
     final accountMap = {for (var account in accounts) account.id: account};
-    
+
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
       return TransactionWithAccount(
         transaction: transaction,
-        account: transaction.accountId != null ? accountMap[transaction.accountId] : null,
+        account: transaction.accountId != null
+            ? accountMap[transaction.accountId]
+            : null,
       );
     }).toList();
-    
+
     setState(() {
       _transactions = transactions;
       _transactionsWithAccounts = transactionsWithAccounts;
@@ -159,21 +164,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Query for income transactions
     final incomeQuery = _database.select(_database.transactions)
-      ..where((tbl) =>
-          tbl.type.equals('income') &
-          tbl.date.isBetweenValues(startOfMonth, endOfMonth));
+      ..where(
+        (tbl) =>
+            tbl.type.equals('income') &
+            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
+      );
     final incomeTransactions = await incomeQuery.get();
-    final totalIncome =
-        incomeTransactions.fold<double>(0.0, (sum, tx) => sum + tx.amount);
+    final totalIncome = incomeTransactions.fold<double>(
+      0.0,
+      (sum, tx) => sum + tx.amount,
+    );
 
     // Query for expense transactions
     final expenseQuery = _database.select(_database.transactions)
-      ..where((tbl) =>
-          tbl.type.equals('expense') &
-          tbl.date.isBetweenValues(startOfMonth, endOfMonth));
+      ..where(
+        (tbl) =>
+            tbl.type.equals('expense') &
+            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
+      );
     final expenseTransactions = await expenseQuery.get();
-    final totalExpenses =
-        expenseTransactions.fold<double>(0.0, (sum, tx) => sum + tx.amount);
+    final totalExpenses = expenseTransactions.fold<double>(
+      0.0,
+      (sum, tx) => sum + tx.amount,
+    );
 
     setState(() {
       _totalIncome = totalIncome;
@@ -189,16 +202,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final transactionsQuery = _database.select(_database.transactions)
       ..where((tbl) => tbl.date.isBetweenValues(startOfMonth, endOfMonth));
     final transactions = await transactionsQuery.get();
-    
+
     // Load all accounts for mapping
     final accounts = await _database.select(_database.accounts).get();
     final accountMap = {for (var account in accounts) account.id: account};
-    
+
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
       return TransactionWithAccount(
         transaction: transaction,
-        account: transaction.accountId != null ? accountMap[transaction.accountId] : null,
+        account: transaction.accountId != null
+            ? accountMap[transaction.accountId]
+            : null,
       );
     }).toList();
 
@@ -208,87 +223,103 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-   Future<void> _loadUpcomingTasks() async {
-     final now = DateTime.now();
-     final endOfMonth = DateTime(now.year, now.month + 1, 0);
- 
-     final tasksQuery = _database.select(_database.tasks)
-       ..where((tbl) =>
-           tbl.dueDate.isBetweenValues(now, endOfMonth) & tbl.isCompleted.equals(false));
-     final tasks = await tasksQuery.get();
- 
-     setState(() {
-       _upcomingTasks = tasks;
-     });
-   }
- 
-   Future<void> _loadIncomeAndExpensesForMonth(DateTime month) async {
-     final startOfMonth = DateTime(month.year, month.month, 1);
-     final endOfMonth = DateTime(month.year, month.month + 1, 0);
- 
-     // Query for income transactions
-     final incomeQuery = _database.select(_database.transactions)
-       ..where((tbl) =>
-           tbl.type.equals('income') &
-           tbl.date.isBetweenValues(startOfMonth, endOfMonth));
-     final incomeTransactions = await incomeQuery.get();
-     final totalIncome =
-         incomeTransactions.fold<double>(0.0, (sum, tx) => sum + tx.amount);
- 
-     // Query for expense transactions
-     final expenseQuery = _database.select(_database.transactions)
-       ..where((tbl) =>
-           tbl.type.equals('expense') &
-           tbl.date.isBetweenValues(startOfMonth, endOfMonth));
-     final expenseTransactions = await expenseQuery.get();
-     final totalExpenses =
-         expenseTransactions.fold<double>(0.0, (sum, tx) => sum + tx.amount);
- 
-     setState(() {
-       _totalIncome = totalIncome;
-       _totalExpenses = totalExpenses;
-     });
-   }
- 
-   Future<void> _loadTransactionsForMonth(DateTime month) async {
-     final startOfMonth = DateTime(month.year, month.month, 1);
-     final endOfMonth = DateTime(month.year, month.month + 1, 0);
+  Future<void> _loadUpcomingTasks() async {
+    final now = DateTime.now();
+    final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
-     final transactionsQuery = _database.select(_database.transactions)
-       ..where((tbl) => tbl.date.isBetweenValues(startOfMonth, endOfMonth));
-     final transactions = await transactionsQuery.get();
-     
-     // Load all accounts for mapping
-     final accounts = await _database.select(_database.accounts).get();
-     final accountMap = {for (var account in accounts) account.id: account};
-     
-     // Create TransactionWithAccount objects
-     final transactionsWithAccounts = transactions.map((transaction) {
-       return TransactionWithAccount(
-         transaction: transaction,
-         account: transaction.accountId != null ? accountMap[transaction.accountId] : null,
-       );
-     }).toList();
+    final tasksQuery = _database.select(_database.tasks)
+      ..where(
+        (tbl) =>
+            tbl.dueDate.isBetweenValues(now, endOfMonth) &
+            tbl.isCompleted.equals(false),
+      );
+    final tasks = await tasksQuery.get();
 
-     setState(() {
-       _transactions = transactions;
-       _transactionsWithAccounts = transactionsWithAccounts;
-     });
-   }
- 
-   Future<void> _loadUpcomingTasksForMonth(DateTime month) async {
-     final startOfMonth = DateTime(month.year, month.month, 1);
-     final endOfMonth = DateTime(month.year, month.month + 1, 0);
- 
-     final tasksQuery = _database.select(_database.tasks)
-       ..where((tbl) =>
-           tbl.dueDate.isBetweenValues(startOfMonth, endOfMonth) & tbl.isCompleted.equals(false));
-     final tasks = await tasksQuery.get();
- 
-     setState(() {
-       _upcomingTasks = tasks;
-     });
-   }
+    setState(() {
+      _upcomingTasks = tasks;
+    });
+  }
+
+  Future<void> _loadIncomeAndExpensesForMonth(DateTime month) async {
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final endOfMonth = DateTime(month.year, month.month + 1, 0);
+
+    // Query for income transactions
+    final incomeQuery = _database.select(_database.transactions)
+      ..where(
+        (tbl) =>
+            tbl.type.equals('income') &
+            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
+      );
+    final incomeTransactions = await incomeQuery.get();
+    final totalIncome = incomeTransactions.fold<double>(
+      0.0,
+      (sum, tx) => sum + tx.amount,
+    );
+
+    // Query for expense transactions
+    final expenseQuery = _database.select(_database.transactions)
+      ..where(
+        (tbl) =>
+            tbl.type.equals('expense') &
+            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
+      );
+    final expenseTransactions = await expenseQuery.get();
+    final totalExpenses = expenseTransactions.fold<double>(
+      0.0,
+      (sum, tx) => sum + tx.amount,
+    );
+
+    setState(() {
+      _totalIncome = totalIncome;
+      _totalExpenses = totalExpenses;
+    });
+  }
+
+  Future<void> _loadTransactionsForMonth(DateTime month) async {
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final endOfMonth = DateTime(month.year, month.month + 1, 0);
+
+    final transactionsQuery = _database.select(_database.transactions)
+      ..where((tbl) => tbl.date.isBetweenValues(startOfMonth, endOfMonth));
+    final transactions = await transactionsQuery.get();
+
+    // Load all accounts for mapping
+    final accounts = await _database.select(_database.accounts).get();
+    final accountMap = {for (var account in accounts) account.id: account};
+
+    // Create TransactionWithAccount objects
+    final transactionsWithAccounts = transactions.map((transaction) {
+      return TransactionWithAccount(
+        transaction: transaction,
+        account: transaction.accountId != null
+            ? accountMap[transaction.accountId]
+            : null,
+      );
+    }).toList();
+
+    setState(() {
+      _transactions = transactions;
+      _transactionsWithAccounts = transactionsWithAccounts;
+    });
+  }
+
+  Future<void> _loadUpcomingTasksForMonth(DateTime month) async {
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final endOfMonth = DateTime(month.year, month.month + 1, 0);
+
+    final tasksQuery = _database.select(_database.tasks)
+      ..where(
+        (tbl) =>
+            tbl.dueDate.isBetweenValues(startOfMonth, endOfMonth) &
+            tbl.isCompleted.equals(false),
+      );
+    final tasks = await tasksQuery.get();
+
+    setState(() {
+      _upcomingTasks = tasks;
+    });
+  }
 
   void _scrollToSelectedMonth() {
     if (_selectedMonthIndex != -1) {
@@ -306,7 +337,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     // SystemChrome.setSystemUIOverlayStyle(
@@ -314,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // );
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
-    
+
     // Check if we should refresh the data
     if (homeScreenProvider.shouldRefresh) {
       _refreshData();
@@ -346,128 +376,118 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 stops: const [0.3, 1.0],
               ),
             ),
-            child: child,
+            child: Column(
+              children: [
+                _buildAppBar(context),
+                _buildMonthSelector(),
+                _buildBalanceCards(),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: _buildTransactionSectionContent(),
+                ),
+              ],
+            ),
           );
         },
-        child: CustomScrollView(
-          slivers: [
-            _buildAppBar(context),
-            SliverToBoxAdapter(
-              child: Column(
-                children: [_buildMonthSelector(), _buildBalanceCards()],
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            _buildTransactionSection(),
-          ],
-        ),
       ),
     );
   }
 
-  SliverAppBar _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
-    return SliverAppBar(
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      toolbarHeight: 100,
-      pinned: true,
-      floating: true,
-      snap: true,
-      automaticallyImplyLeading: false,
-      title: Center(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const ProfileScreen(),
-                        withNavBar: false,
-                        pageTransitionAnimation:
-                            PageTransitionAnimation.cupertino,
-                      );
-                    },
-                    child: const CircleAvatar(
-                      radius: 22,
-                      backgroundImage: AssetImage(
-                        'images/backgrounds/onboarding1.png',
-                      ),
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    return Container(
+      height: 100 + statusBarHeight, // Match the toolbarHeight from SliverAppBar plus status bar height
+      padding: EdgeInsets.only(top: statusBarHeight, bottom: 8.0), // Match the padding from SliverAppBar plus status bar height
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    PersistentNavBarNavigator.pushNewScreen(
+                      context,
+                      screen: const ProfileScreen(),
+                      withNavBar: false,
+                      pageTransitionAnimation:
+                          PageTransitionAnimation.cupertino,
+                    );
+                  },
+                  child: const CircleAvatar(
+                    radius: 22,
+                    backgroundImage: AssetImage(
+                      'images/backgrounds/onboarding1.png',
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${_selectedMonthIndex < _months.length && _selectedMonthIndex >= 0 ? DateFormat('MMMM').format(_months[_selectedMonthIndex]) : 'Balance'}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.black54,
-                          fontWeight: FontWeight.w500,
-                        ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${_selectedMonthIndex < _months.length && _selectedMonthIndex >= 0 ? DateFormat('MMMM').format(_months[_selectedMonthIndex]) : 'Balance'}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '\$ ${(_totalIncome - _totalExpenses).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '\$ ${(_totalIncome - _totalExpenses).toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
                       ),
-                    ],
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildAppBarButton(
-                    HugeIcons.strokeRoundedAirplaneMode,
-                    onPressed: Provider.of<VacationProvider>(
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildAppBarButton(
+                  HugeIcons.strokeRoundedAirplaneMode,
+                  onPressed: Provider.of<VacationProvider>(
+                    context,
+                    listen: false,
+                  ).toggleAiMode,
+                  isActive: vacationProvider.isVacationMode,
+                ),
+                _buildAppBarButton(
+                  HugeIcons.strokeRoundedAnalytics02,
+                  onPressed: () {
+                    PersistentNavBarNavigator.pushNewScreen(
                       context,
-                      listen: false,
-                    ).toggleAiMode,
-                    isActive: vacationProvider.isVacationMode,
-                  ),
-                  _buildAppBarButton(
-                    HugeIcons.strokeRoundedAnalytics02,
-                    onPressed: () {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const AnalyticsScreen(),
-                        withNavBar: false,
-                        pageTransitionAnimation:
-                            PageTransitionAnimation.cupertino,
-                      );
-                    },
-                  ),
-                  _buildAppBarButton(
-                    HugeIcons.strokeRoundedStar,
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return const FeedbackModal();
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
+                      screen: const AnalyticsScreen(),
+                      withNavBar: false,
+                      pageTransitionAnimation:
+                          PageTransitionAnimation.cupertino,
+                    );
+                  },
+                ),
+                _buildAppBarButton(
+                  HugeIcons.strokeRoundedStar,
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return const FeedbackModal();
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
-  }
+ }
 
   Widget _buildAppBarButton(
     List<List<dynamic>> icon, {
@@ -547,24 +567,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Row(
         children: [
           Expanded(
-           child: _buildInfoCard(
-             'Income',
-             '+ \$${_totalIncome.toStringAsFixed(2)}',
-             Colors.green,
-             HugeIcons.strokeRoundedChartUp,
-             AppColors.incomeBackground,
-           ),
-         ),
-         const SizedBox(width: 12),
-         Expanded(
-           child: _buildInfoCard(
-             'Expense',
-             '- \$${_totalExpenses.toStringAsFixed(2)}',
-             Colors.red,
-             HugeIcons.strokeRoundedChartDown,
-             AppColors.expenseBackground,
-           ),
-         ),
+            child: _buildInfoCard(
+              'Income',
+              '+ \$${_totalIncome.toStringAsFixed(2)}',
+              Colors.green,
+              HugeIcons.strokeRoundedChartUp,
+              AppColors.incomeBackground,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildInfoCard(
+              'Expense',
+              '- \$${_totalExpenses.toStringAsFixed(2)}',
+              Colors.red,
+              HugeIcons.strokeRoundedChartDown,
+              AppColors.expenseBackground,
+            ),
+          ),
         ],
       ),
     );
@@ -614,6 +634,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildTransactionSection() {
+    return SliverList(
+      delegate: SliverChildListDelegate([_buildTransactionSectionContent()]),
+    );
+  }
+
+  Widget _buildTransactionSectionContent() {
     Map<String, List<TransactionWithAccount>> groupedTransactions = {};
     for (var tx in _transactionsWithAccounts) {
       String dateKey = DateFormat('MMM d, yyyy').format(tx.transaction.date);
@@ -624,48 +650,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     List<String> sortedKeys = groupedTransactions.keys.toList();
 
-    return SliverList(
-      delegate: SliverChildListDelegate(
-        [
-          Container(
-            padding: const EdgeInsets.only(top: 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
-            ),
-            child: Column(
-              children: [
-                ...sortedKeys.map((date) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                        child: Text(
-                          date.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(
+          children: [
+            ...sortedKeys.map((date) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                    child: Text(
+                      date.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
-                      ...groupedTransactions[date]!.map(
-                        (tx) => _buildTransactionItem(tx),
-                      ),
-                    ],
-                  );
-                }).toList(),
-                const SizedBox(height: 16),
-                _buildUpcomingTasksSection(),
-                const SizedBox(height: 70), // To avoid FAB overlap
-              ],
-            ),
-          ),
-        ],
+                    ),
+                  ),
+                  ...groupedTransactions[date]!.map(
+                    (tx) => _buildTransactionItem(tx),
+                  ),
+                ],
+              );
+            }).toList(),
+            const SizedBox(height: 16),
+            _buildUpcomingTasksSection(),
+            const SizedBox(height: 70), // To avoid FAB overlap
+          ],
+        ),
       ),
     );
   }
@@ -674,13 +696,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final transaction = transactionWithAccount.transaction;
     final account = transactionWithAccount.account;
     final uiTransaction = _convertToUiTransaction(transaction);
-    
+
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ExpenseDetailScreen(transaction: uiTransaction),
+            builder: (context) =>
+                ExpenseDetailScreen(transaction: uiTransaction),
           ),
         );
       },
@@ -734,9 +757,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Text(
               '${transaction.type == 'income' ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}',
               style: TextStyle(
-                color: transaction.type == 'income'
-                    ? Colors.green
-                    : Colors.red,
+                color: transaction.type == 'income' ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -759,10 +780,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           const Text(
             'Upcoming Tasks',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           ..._upcomingTasks.map((task) => _buildTaskItem(task)).toList(),
@@ -798,9 +816,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              task.type == 'income'
-                  ? Icons.trending_up
-                  : Icons.trending_down,
+              task.type == 'income' ? Icons.trending_up : Icons.trending_down,
               color: task.type == 'income' ? Colors.green : Colors.red,
             ),
           ),
@@ -822,8 +838,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
-              ),
             ),
+          ),
           Text(
             '${task.type == 'income' ? '+' : '-'} \$${task.amount.toStringAsFixed(2)}',
             style: TextStyle(

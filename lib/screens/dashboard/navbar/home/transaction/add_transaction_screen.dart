@@ -239,6 +239,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   inputType: InputType.date,
                   format: DateFormat('dd/MM/yyyy'),
                   style: const TextStyle(fontSize: 13),
+                  firstDate: DateTime.now(),
                   decoration: _inputDecoration(
                     suffixIcon: HugeIcons.strokeRoundedCalendar01,
                   ),
