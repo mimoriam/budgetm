@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/data/local/app_database.dart' as db;
+import 'package:budgetm/data/local/models/account_model.dart';
 import 'package:budgetm/models/transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -56,12 +57,29 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           ).textTheme.displayLarge?.copyWith(fontSize: 32),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          widget.transaction.description,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: AppColors.secondaryTextColorLight,
-                              ),
+                        FutureBuilder<db.Account?>(
+                          future: db.AppDatabase().getAccountById(widget.transaction.accountId ?? ''),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Text('Loading...');
+                            } else if (snapshot.hasError) {
+                              return Text('Error: ${snapshot.error}');
+                            } else if (snapshot.hasData && snapshot.data != null) {
+                              return Text(
+                                snapshot.data!.name,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: AppColors.secondaryTextColorLight,
+                                    ),
+                              );
+                            } else {
+                              return const Text(
+                                'Account not found',
+                                style: TextStyle(
+                                  color: AppColors.secondaryTextColorLight,
+                                ),
+                              );
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -225,7 +243,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4),
           child: Row(
             children: [
               GestureDetector(

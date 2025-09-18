@@ -13,7 +13,22 @@ part 'app_database.g.dart';
 
 @DriftDatabase(tables: [Transactions, Tasks, Accounts])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
+   // Singleton instance
+   static AppDatabase? _instance;
+ 
+   // Private constructor
+   AppDatabase._internal([QueryExecutor? executor]) : super(executor ?? _openConnection());
+ 
+    // Factory constructor to return the singleton instance
+    factory AppDatabase([QueryExecutor? executor]) {
+      // Thread-safe singleton initialization
+      return _instance ??= AppDatabase._internal(executor);
+    }
+ 
+   // Method to get the singleton instance
+   static AppDatabase get instance {
+     return AppDatabase();
+   }
 
   @override
   int get schemaVersion => 4; // Incremented from 3 to 4 to fix Accounts table primary key

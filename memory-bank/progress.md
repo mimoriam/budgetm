@@ -41,3 +41,4 @@ This file tracks the project's progress using a task list format.
 [2025-09-18 17:58:03] - Successfully implemented delete functionality in ExpenseDetailScreen. The feature now allows users to delete transactions from the database when they press the Delete button.
 [2025-09-18 19:05:00] - Added top padding to the appbar in home.dart to separate it from the status bar. Used MediaQuery.of(context).padding.top to dynamically calculate the status bar height and added it as top padding to the appbar container.
 [2025-09-18 19:21:0] - Fixed issue with home screen refresh loading data for current month instead of selected month. Modified _refreshData() method in home.dart to use month-specific data loading methods with _months[_selectedMonthIndex] parameter instead of generic methods that always loaded current month data.
+2025-09-18 14:40:00 - Implemented singleton pattern for AppDatabase to prevent multiple instances and race conditions

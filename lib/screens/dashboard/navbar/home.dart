@@ -39,6 +39,7 @@ model.Transaction _convertToUiTransaction(Transaction dbTransaction) {
     date: dbTransaction.date,
     icon: const Icon(Icons.account_balance), // Default icon
     iconBackgroundColor: Colors.grey.shade100, // Default color
+    accountId: dbTransaction.accountId, // Pass accountId from database transaction
   );
 }
 
