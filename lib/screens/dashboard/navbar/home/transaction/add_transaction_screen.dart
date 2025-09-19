@@ -5,6 +5,7 @@ import 'package:budgetm/data/local/models/transaction_model.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:drift/drift.dart' as drift hide Column;
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -71,9 +72,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _loadCategories() async {
     try {
-      // Get categories filtered by transaction type
+      // Get categories filtered by transaction type and ordered by displayOrder
       final categories = await (_database.select(_database.categories)
-            ..where((tbl) => tbl.type.equals(widget.transactionType == TransactionType.income ? 'income' : 'expense')))
+            ..where((tbl) => tbl.type.equals(widget.transactionType == TransactionType.income ? 'income' : 'expense'))
+            ..orderBy([(u) => OrderingTerm(expression: u.displayOrder)]))
           .get();
       
       setState(() {

@@ -6,6 +6,7 @@ class Categories extends Table {
   TextColumn get type => text().nullable()(); // e.g., 'income', 'expense'
   TextColumn get icon => text().nullable()(); // Icon for the category
   TextColumn get color => text().nullable()(); // Color for the category
+  IntColumn get displayOrder => integer().withDefault(Constant(0))(); // Display order for categories
 }
 
 class Transactions extends Table {

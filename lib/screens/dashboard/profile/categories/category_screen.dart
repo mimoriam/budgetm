@@ -26,7 +26,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   Future<void> _loadCategories() async {
     final database = AppDatabase.instance;
-    final categories = await database.select(database.categories).get();
+    final categories = await database.getCategoriesOrdered();
     setState(() {
       _categories = categories;
       _isLoading = false;
@@ -36,8 +36,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   Widget build(BuildContext context) {
     final currentCategories = _categories
-        .where((category) =>
-            category.type == (_isExpenseSelected ? 'expense' : 'income'))
+        .where(
+          (category) =>
+              category.type == (_isExpenseSelected ? 'expense' : 'income'),
+        )
         .toList();
 
     return Scaffold(
@@ -47,9 +49,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         children: [
           _buildToggleChips(),
           if (_isLoading)
-            const Expanded(
-              child: Center(child: CircularProgressIndicator()),
-            )
+            const Expanded(child: Center(child: CircularProgressIndicator()))
           else
             Expanded(
               child: ReorderableListView.builder(
@@ -63,8 +63,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   );
                 },
                 onReorder: (int oldIndex, int newIndex) {
-                  // Reordering is not implemented in this version
-                  // You could implement this by adding an 'order' field to the Categories table
+                  _reorderCategories(oldIndex, newIndex, currentCategories);
                 },
               ),
             ),
@@ -188,14 +187,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       child: _buildChip(
                         'Expense',
                         _isExpenseSelected,
-                            () => setState(() => _isExpenseSelected = true),
+                        () => setState(() => _isExpenseSelected = true),
                       ),
                     ),
                     Expanded(
                       child: _buildChip(
                         'Income',
                         !_isExpenseSelected,
-                            () => setState(() => _isExpenseSelected = false),
+                        () => setState(() => _isExpenseSelected = false),
                       ),
                     ),
                   ],
@@ -226,10 +225,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
     );
   }
 
-  Widget _buildCategoryItem({
-    required Key key,
-    required Category category,
-  }) {
+  Widget _buildCategoryItem({required Key key, required Category category}) {
     return Container(
       key: key,
       margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -240,8 +236,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
       ),
       child: ListTile(
         dense: true,
-        contentPadding:
-        const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -254,25 +249,78 @@ class _CategoryScreenState extends State<CategoryScreen> {
             color: Colors.black87,
           ),
         ),
-        title: Text(category.name ?? '',
-            style: const TextStyle(fontWeight: FontWeight.w500)),
+        title: Text(
+          category.name ?? '',
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         trailing: IconButton(
           icon: const HugeIcon(
-            icon: HugeIcons.strokeRoundedDelete01,
-            color: Colors.red,
+            icon: HugeIcons.strokeRoundedDragDropVertical,
+            color: Colors.grey,
             size: 24,
           ),
-          onPressed: () => _deleteCategory(category),
+          onPressed: null,
         ),
       ),
     );
   }
 
+  Future<void> _reorderCategories(
+    int oldIndex,
+    int newIndex,
+    List<Category> currentCategories,
+  ) async {
+    // Adjust newIndex if it's greater than oldIndex
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+
+    // Create a copy of the current categories list
+    final updatedCategories = List<Category>.from(currentCategories);
+
+    // Reorder the categories in the list
+    final movedCategory = updatedCategories.removeAt(oldIndex);
+    updatedCategories.insert(newIndex, movedCategory);
+
+    // Update the display order in the database
+    final categoryOrderPairs = <MapEntry<int, int>>[];
+    for (int i = 0; i < updatedCategories.length; i++) {
+      categoryOrderPairs.add(MapEntry(updatedCategories[i].id, i));
+    }
+
+    final database = AppDatabase.instance;
+    await database.updateMultipleCategoryDisplayOrders(categoryOrderPairs);
+
+    // Update the state with the new display orders
+    setState(() {
+      // Create a map of category id to new display order
+      final orderMap = <int, int>{};
+      for (int i = 0; i < updatedCategories.length; i++) {
+        orderMap[updatedCategories[i].id] = i;
+      }
+
+      // Update the _categories list with new display orders
+      _categories = _categories.map((category) {
+        final newDisplayOrder = orderMap[category.id];
+        if (newDisplayOrder != null) {
+          // Create a new Category object with updated displayOrder
+          return category.copyWith(displayOrder: newDisplayOrder);
+        }
+        return category;
+      }).toList();
+
+      // Sort the categories by display order to ensure correct UI order
+      _categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    });
+  }
+
   Future<void> _deleteCategory(Category category) async {
     final database = AppDatabase.instance;
-    await (database.delete(database.categories)
-          ..where((tbl) => tbl.id.equals(category.id)))
-        .go();
-    _loadCategories(); // Refresh the list
+    await database.customUpdate(
+      'DELETE FROM categories WHERE id = ?',
+      variables: [drift.Variable.withInt(category.id)],
+      updates: {database.categories},
+    );
+    await _loadCategories(); // Reload categories after deletion
   }
 }

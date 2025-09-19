@@ -87,6 +87,30 @@ class AppDatabase extends _$AppDatabase {
     )..where((cat) => cat.id.equals(id))).getSingleOrNull();
   }
 
+  /// Update the display order of a category
+  Future<int> updateCategoryDisplayOrder(int categoryId, int displayOrder) {
+    return customUpdate(
+      'UPDATE categories SET display_order = ? WHERE id = ?',
+      variables: [Variable.withInt(displayOrder), Variable.withInt(categoryId)],
+      updates: {categories},
+    );
+  }
+
+  /// Update display orders for multiple categories
+  Future<void> updateMultipleCategoryDisplayOrders(List<MapEntry<int, int>> categoryOrderPairs) async {
+    for (var pair in categoryOrderPairs) {
+      await updateCategoryDisplayOrder(pair.key, pair.value);
+    }
+  }
+
+  /// Get all categories ordered by display order
+  Future<List<Category>> getCategoriesOrdered() {
+    return (select(categories)..orderBy([
+      (u) => OrderingTerm(expression: u.displayOrder),
+      (u) => OrderingTerm(expression: u.id),
+    ])).get();
+  }
+
   /// Get the default account
   Future<Account?> getDefaultAccount() {
     return (select(
