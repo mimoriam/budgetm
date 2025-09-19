@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/data/local/app_database.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,22 @@ class BalanceScreen extends StatefulWidget {
 
 class _BalanceScreenState extends State<BalanceScreen> {
   int touchedIndex = -1;
+  late AppDatabase _database;
+  List<Account> _accounts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _database = AppDatabase();
+    _loadAccounts();
+  }
+
+  Future<void> _loadAccounts() async {
+    final accounts = await _database.getAccounts();
+    setState(() {
+      _accounts = accounts;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,21 +51,18 @@ class _BalanceScreenState extends State<BalanceScreen> {
                   const SizedBox(height: 24),
                   _buildSectionHeader('MY ACCOUNTS'),
                   const SizedBox(height: 12),
-                  _buildAccountItem(
-                    icon: Icons.apple,
-                    iconColor: Colors.black,
-                    iconBackgroundColor: Colors.grey.shade200,
-                    accountName: 'Askari',
-                    amount: 200.00,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildAccountItem(
-                    icon: Icons.apple,
-                    iconColor: Colors.black,
-                    iconBackgroundColor: Colors.grey.shade200,
-                    accountName: 'Meezan',
-                    amount: 200.00,
-                  ),
+                  ..._accounts.map((account) => Column(
+                        children: [
+                          _buildAccountItem(
+                            icon: Icons.account_balance,
+                            iconColor: Colors.black,
+                            iconBackgroundColor: Colors.grey.shade200,
+                            accountName: account.name,
+                            amount: account.balance,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      )),
                 ],
               ),
             ),
@@ -145,46 +159,68 @@ class _BalanceScreenState extends State<BalanceScreen> {
   }
 
   List<PieChartSectionData> showingSections() {
-    return List.generate(3, (i) {
+    if (_accounts.isEmpty) {
+      return [];
+    }
+
+    // Calculate total balance
+    final totalBalance = _accounts.fold<double>(0.0, (sum, account) => sum + account.balance);
+    
+    // Define a list of colors for the pie chart sections
+    final colors = [
+      const Color(0xFF2563EB),
+      const Color(0xFFF59E0B),
+      const Color(0xFF10B981),
+      const Color(0xFFEF4444),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+    ];
+
+    return List.generate(_accounts.length, (i) {
       final isTouched = i == touchedIndex;
       final radius = isTouched ? 120.0 : 100.0;
-
-      switch (i) {
-        case 0:
-          return PieChartSectionData(
-            color: const Color(0xFF2563EB),
-            value: 25,
-            title: '',
-            radius: radius,
-          );
-        case 1:
-          return PieChartSectionData(
-            color: const Color(0xFFF59E0B),
-            value: 35,
-            title: '',
-            radius: radius,
-          );
-        case 2:
-          return PieChartSectionData(
-            color: const Color(0xFF10B981),
-            value: 40,
-            title: '',
-            radius: radius,
-          );
-        default:
-          throw Error();
-      }
+      final account = _accounts[i];
+      
+      return PieChartSectionData(
+        color: colors[i % colors.length],
+        value: account.balance,
+        title: '',
+        radius: radius,
+      );
     });
   }
 
   Widget _buildLegend() {
+    if (_accounts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Define a list of colors for the legend items
+    final colors = [
+      const Color(0xFF2563EB),
+      const Color(0xFFF59E0B),
+      const Color(0xFF10B981),
+      const Color(0xFFEF4444),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+    ];
+
     return Column(
       children: [
-        _buildLegendItem(const Color(0xFF10B981), 'Account 1', 100000),
-        const SizedBox(height: 12),
-        _buildLegendItem(const Color(0xFFF59E0B), 'Account 2', 100000),
-        const SizedBox(height: 12),
-        _buildLegendItem(const Color(0xFF2563EB), 'Account 3', 100000),
+        ..._accounts.asMap().entries.map((entry) {
+          final index = entry.key;
+          final account = entry.value;
+          return Column(
+            children: [
+              _buildLegendItem(
+                colors[index % colors.length],
+                account.name,
+                account.balance,
+              ),
+              if (index < _accounts.length - 1) const SizedBox(height: 12),
+            ],
+          );
+        }).toList(),
       ],
     );
   }

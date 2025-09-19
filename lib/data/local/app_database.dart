@@ -134,6 +134,11 @@ class AppDatabase extends _$AppDatabase {
     ])).get();
   }
 
+  /// Get all accounts
+  Future<List<Account>> getAccounts() {
+    return select(accounts).get();
+ }
+
   /// Get the default account
   Future<Account?> getDefaultAccount() {
     return (select(

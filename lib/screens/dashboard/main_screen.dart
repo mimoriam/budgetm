@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/add_budget/add_budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
@@ -308,7 +309,12 @@ class _MainScreenState extends State<MainScreen> {
             color: Colors.blue,
             onPressed: () {
               _toggleFabMenu();
-              // TODO: Navigate to Add Account screen
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddAccountScreen(),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
             },
           ),
         ];
