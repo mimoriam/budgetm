@@ -398,8 +398,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final vacationProvider = context.watch<VacationProvider>();
     final statusBarHeight = MediaQuery.of(context).padding.top;
     return Container(
-      height: 100 + statusBarHeight, // Match the toolbarHeight from SliverAppBar plus status bar height
-      padding: EdgeInsets.only(top: statusBarHeight, bottom: 8.0), // Match the padding from SliverAppBar plus status bar height
+      height: statusBarHeight + 80, // Match the toolbarHeight from SliverAppBar plus status bar height
+      padding: EdgeInsets.only(top: 20, left: 10, right: 6), // Match the padding from SliverAppBar plus status bar height
       child: Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
