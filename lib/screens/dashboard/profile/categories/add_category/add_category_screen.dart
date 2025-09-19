@@ -5,6 +5,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/data/local/app_database.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter/services.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   const AddCategoryScreen({super.key});
@@ -15,6 +16,48 @@ class AddCategoryScreen extends StatefulWidget {
 
 class _AddCategoryScreenState extends State<AddCategoryScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
+
+  Future<void> _saveCategory() async {
+    if (_formKey.currentState?.saveAndValidate() ?? false) {
+      try {
+        final formValue = _formKey.currentState!.value;
+        final name = formValue['name'] as String;
+        final type = formValue['type'] as String;
+
+        final database = AppDatabase.instance;
+        
+        // Get the next display order for this category type
+        final nextDisplayOrder = await database.getMaxDisplayOrderForType(type);
+        
+        // Create the category companion
+        final categoryCompanion = CategoriesCompanion(
+          name: drift.Value(name),
+          type: drift.Value(type),
+          displayOrder: drift.Value(nextDisplayOrder),
+        );
+        
+        // Insert the category
+        await database.insertCategory(categoryCompanion);
+        
+        // Show a success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Category added successfully')),
+          );
+          
+          // Navigate back to the previous screen
+          Navigator.of(context).pop(true); // Pass true to indicate success
+        }
+      } catch (e) {
+        // Show an error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add category: $e')),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -226,12 +269,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState?.saveAndValidate() ?? false) {
-                  debugPrint(_formKey.currentState?.value.toString());
-                  Navigator.of(context).pop();
-                }
-              },
+              onPressed: _saveCategory,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 16),

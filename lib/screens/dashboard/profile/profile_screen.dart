@@ -8,6 +8,7 @@ import 'package:budgetm/screens/dashboard/profile/export_data/export_data_screen
 import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
@@ -266,18 +267,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundImage: AssetImage('images/backgrounds/onboarding1.png'),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Muhammad Shehroz Khan',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+            StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.userChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                if (!snapshot.hasData) {
+                  return const Text('User not found');
+                }
+                final user = snapshot.data!;
+                final displayName = user.displayName ?? user.email ?? 'User Name';
+                return Text(
+                  displayName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 4),
-            const Text(
-              'muhammadshehroz5683@gmail.com',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+            StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.userChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox.shrink();
+                }
+                if (!snapshot.hasData) {
+                  return const SizedBox.shrink();
+                }
+                final user = snapshot.data!;
+                return Text(
+                  user.email ?? 'No email available',
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                );
+              },
             ),
             const SizedBox(height: 12),
             Consumer<VacationProvider>(

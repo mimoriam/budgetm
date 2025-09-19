@@ -103,6 +103,29 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// Insert a new category
+  Future<int> insertCategory(CategoriesCompanion category) {
+    return into(categories).insert(category);
+  }
+
+    /// Get the maximum display order for a given category type
+    Future<int> getMaxDisplayOrderForType(String type) async {
+      final result = await customSelect(
+        'SELECT MAX(display_order) as maxOrder FROM categories WHERE type = ?',
+        variables: [Variable.withString(type)],
+        readsFrom: {categories},
+      ).getSingleOrNull();
+  
+      // If no categories exist for this type, start with 0
+      // Otherwise, return the max order + 1
+      if (result != null && result.data['maxOrder'] != null) {
+        final maxOrder = result.data['maxOrder'] as int?;
+        return (maxOrder ?? -1) + 1;
+      } else {
+        return 0;
+      }
+    }
+
   /// Get all categories ordered by display order
   Future<List<Category>> getCategoriesOrdered() {
     return (select(categories)..orderBy([

@@ -72,13 +72,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 20.0), // Uplift FAB
         child: FloatingActionButton(
-          onPressed: () {
-            PersistentNavBarNavigator.pushNewScreen(
+          onPressed: () async {
+            final result = await PersistentNavBarNavigator.pushNewScreen(
               context,
               screen: const AddCategoryScreen(),
               withNavBar: false,
               pageTransitionAnimation: PageTransitionAnimation.cupertino,
             );
+            
+            // If a category was added successfully, refresh the list
+            if (result == true) {
+              _loadCategories();
+            }
           },
           backgroundColor: AppColors.gradientEnd,
           shape: const CircleBorder(),
