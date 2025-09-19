@@ -1611,6 +1611,39 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _accountTypeMeta = const VerificationMeta(
+    'accountType',
+  );
+  @override
+  late final GeneratedColumn<String> accountType = GeneratedColumn<String>(
+    'account_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _creditLimitMeta = const VerificationMeta(
+    'creditLimit',
+  );
+  @override
+  late final GeneratedColumn<double> creditLimit = GeneratedColumn<double>(
+    'credit_limit',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _balanceLimitMeta = const VerificationMeta(
+    'balanceLimit',
+  );
+  @override
+  late final GeneratedColumn<double> balanceLimit = GeneratedColumn<double>(
+    'balance_limit',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _balanceMeta = const VerificationMeta(
     'balance',
   );
@@ -1653,6 +1686,9 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    accountType,
+    creditLimit,
+    balanceLimit,
     balance,
     currency,
     isDefault,
@@ -1681,6 +1717,35 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('account_type')) {
+      context.handle(
+        _accountTypeMeta,
+        accountType.isAcceptableOrUnknown(
+          data['account_type']!,
+          _accountTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_accountTypeMeta);
+    }
+    if (data.containsKey('credit_limit')) {
+      context.handle(
+        _creditLimitMeta,
+        creditLimit.isAcceptableOrUnknown(
+          data['credit_limit']!,
+          _creditLimitMeta,
+        ),
+      );
+    }
+    if (data.containsKey('balance_limit')) {
+      context.handle(
+        _balanceLimitMeta,
+        balanceLimit.isAcceptableOrUnknown(
+          data['balance_limit']!,
+          _balanceLimitMeta,
+        ),
+      );
     }
     if (data.containsKey('balance')) {
       context.handle(
@@ -1719,6 +1784,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      accountType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_type'],
+      )!,
+      creditLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}credit_limit'],
+      ),
+      balanceLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}balance_limit'],
+      ),
       balance: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}balance'],
@@ -1743,12 +1820,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
 class Account extends DataClass implements Insertable<Account> {
   final String id;
   final String name;
+  final String accountType;
+  final double? creditLimit;
+  final double? balanceLimit;
   final double balance;
   final String currency;
   final bool isDefault;
   const Account({
     required this.id,
     required this.name,
+    required this.accountType,
+    this.creditLimit,
+    this.balanceLimit,
     required this.balance,
     required this.currency,
     required this.isDefault,
@@ -1758,6 +1841,13 @@ class Account extends DataClass implements Insertable<Account> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    map['account_type'] = Variable<String>(accountType);
+    if (!nullToAbsent || creditLimit != null) {
+      map['credit_limit'] = Variable<double>(creditLimit);
+    }
+    if (!nullToAbsent || balanceLimit != null) {
+      map['balance_limit'] = Variable<double>(balanceLimit);
+    }
     map['balance'] = Variable<double>(balance);
     map['currency'] = Variable<String>(currency);
     map['is_default'] = Variable<bool>(isDefault);
@@ -1768,6 +1858,13 @@ class Account extends DataClass implements Insertable<Account> {
     return AccountsCompanion(
       id: Value(id),
       name: Value(name),
+      accountType: Value(accountType),
+      creditLimit: creditLimit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(creditLimit),
+      balanceLimit: balanceLimit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(balanceLimit),
       balance: Value(balance),
       currency: Value(currency),
       isDefault: Value(isDefault),
@@ -1782,6 +1879,9 @@ class Account extends DataClass implements Insertable<Account> {
     return Account(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      accountType: serializer.fromJson<String>(json['accountType']),
+      creditLimit: serializer.fromJson<double?>(json['creditLimit']),
+      balanceLimit: serializer.fromJson<double?>(json['balanceLimit']),
       balance: serializer.fromJson<double>(json['balance']),
       currency: serializer.fromJson<String>(json['currency']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
@@ -1793,6 +1893,9 @@ class Account extends DataClass implements Insertable<Account> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'accountType': serializer.toJson<String>(accountType),
+      'creditLimit': serializer.toJson<double?>(creditLimit),
+      'balanceLimit': serializer.toJson<double?>(balanceLimit),
       'balance': serializer.toJson<double>(balance),
       'currency': serializer.toJson<String>(currency),
       'isDefault': serializer.toJson<bool>(isDefault),
@@ -1802,12 +1905,18 @@ class Account extends DataClass implements Insertable<Account> {
   Account copyWith({
     String? id,
     String? name,
+    String? accountType,
+    Value<double?> creditLimit = const Value.absent(),
+    Value<double?> balanceLimit = const Value.absent(),
     double? balance,
     String? currency,
     bool? isDefault,
   }) => Account(
     id: id ?? this.id,
     name: name ?? this.name,
+    accountType: accountType ?? this.accountType,
+    creditLimit: creditLimit.present ? creditLimit.value : this.creditLimit,
+    balanceLimit: balanceLimit.present ? balanceLimit.value : this.balanceLimit,
     balance: balance ?? this.balance,
     currency: currency ?? this.currency,
     isDefault: isDefault ?? this.isDefault,
@@ -1816,6 +1925,15 @@ class Account extends DataClass implements Insertable<Account> {
     return Account(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      accountType: data.accountType.present
+          ? data.accountType.value
+          : this.accountType,
+      creditLimit: data.creditLimit.present
+          ? data.creditLimit.value
+          : this.creditLimit,
+      balanceLimit: data.balanceLimit.present
+          ? data.balanceLimit.value
+          : this.balanceLimit,
       balance: data.balance.present ? data.balance.value : this.balance,
       currency: data.currency.present ? data.currency.value : this.currency,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
@@ -1827,6 +1945,9 @@ class Account extends DataClass implements Insertable<Account> {
     return (StringBuffer('Account(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('accountType: $accountType, ')
+          ..write('creditLimit: $creditLimit, ')
+          ..write('balanceLimit: $balanceLimit, ')
           ..write('balance: $balance, ')
           ..write('currency: $currency, ')
           ..write('isDefault: $isDefault')
@@ -1835,13 +1956,25 @@ class Account extends DataClass implements Insertable<Account> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, balance, currency, isDefault);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    accountType,
+    creditLimit,
+    balanceLimit,
+    balance,
+    currency,
+    isDefault,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Account &&
           other.id == this.id &&
           other.name == this.name &&
+          other.accountType == this.accountType &&
+          other.creditLimit == this.creditLimit &&
+          other.balanceLimit == this.balanceLimit &&
           other.balance == this.balance &&
           other.currency == this.currency &&
           other.isDefault == this.isDefault);
@@ -1850,6 +1983,9 @@ class Account extends DataClass implements Insertable<Account> {
 class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String> accountType;
+  final Value<double?> creditLimit;
+  final Value<double?> balanceLimit;
   final Value<double> balance;
   final Value<String> currency;
   final Value<bool> isDefault;
@@ -1857,6 +1993,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   const AccountsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.accountType = const Value.absent(),
+    this.creditLimit = const Value.absent(),
+    this.balanceLimit = const Value.absent(),
     this.balance = const Value.absent(),
     this.currency = const Value.absent(),
     this.isDefault = const Value.absent(),
@@ -1865,16 +2004,23 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   AccountsCompanion.insert({
     required String id,
     required String name,
+    required String accountType,
+    this.creditLimit = const Value.absent(),
+    this.balanceLimit = const Value.absent(),
     this.balance = const Value.absent(),
     required String currency,
     this.isDefault = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
+       accountType = Value(accountType),
        currency = Value(currency);
   static Insertable<Account> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? accountType,
+    Expression<double>? creditLimit,
+    Expression<double>? balanceLimit,
     Expression<double>? balance,
     Expression<String>? currency,
     Expression<bool>? isDefault,
@@ -1883,6 +2029,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (accountType != null) 'account_type': accountType,
+      if (creditLimit != null) 'credit_limit': creditLimit,
+      if (balanceLimit != null) 'balance_limit': balanceLimit,
       if (balance != null) 'balance': balance,
       if (currency != null) 'currency': currency,
       if (isDefault != null) 'is_default': isDefault,
@@ -1893,6 +2042,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   AccountsCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<String>? accountType,
+    Value<double?>? creditLimit,
+    Value<double?>? balanceLimit,
     Value<double>? balance,
     Value<String>? currency,
     Value<bool>? isDefault,
@@ -1901,6 +2053,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     return AccountsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      accountType: accountType ?? this.accountType,
+      creditLimit: creditLimit ?? this.creditLimit,
+      balanceLimit: balanceLimit ?? this.balanceLimit,
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
       isDefault: isDefault ?? this.isDefault,
@@ -1916,6 +2071,15 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (accountType.present) {
+      map['account_type'] = Variable<String>(accountType.value);
+    }
+    if (creditLimit.present) {
+      map['credit_limit'] = Variable<double>(creditLimit.value);
+    }
+    if (balanceLimit.present) {
+      map['balance_limit'] = Variable<double>(balanceLimit.value);
     }
     if (balance.present) {
       map['balance'] = Variable<double>(balance.value);
@@ -1937,6 +2101,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     return (StringBuffer('AccountsCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('accountType: $accountType, ')
+          ..write('creditLimit: $creditLimit, ')
+          ..write('balanceLimit: $balanceLimit, ')
           ..write('balance: $balance, ')
           ..write('currency: $currency, ')
           ..write('isDefault: $isDefault, ')
@@ -2757,6 +2924,9 @@ typedef $$AccountsTableCreateCompanionBuilder =
     AccountsCompanion Function({
       required String id,
       required String name,
+      required String accountType,
+      Value<double?> creditLimit,
+      Value<double?> balanceLimit,
       Value<double> balance,
       required String currency,
       Value<bool> isDefault,
@@ -2766,6 +2936,9 @@ typedef $$AccountsTableUpdateCompanionBuilder =
     AccountsCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<String> accountType,
+      Value<double?> creditLimit,
+      Value<double?> balanceLimit,
       Value<double> balance,
       Value<String> currency,
       Value<bool> isDefault,
@@ -2788,6 +2961,21 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountType => $composableBuilder(
+    column: $table.accountType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get creditLimit => $composableBuilder(
+    column: $table.creditLimit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get balanceLimit => $composableBuilder(
+    column: $table.balanceLimit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2826,6 +3014,21 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get accountType => $composableBuilder(
+    column: $table.accountType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get creditLimit => $composableBuilder(
+    column: $table.creditLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get balanceLimit => $composableBuilder(
+    column: $table.balanceLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get balance => $composableBuilder(
     column: $table.balance,
     builder: (column) => ColumnOrderings(column),
@@ -2856,6 +3059,21 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get accountType => $composableBuilder(
+    column: $table.accountType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get creditLimit => $composableBuilder(
+    column: $table.creditLimit,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get balanceLimit => $composableBuilder(
+    column: $table.balanceLimit,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<double> get balance =>
       $composableBuilder(column: $table.balance, builder: (column) => column);
@@ -2897,6 +3115,9 @@ class $$AccountsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String> accountType = const Value.absent(),
+                Value<double?> creditLimit = const Value.absent(),
+                Value<double?> balanceLimit = const Value.absent(),
                 Value<double> balance = const Value.absent(),
                 Value<String> currency = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
@@ -2904,6 +3125,9 @@ class $$AccountsTableTableManager
               }) => AccountsCompanion(
                 id: id,
                 name: name,
+                accountType: accountType,
+                creditLimit: creditLimit,
+                balanceLimit: balanceLimit,
                 balance: balance,
                 currency: currency,
                 isDefault: isDefault,
@@ -2913,6 +3137,9 @@ class $$AccountsTableTableManager
               ({
                 required String id,
                 required String name,
+                required String accountType,
+                Value<double?> creditLimit = const Value.absent(),
+                Value<double?> balanceLimit = const Value.absent(),
                 Value<double> balance = const Value.absent(),
                 required String currency,
                 Value<bool> isDefault = const Value.absent(),
@@ -2920,6 +3147,9 @@ class $$AccountsTableTableManager
               }) => AccountsCompanion.insert(
                 id: id,
                 name: name,
+                accountType: accountType,
+                creditLimit: creditLimit,
+                balanceLimit: balanceLimit,
                 balance: balance,
                 currency: currency,
                 isDefault: isDefault,

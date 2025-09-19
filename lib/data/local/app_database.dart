@@ -66,6 +66,11 @@ class AppDatabase extends _$AppDatabase {
     return into(accounts).insert(account);
   }
 
+  /// Insert a new transaction
+  Future<int> insertTransaction(TransactionsCompanion transaction) {
+    return into(transactions).insert(transaction);
+  }
+
   /// Get an account by ID
   Future<Account?> getAccountById(String id) {
     return (select(
@@ -156,7 +161,8 @@ class AppDatabase extends _$AppDatabase {
     // Create a default account
     final defaultAccountCompanion = AccountsCompanion.insert(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: 'Default Account',
+      name: 'Default',
+      accountType: 'Cash', // Default account type
       currency:
           'USD', // Default currency, should be updated based on user settings
     );
@@ -177,6 +183,7 @@ class AppDatabase extends _$AppDatabase {
     final accountCompanion = AccountsCompanion.insert(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
+      accountType: 'Cash', // Default account type
       currency: currency,
       isDefault: Value(true),
     );

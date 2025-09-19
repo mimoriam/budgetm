@@ -24,7 +24,11 @@ class TransactionWithAccount {
   final Account? account;
   final Category? category;
 
-  TransactionWithAccount({required this.transaction, this.account, this.category});
+  TransactionWithAccount({
+    required this.transaction,
+    this.account,
+    this.category,
+  });
 }
 
 // Helper function to convert database transaction to UI transaction
@@ -40,8 +44,10 @@ model.Transaction _convertToUiTransaction(Transaction dbTransaction) {
     date: dbTransaction.date,
     icon: const Icon(Icons.account_balance), // Default icon
     iconBackgroundColor: Colors.grey.shade100, // Default color
-    accountId: dbTransaction.accountId, // Pass accountId from database transaction
-    categoryId: dbTransaction.categoryId, // Pass categoryId from database transaction
+    accountId:
+        dbTransaction.accountId, // Pass accountId from database transaction
+    categoryId:
+        dbTransaction.categoryId, // Pass categoryId from database transaction
   );
 }
 
@@ -100,6 +106,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _loadUpcomingTasksForMonth(_months[_selectedMonthIndex]);
   }
 
+  Future<void> _refreshAccountData() async {
+    await _loadIncomeAndExpenses();
+    await _loadTransactions();
+    // Add any other account-specific data loading if necessary
+  }
+
   Future<void> _loadMonths() async {
     final prefs = await SharedPreferences.getInstance();
     final firstLoginDateString = prefs.getString('firstLoginDate');
@@ -146,7 +158,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Load all categories for mapping
     final categories = await _database.select(_database.categories).get();
-    final categoryMap = {for (var category in categories) category.id: category};
+    final categoryMap = {
+      for (var category in categories) category.id: category,
+    };
 
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
@@ -219,7 +233,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Load all categories for mapping
     final categories = await _database.select(_database.categories).get();
-    final categoryMap = {for (var category in categories) category.id: category};
+    final categoryMap = {
+      for (var category in categories) category.id: category,
+    };
 
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
@@ -307,7 +323,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Load all categories for mapping
     final categories = await _database.select(_database.categories).get();
-    final categoryMap = {for (var category in categories) category.id: category};
+    final categoryMap = {
+      for (var category in categories) category.id: category,
+    };
 
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
@@ -371,9 +389,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Check if we should refresh the data
     if (homeScreenProvider.shouldRefresh) {
-      _refreshData();
-      // Mark refresh as complete
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _refreshData();
+        // Mark refresh as complete
+        homeScreenProvider.completeRefresh();
+      });
+    }
+    // Check for account-specific refresh
+    else if (homeScreenProvider.shouldRefreshAccounts) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _refreshAccountData(); // New method to refresh only account-related data
+        // Mark refresh as complete
         homeScreenProvider.completeRefresh();
       });
     }
@@ -406,9 +432,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildMonthSelector(),
                 _buildBalanceCards(),
                 const SizedBox(height: 16),
-                Expanded(
-                  child: _buildTransactionSectionContent(),
-                ),
+                Expanded(child: _buildTransactionSectionContent()),
               ],
             ),
           );
@@ -421,8 +445,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final vacationProvider = context.watch<VacationProvider>();
     final statusBarHeight = MediaQuery.of(context).padding.top;
     return Container(
-      height: statusBarHeight + 80, // Match the toolbarHeight from SliverAppBar plus status bar height
-      padding: EdgeInsets.only(top: 20, left: 10, right: 6), // Match the padding from SliverAppBar plus status bar height
+      height:
+          statusBarHeight +
+          80, // Match the toolbarHeight from SliverAppBar plus status bar height
+      padding: EdgeInsets.only(
+        top: 20,
+        left: 10,
+        right: 6,
+      ), // Match the padding from SliverAppBar plus status bar height
       child: Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -511,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
- }
+  }
 
   Widget _buildAppBarButton(
     List<List<dynamic>> icon, {
@@ -723,12 +753,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) =>
+        //         ExpenseDetailScreen(transaction: uiTransaction),
+        //   ),
+        // );
+        PersistentNavBarNavigator.pushNewScreen(
           context,
-          MaterialPageRoute(
-            builder: (context) =>
-                ExpenseDetailScreen(transaction: uiTransaction),
-          ),
+          screen: ExpenseDetailScreen(transaction: uiTransaction),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );
       },
       child: Container(
@@ -762,7 +798,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    transactionWithAccount.category?.name ?? transaction.description, // Use category name as title, fallback to description
+                    transactionWithAccount.category?.name ??
+                        transaction
+                            .description, // Use category name as title, fallback to description
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -770,7 +808,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    account?.name ?? '', // Only display account name
+                    "${account?.name ?? ''} - ${account?.accountType ?? ''}", // Only display account name
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],

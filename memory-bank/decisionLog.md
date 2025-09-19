@@ -41,3 +41,4 @@ This file records architectural and implementation decisions using a list format
 [2025-09-19 09:17:15] - Removed description field from add_transaction_screen and implemented category filtering based on transaction type
 [2025-09-19 09:27:42] - Modified transaction list display on home screen. Changed transaction title to show category type and removed category type from bottom section, ensuring only account type remains there.
 [2025-09-19 11:09:11] - Modified category initialization to ensure both expense and income categories share the same initial set of names. Created a unified list of default category names and generate both income and expense categories for each name.
+[2025-09-19 13:23:28] - Updated Accounts table schema to include account_type (required), credit_limit (nullable), and balance_limit (nullable) fields. This change extends the account model to support different account types and optional limits for credit and balance accounts.

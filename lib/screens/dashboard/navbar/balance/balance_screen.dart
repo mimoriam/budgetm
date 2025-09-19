@@ -1,7 +1,9 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/data/local/app_database.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class BalanceScreen extends StatefulWidget {
   const BalanceScreen({super.key});
@@ -31,7 +33,17 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Consumer<HomeScreenProvider>(
+      builder: (context, homeScreenProvider, child) {
+        // Refresh accounts if needed
+        if (homeScreenProvider.shouldRefresh || homeScreenProvider.shouldRefreshAccounts) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadAccounts();
+            homeScreenProvider.completeRefresh();
+          });
+        }
+
+        return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       body: Column(
         children: [
@@ -59,6 +71,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
                             iconBackgroundColor: Colors.grey.shade200,
                             accountName: account.name,
                             amount: account.balance,
+                            accountType: account.accountType,
+                            creditLimit: account.creditLimit,
+                            balanceLimit: account.balanceLimit,
                           ),
                           const SizedBox(height: 12),
                         ],
@@ -69,6 +84,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -265,6 +282,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
     required Color iconBackgroundColor,
     required String accountName,
     required double amount,
+    required String accountType,
+    double? creditLimit,
+    double? balanceLimit,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -291,13 +311,39 @@ class _BalanceScreenState extends State<BalanceScreen> {
             child: Icon(icon, size: 24, color: iconColor),
           ),
           const SizedBox(width: 12),
-          Text(
-            accountName,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  accountName,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  accountType,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.secondaryTextColorLight,
+                      ),
+                ),
+                if (creditLimit != null)
+                  Text(
+                    'Credit Limit: \$${creditLimit.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.secondaryTextColorLight,
+                        ),
+                  )
+                else if (balanceLimit != null)
+                  Text(
+                    'Balance Limit: \$${balanceLimit.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.secondaryTextColorLight,
+                        ),
+                  ),
+              ],
+            ),
           ),
-          const Spacer(),
           Text(
             '\$${amount.toStringAsFixed(2)}',
             style: Theme.of(

@@ -1,11 +1,13 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/data/local/app_database.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:provider/provider.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -290,12 +292,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
           validator: FormBuilderValidators.compose([
-            FormBuilderValidators.required(errorText: 'Amount is required'),
             FormBuilderValidators.numeric(
               errorText: 'Please enter a valid number',
             ),
             (value) {
-              final number = double.tryParse(value ?? '');
+              if (value == null || value.isEmpty) return null;
+              final number = double.tryParse(value);
               if (number != null && number < 0) {
                 return 'Initial Balance cannot be negative';
               }
@@ -322,19 +324,6 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'^-?[0-9]*')),
         ],
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'This field is required';
-          }
-          final number = int.tryParse(value);
-          if (number == null) {
-            return 'Please enter a valid number';
-          }
-          if (!_isCreditSelected && number < 0) {
-            return 'Balance limit must be a positive number';
-          }
-          return null;
-        },
       ),
     );
   }
@@ -421,30 +410,72 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (_formKey.currentState?.saveAndValidate() ?? false) {
                   final values = _formKey.currentState!.value;
-                  double balance =
-                      double.tryParse(values['amount'].toString()) ?? 0.0;
+                  final name = values['name'] as String;
+                  final amount = double.tryParse(values['amount'].toString()) ?? 0.0;
+                  final currency = 'USD'; // Placeholder, should be dynamic
+                  final accountType = values['account_type'] as String;
 
-                  if (_isCreditSelected) {
-                    final creditLimit =
-                        double.tryParse(values['credit_limit'].toString()) ??
-                        0.0;
-                    balance -= creditLimit.abs();
+                  // Determine creditLimit or balanceLimit based on _isCreditSelected
+                  final creditLimitValue = _isCreditSelected
+                      ? double.tryParse(values['credit_limit']?.toString() ?? '')
+                      : null;
+                  final balanceLimitValue = !_isCreditSelected
+                      ? double.tryParse(values['balance_limit']?.toString() ?? '')
+                      : null;
+
+                  double balance = amount;
+                  if (_isCreditSelected && creditLimitValue != null) {
+                    balance -= creditLimitValue.abs();
                   }
 
                   final newAccount = AccountsCompanion(
                     id: drift.Value(
                       DateTime.now().millisecondsSinceEpoch.toString(),
                     ),
-                    name: drift.Value(values['name']),
+                    name: drift.Value(name),
+                    accountType: drift.Value(accountType),
                     balance: drift.Value(balance),
                     currency: const drift.Value('USD'), // Placeholder
+                    creditLimit: creditLimitValue != null ? drift.Value(creditLimitValue) : const drift.Value.absent(),
+                    balanceLimit: balanceLimitValue != null ? drift.Value(balanceLimitValue) : const drift.Value.absent(),
                     isDefault: const drift.Value(false),
                   );
 
-                  _database.insertAccount(newAccount);
+                  final accountId = await _database.insertAccount(newAccount);
+
+                  // Check if 'include_in_total' is enabled and create initial balance transaction
+                  final includeInTotal = values['include_in_total'] as bool? ?? true;
+                  if (includeInTotal && amount > 0) {
+                    // Determine transaction type based on account type and amount
+                    String transactionType = 'income';
+                    String description = 'Initial Balance for $name';
+                    
+                    if (_isCreditSelected) {
+                      // For credit accounts, a positive limit is effectively an expense (liability)
+                      transactionType = 'expense';
+                      description = 'Credit Limit for $name';
+                    }
+                    
+                    final initialTransaction = TransactionsCompanion(
+                      id: const drift.Value.absent(),
+                      description: drift.Value(description),
+                      amount: drift.Value(amount.abs()), // Use absolute value of amount
+                      type: drift.Value(transactionType),
+                      date: drift.Value(DateTime.now()),
+                      accountId: drift.Value(accountId.toString()),
+                    );
+                    
+                    await _database.insertTransaction(initialTransaction);
+                  }
+                  
+                  if (includeInTotal) {
+                    Provider.of<HomeScreenProvider>(context, listen: false).triggerAccountRefresh();
+                  } else {
+                    Provider.of<HomeScreenProvider>(context, listen: false).triggerRefresh();
+                  }
 
                   debugPrint(_formKey.currentState?.value.toString());
                   Navigator.of(context).pop();

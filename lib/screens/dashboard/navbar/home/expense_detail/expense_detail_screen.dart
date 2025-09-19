@@ -84,7 +84,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               return Text('Error: ${snapshot.error}');
                             } else if (snapshot.hasData && snapshot.data != null) {
                               return Text(
-                                snapshot.data!.name,
+                                "${snapshot.data!.name} - ${snapshot.data!.accountType}",
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: AppColors.secondaryTextColorLight,
                                     ),
@@ -146,27 +146,27 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   const SizedBox(height: 40),
                   Row(
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                            side: const BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Text(
-                            'Move to Calendar',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.black, fontSize: 14),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
+                      // Expanded(
+                      //   child: OutlinedButton(
+                      //     onPressed: () {},
+                      //     style: OutlinedButton.styleFrom(
+                      //       padding: const EdgeInsets.symmetric(vertical: 14),
+                      //       shape: RoundedRectangleBorder(
+                      //         borderRadius: BorderRadius.circular(30.0),
+                      //       ),
+                      //       side: const BorderSide(
+                      //         color: Colors.black,
+                      //         width: 1.5,
+                      //       ),
+                      //     ),
+                      //     child: Text(
+                      //       'Move to Calendar',
+                      //       style: Theme.of(context).textTheme.labelLarge
+                      //           ?.copyWith(color: Colors.black, fontSize: 14),
+                      //     ),
+                      //   ),
+                      // ),
+                      // const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
