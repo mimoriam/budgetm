@@ -50,11 +50,29 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   Center(
                     child: Column(
                       children: [
-                        Text(
-                          widget.transaction.title,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.displayLarge?.copyWith(fontSize: 32),
+                        FutureBuilder<db.Category?>(
+                          future: db.AppDatabase().getCategoryById(widget.transaction.categoryId ?? 0),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Text('Loading...');
+                            } else if (snapshot.hasError) {
+                              return Text('Error: ${snapshot.error}');
+                            } else if (snapshot.hasData && snapshot.data != null) {
+                              return Text(
+                                snapshot.data!.name ?? widget.transaction.title,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.displayLarge?.copyWith(fontSize: 32),
+                              );
+                            } else {
+                              return Text(
+                                widget.transaction.title,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.displayLarge?.copyWith(fontSize: 32),
+                              );
+                            }
+                          },
                         ),
                         const SizedBox(height: 8),
                         FutureBuilder<db.Account?>(

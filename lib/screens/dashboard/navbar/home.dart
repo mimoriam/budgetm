@@ -18,12 +18,13 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Data structure to hold a transaction with its associated account
+// Data structure to hold a transaction with its associated account and category
 class TransactionWithAccount {
   final Transaction transaction;
   final Account? account;
+  final Category? category;
 
-  TransactionWithAccount({required this.transaction, this.account});
+  TransactionWithAccount({required this.transaction, this.account, this.category});
 }
 
 // Helper function to convert database transaction to UI transaction
@@ -40,6 +41,7 @@ model.Transaction _convertToUiTransaction(Transaction dbTransaction) {
     icon: const Icon(Icons.account_balance), // Default icon
     iconBackgroundColor: Colors.grey.shade100, // Default color
     accountId: dbTransaction.accountId, // Pass accountId from database transaction
+    categoryId: dbTransaction.categoryId, // Pass categoryId from database transaction
   );
 }
 
@@ -142,12 +144,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final accounts = await _database.select(_database.accounts).get();
     final accountMap = {for (var account in accounts) account.id: account};
 
+    // Load all categories for mapping
+    final categories = await _database.select(_database.categories).get();
+    final categoryMap = {for (var category in categories) category.id: category};
+
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
       return TransactionWithAccount(
         transaction: transaction,
         account: transaction.accountId != null
             ? accountMap[transaction.accountId]
+            : null,
+        category: transaction.categoryId != null
+            ? categoryMap[transaction.categoryId]
             : null,
       );
     }).toList();
@@ -208,12 +217,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final accounts = await _database.select(_database.accounts).get();
     final accountMap = {for (var account in accounts) account.id: account};
 
+    // Load all categories for mapping
+    final categories = await _database.select(_database.categories).get();
+    final categoryMap = {for (var category in categories) category.id: category};
+
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
       return TransactionWithAccount(
         transaction: transaction,
         account: transaction.accountId != null
             ? accountMap[transaction.accountId]
+            : null,
+        category: transaction.categoryId != null
+            ? categoryMap[transaction.categoryId]
             : null,
       );
     }).toList();
@@ -289,12 +305,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final accounts = await _database.select(_database.accounts).get();
     final accountMap = {for (var account in accounts) account.id: account};
 
+    // Load all categories for mapping
+    final categories = await _database.select(_database.categories).get();
+    final categoryMap = {for (var category in categories) category.id: category};
+
     // Create TransactionWithAccount objects
     final transactionsWithAccounts = transactions.map((transaction) {
       return TransactionWithAccount(
         transaction: transaction,
         account: transaction.accountId != null
             ? accountMap[transaction.accountId]
+            : null,
+        category: transaction.categoryId != null
+            ? categoryMap[transaction.categoryId]
             : null,
       );
     }).toList();
@@ -739,7 +762,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    transaction.description, // Use description as title
+                    transactionWithAccount.category?.name ?? transaction.description, // Use category name as title, fallback to description
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -747,9 +770,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    account != null
-                        ? '${transaction.category} • ${account.name}'
-                        : transaction.category,
+                    account?.name ?? '', // Only display account name
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],

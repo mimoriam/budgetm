@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/data/local/app_database.dart';
+import 'package:budgetm/data/local/models/transaction_model.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:drift/drift.dart' as drift hide Column;
@@ -24,13 +25,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   bool _isMoreOptionsVisible = false;
   late AppDatabase _database;
   List<Account> _accounts = [];
+  List<Category> _categories = [];
   String? _selectedAccountId;
+  int? _selectedCategoryId;
 
   @override
   void initState() {
     super.initState();
     _database = AppDatabase();
     _loadAccounts();
+    _loadCategories();
   }
 
   Future<void> _loadAccounts() async {
@@ -62,6 +66,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     } catch (e) {
       // Handle error
       debugPrint('Error loading accounts: $e');
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      // Get categories filtered by transaction type
+      final categories = await (_database.select(_database.categories)
+            ..where((tbl) => tbl.type.equals(widget.transactionType == TransactionType.income ? 'income' : 'expense')))
+          .get();
+      
+      setState(() {
+        _categories = categories;
+        
+        // Set default category
+        if (_categories.isNotEmpty) {
+          // Try to find "Misc" category first
+          final miscCategory = _categories.firstWhere(
+            (category) => category.name?.toLowerCase() == 'misc',
+            orElse: () => _categories.first,
+          );
+          _selectedCategoryId = miscCategory.id;
+        }
+      });
+    } catch (e) {
+      // Handle error
+      debugPrint('Error loading categories: $e');
     }
   }
 
@@ -136,14 +166,33 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           Expanded(
                             child: _buildFormSection(
                               context,
-                              'Name',
-                              FormBuilderTextField(
-                                name: 'name',
-                                style: const TextStyle(fontSize: 13),
-                                decoration: _inputDecoration(hintText: 'Name'),
-                                validator: FormBuilderValidators.required(
-                                  errorText: 'Name is required',
+                              'Category',
+                              FormBuilderDropdown(
+                                name: 'category',
+                                decoration: _inputDecoration(
+                                  hintText: 'Select',
                                 ),
+                                isDense: true,
+                                items: _categories
+                                    .map(
+                                      (category) => DropdownMenuItem(
+                                        value: category.id,
+                                        child: Text(
+                                          category.name ?? 'Unnamed Category',
+                                          style: const TextStyle(fontSize: 13),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                initialValue: _selectedCategoryId,
+                                validator: FormBuilderValidators.required(
+                                  errorText: 'Please select a category',
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedCategoryId = value as int?;
+                                  });
+                                },
                               ),
                             ),
                           ),
@@ -622,11 +671,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       
       // Create transaction companion
       final transactionCompanion = TransactionsCompanion.insert(
-        description: formData['name'] as String,
+        description: '', // Default empty description
         amount: double.parse(formData['amount'] as String),
         type: widget.transactionType == TransactionType.income ? 'income' : 'expense',
         date: transactionDate,
-        category: 'General', // TODO: Implement category selection
+        categoryId: drift.Value(_selectedCategoryId),
         accountId: drift.Value(_selectedAccountId),
         time: drift.Value((formData['time'] as DateTime?)?.toIso8601String()),
         repeat: drift.Value(formData['repeat'] as String?),

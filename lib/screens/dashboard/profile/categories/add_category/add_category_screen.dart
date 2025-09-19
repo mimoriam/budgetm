@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:budgetm/data/local/app_database.dart';
+import 'package:drift/drift.dart' as drift;
 
 class AddCategoryScreen extends StatefulWidget {
   const AddCategoryScreen({super.key});
@@ -40,29 +42,30 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                         'Name',
                         FormBuilderTextField(
                           name: 'name',
-                          initialValue: 'Askari Bank',
-                          decoration: _inputDecoration(hintText: 'Enter name'),
+                          decoration: _inputDecoration(hintText: 'Enter category name'),
                           validator: FormBuilderValidators.required(),
                         ),
                       ),
                       const SizedBox(height: 16),
                       _buildFormSection(
                         context,
-                        'Parent Category',
+                        'Type',
                         FormBuilderDropdown<String>(
-                          name: 'parent_category',
-                          initialValue: 'Salary',
+                          name: 'type',
                           decoration: _inputDecoration(
-                            hintText: 'Select a category',
+                            hintText: 'Select type',
                           ),
-                          items: ['Salary', 'Investments', 'Business', 'Gifts']
-                              .map(
-                                (category) => DropdownMenuItem(
-                                  value: category,
-                                  child: Text(category),
-                                ),
-                              )
-                              .toList(),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'income',
+                              child: Text('Income'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'expense',
+                              child: Text('Expense'),
+                            ),
+                          ],
+                          validator: FormBuilderValidators.required(),
                         ),
                       ),
                       const SizedBox(height: 16),

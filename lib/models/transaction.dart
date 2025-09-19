@@ -12,6 +12,7 @@ class Transaction {
   final Widget icon;
   final Color iconBackgroundColor;
   final String? accountId; // Add accountId field
+  final int? categoryId; // Add categoryId field
 
   Transaction({
     required this.id, // Add database transaction ID
@@ -23,5 +24,6 @@ class Transaction {
     required this.icon,
     required this.iconBackgroundColor,
     this.accountId, // Add accountId field
+    this.categoryId, // Add categoryId field
   });
 }

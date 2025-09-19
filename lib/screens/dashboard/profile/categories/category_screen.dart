@@ -3,6 +3,8 @@ import 'package:budgetm/screens/dashboard/profile/categories/add_category/add_ca
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:budgetm/data/local/app_database.dart';
+import 'package:drift/drift.dart' as drift;
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
@@ -13,27 +15,30 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   bool _isExpenseSelected = true;
+  List<Category> _categories = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _expenseCategories = [
-    {'icon': HugeIcons.strokeRoundedShoppingBag01, 'name': 'Super Market'},
-    {'icon': HugeIcons.strokeRoundedTShirt, 'name': 'Clothing'},
-    {'icon': HugeIcons.strokeRoundedHome01, 'name': 'Home'},
-    {'icon': HugeIcons.strokeRoundedTicket01, 'name': 'Entertainment'},
-    {'icon': HugeIcons.strokeRoundedBus01, 'name': 'Transport'},
-    {'icon': HugeIcons.strokeRoundedGift, 'name': 'Gifts'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
 
-  final List<Map<String, dynamic>> _incomeCategories = [
-    {'icon': HugeIcons.strokeRoundedDollar02, 'name': 'Salary'},
-    {'icon': HugeIcons.strokeRoundedChartUp, 'name': 'Investments'},
-    {'icon': HugeIcons.strokeRoundedBriefcase01, 'name': 'Business'},
-    {'icon': HugeIcons.strokeRoundedGift, 'name': 'Gifts'},
-  ];
+  Future<void> _loadCategories() async {
+    final database = AppDatabase.instance;
+    final categories = await database.select(database.categories).get();
+    setState(() {
+      _categories = categories;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final currentList =
-    _isExpenseSelected ? _expenseCategories : _incomeCategories;
+    final currentCategories = _categories
+        .where((category) =>
+            category.type == (_isExpenseSelected ? 'expense' : 'income'))
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
@@ -41,29 +46,28 @@ class _CategoryScreenState extends State<CategoryScreen> {
       body: Column(
         children: [
           _buildToggleChips(),
-          Expanded(
-            child: ReorderableListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-              itemCount: currentList.length,
-              itemBuilder: (context, index) {
-                final category = currentList[index];
-                return _buildCategoryItem(
-                  key: ValueKey(category['name']),
-                  iconData: category['icon'],
-                  name: category['name'],
-                );
-              },
-              onReorder: (int oldIndex, int newIndex) {
-                setState(() {
-                  if (newIndex > oldIndex) {
-                    newIndex -= 1;
-                  }
-                  final item = currentList.removeAt(oldIndex);
-                  currentList.insert(newIndex, item);
-                });
-              },
+          if (_isLoading)
+            const Expanded(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else
+            Expanded(
+              child: ReorderableListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                itemCount: currentCategories.length,
+                itemBuilder: (context, index) {
+                  final category = currentCategories[index];
+                  return _buildCategoryItem(
+                    key: ValueKey(category.id),
+                    category: category,
+                  );
+                },
+                onReorder: (int oldIndex, int newIndex) {
+                  // Reordering is not implemented in this version
+                  // You could implement this by adding an 'order' field to the Categories table
+                },
+              ),
             ),
-          ),
         ],
       ),
       floatingActionButton: Padding(
@@ -133,7 +137,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Category',
+                  'Categories',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -224,8 +228,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   Widget _buildCategoryItem({
     required Key key,
-    required List<List<dynamic>> iconData,
-    required String name,
+    required Category category,
   }) {
     return Container(
       key: key,
@@ -245,16 +248,31 @@ class _CategoryScreenState extends State<CategoryScreen> {
             color: Colors.lime.shade50,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: HugeIcon(icon: iconData, size: 22, color: Colors.black87),
+          child: const HugeIcon(
+            icon: HugeIcons.strokeRoundedShoppingBag01,
+            size: 22,
+            color: Colors.black87,
+          ),
         ),
-        title:
-        Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
-        trailing: const HugeIcon(
-          icon: HugeIcons.strokeRoundedDragDropVertical,
-          color: Colors.grey,
-          size: 24,
+        title: Text(category.name ?? '',
+            style: const TextStyle(fontWeight: FontWeight.w500)),
+        trailing: IconButton(
+          icon: const HugeIcon(
+            icon: HugeIcons.strokeRoundedDelete01,
+            color: Colors.red,
+            size: 24,
+          ),
+          onPressed: () => _deleteCategory(category),
         ),
       ),
     );
+  }
+
+  Future<void> _deleteCategory(Category category) async {
+    final database = AppDatabase.instance;
+    await (database.delete(database.categories)
+          ..where((tbl) => tbl.id.equals(category.id)))
+        .go();
+    _loadCategories(); // Refresh the list
   }
 }
