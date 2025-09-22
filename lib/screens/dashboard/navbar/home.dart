@@ -808,7 +808,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "${account?.name ?? ''} - ${account?.accountType ?? ''}", // Only display account name
+                    // "${account?.name ?? ''} - ${account?.accountType ?? ''}", // Only display account name
+                    [account?.name, account?.accountType]
+                        .where((text) => text != null && text.isNotEmpty)
+                        .join(' - '),
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
