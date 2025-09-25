@@ -53,7 +53,8 @@ class FirestoreService {
         .collection('accounts')
         .withConverter<FirestoreAccount>(
           fromFirestore: (snapshot, _) => FirestoreAccount.fromFirestore(snapshot),
-          toFirestore: (account, _) => account.toJson(),
+          // Cast to the exact Map type expected by the Firestore API to avoid runtime type errors
+          toFirestore: (account, _) => account.toJson() as Map<String, Object?>,
         );
   }
 
@@ -529,13 +530,30 @@ class FirestoreService {
   // Create a default account only if the user has no existing accounts
   Future<void> createDefaultAccountIfNeeded(String currencyCode, String currencySymbol) async {
     try {
-      final existingAccounts = await getAllAccounts();
-      if (existingAccounts.isEmpty) {
-        await createDefaultAccount('Cash', currencyCode);
-        print('Created default Cash account for new user with currency: $currencyCode');
-      } else {
-        print('User already has ${existingAccounts.length} accounts, skipping default account creation');
-      }
+      final defaultId = 'default_cash';
+      final docRef = _accountsCollection.doc(defaultId);
+
+      await _firestore.runTransaction((t) async {
+        final snap = await t.get(docRef);
+        if (!snap.exists) {
+          final defaultAccount = FirestoreAccount(
+            id: defaultId,
+            name: 'Cash',
+            accountType: 'cash',
+            balance: 0.0,
+            description: 'Default $currencyCode account',
+            color: 'green',
+            icon: 'account_balance_wallet',
+            currency: currencyCode,
+            isDefault: true,
+          );
+          // Pass the typed model; the CollectionReference's converter will handle serialization
+          t.set(docRef, defaultAccount);
+          print('Created default Cash account for new user with currency: $currencyCode');
+        } else {
+          print('Default account already exists, skipping creation');
+        }
+      });
     } catch (e) {
       print('Error in createDefaultAccountIfNeeded: $e');
       rethrow;

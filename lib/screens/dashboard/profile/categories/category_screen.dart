@@ -294,46 +294,50 @@ class _CategoryScreenState extends State<CategoryScreen> {
     int newIndex,
     List<Category> currentCategories,
   ) async {
-    try {
-      // Adjust newIndex if it's greater than oldIndex
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
+    // Adjust newIndex if it's greater than oldIndex
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+
+    // Keep a snapshot of original full _categories to allow reverting on failure
+    final originalCategories = List<Category>.from(_categories);
+
+    // Work on a copy of the visible (filtered) list and reorder it
+    final updatedVisible = List<Category>.from(currentCategories);
+    final movedCategory = updatedVisible.removeAt(oldIndex);
+    updatedVisible.insert(newIndex, movedCategory);
+
+    // Optimistically update local state so UI reflects new order immediately
+    setState(() {
+      for (int i = 0; i < updatedVisible.length; i++) {
+        final id = updatedVisible[i].id;
+        final idx = _categories.indexWhere((c) => c.id == id);
+        if (idx != -1) {
+          _categories[idx] = _categories[idx].copyWith(displayOrder: i);
+        }
       }
 
-      // Create a copy of the current categories list
-      final updatedCategories = List<Category>.from(currentCategories);
+      // Ensure overall list is sorted by displayOrder for correct UI
+      _categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    });
 
-      // Reorder the categories in the list
-      final movedCategory = updatedCategories.removeAt(oldIndex);
-      updatedCategories.insert(newIndex, movedCategory);
-
-      // Update the display order in Firestore
-      for (int i = 0; i < updatedCategories.length; i++) {
-        final category = updatedCategories[i];
+    // Persist the new order to Firestore in the background. If it fails, revert UI.
+    try {
+      for (int i = 0; i < updatedVisible.length; i++) {
+        final category = updatedVisible[i];
         final updatedCategory = category.copyWith(displayOrder: i);
         await _firestoreService.updateCategory(updatedCategory.id, updatedCategory);
       }
-
-      // Update the state with the new display orders
-      setState(() {
-        // Update the _categories list with new display orders
-        for (int i = 0; i < updatedCategories.length; i++) {
-          final categoryId = updatedCategories[i].id;
-          final categoryIndex = _categories.indexWhere((cat) => cat.id == categoryId);
-          if (categoryIndex != -1) {
-            _categories[categoryIndex] = _categories[categoryIndex].copyWith(displayOrder: i);
-          }
-        }
-
-        // Sort the categories by display order to ensure correct UI order
-        _categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-      });
+      // Success - nothing further to do since UI already updated optimistically
     } catch (e) {
       print('Error reordering categories: $e');
-      // Show error message
+      // Revert optimistic update on failure
       if (mounted) {
+        setState(() {
+          _categories = originalCategories;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reorder categories: $e')),
+          const SnackBar(content: Text('Failed to reorder categories. Reverting changes.')),
         );
       }
     }

@@ -19,7 +19,7 @@ class _AuthGateState extends State<AuthGate> {
   // SharedPreferences keys
   static const String _ONBOARDING_DONE_KEY = 'onboardingDone';
   static const String _THEME_CHOSEN_KEY = 'theme_chosen';
-  static const String _USER_CURRENCY_KEY = 'selectedCurrency';
+  static const String _USER_CURRENCY_KEY = 'selectedCurrencyCode';
 
   final FirebaseAuthService _authService = FirebaseAuthService();
   bool? _cachedAuthStatus;
