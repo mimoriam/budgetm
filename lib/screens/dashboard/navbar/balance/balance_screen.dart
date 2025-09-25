@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/data/local/app_database.dart';
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -14,21 +15,25 @@ class BalanceScreen extends StatefulWidget {
 
 class _BalanceScreenState extends State<BalanceScreen> {
   int touchedIndex = -1;
-  late AppDatabase _database;
-  List<Account> _accounts = [];
+  late FirestoreService _firestoreService;
+  List<FirestoreAccount> _accounts = [];
 
   @override
   void initState() {
     super.initState();
-    _database = AppDatabase();
+    _firestoreService = FirestoreService.instance;
     _loadAccounts();
   }
 
   Future<void> _loadAccounts() async {
-    final accounts = await _database.getAccounts();
-    setState(() {
-      _accounts = accounts;
-    });
+    try {
+      final accounts = await _firestoreService.getAllAccounts();
+      setState(() {
+        _accounts = accounts;
+      });
+    } catch (e) {
+      print('Error loading accounts: $e');
+    }
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,9 @@ Future<void> main() async {
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Enable Firestore offline persistence
+  FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
 
   final bool onboardingDone = prefs.getBool('onboardingDone') ?? false;
 

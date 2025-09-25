@@ -17,7 +17,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
  @override
   Widget build(BuildContext context) {
     final currencyProvider = Provider.of<CurrencyProvider>(context);
-    final selectedCurrency = currencyProvider.selectedCurrency;
+    final selectedCurrency = currencyProvider.selectedCurrencyCode;
     
     return Scaffold(
       backgroundColor: Colors.white,
@@ -35,6 +35,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                 children: [
                   _buildSectionHeader('MAIN CURRENCY', showChangeButton: true),
                   _buildCurrencyCard(
+                    context,
                     _getCurrencyFlag(selectedCurrency),
                     _getCurrencyName(selectedCurrency),
                     selectedCurrency,
@@ -176,6 +177,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
       
       widgets.add(
         _buildCurrencyCard(
+          context,
           flag,
           name,
           currencyCode,
@@ -218,12 +220,14 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
   }
 
   Widget _buildCurrencyCard(
+    BuildContext context,
     String flag,
     String name,
     String code, {
     String? value,
     bool isMain = false,
   }) {
+    final currencyProvider = Provider.of<CurrencyProvider>(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
@@ -242,28 +246,45 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
         children: [
           Text(flag, style: const TextStyle(fontSize: 24)),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                code,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  code,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                if (isMain) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Conversion rate: ${currencyProvider.conversionRate.toStringAsFixed(4)}',
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                  ),
+                ],
+              ],
+            ),
           ),
-          if (value != null) ...[
-            const Spacer(),
+          if (value != null && !isMain) ...[
             Text(
               value,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ],
+          if (isMain) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.edit, size: 20),
+              onPressed: () {
+                _showEditRateDialog(context, code);
+              },
             ),
           ],
         ],
@@ -276,13 +297,66 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
     
     showCurrencyPicker(
       context: context,
-      onSelect: (Currency currency) {
-        currencyProvider.setCurrency(currency.code);
+      onSelect: (Currency currency) async {
+        await currencyProvider.setCurrency(currency, 1.0);
         // The selected currency becomes the main currency, so we don't add it to other currencies
       },
     );
   }
 
+  void _showEditRateDialog(BuildContext context, String currencyCode) {
+    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+    final controller = TextEditingController(text: currencyProvider.conversionRate.toString());
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Conversion Rate'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('1 $currencyCode = ? (multiplier applied to amounts)'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. 1.0',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('CANCEL'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final input = controller.text.trim();
+                final parsed = double.tryParse(input);
+                if (parsed == null || parsed <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid rate greater than 0')),
+                  );
+                  return;
+                }
+                final currency = CurrencyService().findByCode(currencyCode);
+                if (currency != null) {
+                  await currencyProvider.setCurrency(currency, parsed);
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text('SAVE'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+ 
   String _getCurrencyFlag(String currencyCode) {
     try {
       final currency = CurrencyService().findByCode(currencyCode);
@@ -294,7 +368,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
       return '🏳️';
     }
   }
-
+ 
   String _getCurrencyName(String currencyCode) {
     try {
       final currency = CurrencyService().findByCode(currencyCode);

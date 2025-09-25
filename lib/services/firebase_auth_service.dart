@@ -5,7 +5,7 @@ import 'package:budgetm/services/firestore_service.dart';
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   /// Registers a new user with email and password
   Future<User?> signUpWithEmailAndPassword(String email, String password) async {

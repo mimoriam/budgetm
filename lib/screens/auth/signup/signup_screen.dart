@@ -2,7 +2,6 @@ import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
-import 'package:budgetm/data/local/app_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -22,8 +21,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isLoading = false; // State for loading indicator
   bool _isLoadingGoogle = false; // State for Google Sign-In loading indicator
   final FirebaseAuthService _authService = FirebaseAuthService();
-  final FirestoreService _firestoreService = FirestoreService();
-  final AppDatabase _appDatabase = AppDatabase();
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   void _togglePasswordVisibility() {
     setState(() {
@@ -368,7 +366,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
                                           // Create a default account for the new user
                                           try {
-                                            await _appDatabase
+                                            await _firestoreService
                                                 .createDefaultAccount(
                                                   'Cash',
                                                   'USD',
@@ -506,7 +504,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                          
                                          // Create a default account for the new user
                                          try {
-                                           await _appDatabase.createDefaultAccount('Cash', 'USD');
+                                           await _firestoreService.createDefaultAccount('Cash', 'USD');
                                          } catch (e) {
                                            // Handle any errors in creating the default account
                                            if (mounted) {

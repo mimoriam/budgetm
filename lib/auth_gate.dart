@@ -7,7 +7,6 @@ import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:budgetm/data/local/category_initializer.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -46,8 +45,7 @@ class _AuthGateState extends State<AuthGate> {
       'currencyChosen': currencyChosen,
     };
     
-    // Initialize default categories
-    await CategoryInitializer.initializeCategories();
+    // Note: Category initialization moved to SelectCurrencyScreen to ensure user is authenticated
     
     setState(() {
       _preferencesLoaded = true;

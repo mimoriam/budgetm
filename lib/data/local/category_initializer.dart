@@ -1,7 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:budgetm/data/local/app_database.dart';
-import 'package:budgetm/data/local/models/transaction_model.dart';
-import 'package:drift/drift.dart';
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/models/category.dart';
 
 class CategoryInitializer {
   static const String _CATEGORIES_POPULATED_KEY = 'categories_populated';
@@ -12,7 +11,7 @@ class CategoryInitializer {
     final bool categoriesPopulated = prefs.getBool(_CATEGORIES_POPULATED_KEY) ?? false;
     
     if (!categoriesPopulated) {
-      final AppDatabase database = AppDatabase();
+      final FirestoreService firestoreService = FirestoreService.instance;
       
       // Default categories to insert - shared names for both income and expense
       final List<String> defaultCategoryNames = [
@@ -28,20 +27,27 @@ class CategoryInitializer {
       ];
       
       // Insert both income and expense categories for each name
+      int displayOrder = 0;
       for (final String categoryName in defaultCategoryNames) {
         // Insert income category
-        final incomeCategory = CategoriesCompanion.insert(
-          name: Value(categoryName),
-          type: Value('income'),
+        final incomeCategory = Category(
+          id: '', // Firestore will generate
+          name: categoryName,
+          type: 'income',
+          displayOrder: displayOrder,
         );
-        await database.into(database.categories).insert(incomeCategory);
+        await firestoreService.createCategory(incomeCategory);
         
         // Insert expense category
-        final expenseCategory = CategoriesCompanion.insert(
-          name: Value(categoryName),
-          type: Value('expense'),
+        final expenseCategory = Category(
+          id: '', // Firestore will generate
+          name: categoryName,
+          type: 'expense',
+          displayOrder: displayOrder,
         );
-        await database.into(database.categories).insert(expenseCategory);
+        await firestoreService.createCategory(expenseCategory);
+        
+        displayOrder++;
       }
       
       // Mark categories as populated

@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/data/local/app_database.dart' as db;
-import 'package:budgetm/data/local/models/account_model.dart';
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/models/category.dart';
+import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -16,19 +17,22 @@ class ExpenseDetailScreen extends StatefulWidget {
 }
 
 class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
-  late db.AppDatabase _database;
+  late FirestoreService _firestoreService;
 
   @override
   void initState() {
     super.initState();
-    _database = db.AppDatabase();
+    _firestoreService = FirestoreService.instance;
   }
 
   Future<void> _deleteTransaction() async {
-    // Delete the transaction from the database
-    await (_database.delete(_database.transactions)
-      ..where((tbl) => tbl.id.equals(widget.transaction.id)))
-      .go();
+    try {
+      // Delete the transaction from Firestore
+      await _firestoreService.deleteTransaction(widget.transaction.id);
+    } catch (e) {
+      print('Error deleting transaction: $e');
+      rethrow;
+    }
   }
 
   @override
@@ -50,8 +54,10 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   Center(
                     child: Column(
                       children: [
-                        FutureBuilder<db.Category?>(
-                          future: db.AppDatabase().getCategoryById(widget.transaction.categoryId ?? 0),
+                        FutureBuilder<Category?>(
+                          future: widget.transaction.categoryId != null
+                              ? _firestoreService.getCategoryById(widget.transaction.categoryId!)
+                              : Future.value(null),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Text('Loading...');
@@ -75,8 +81,10 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           },
                         ),
                         const SizedBox(height: 8),
-                        FutureBuilder<db.Account?>(
-                          future: db.AppDatabase().getAccountById(widget.transaction.accountId ?? ''),
+                        FutureBuilder<FirestoreAccount?>(
+                          future: widget.transaction.accountId != null
+                              ? _firestoreService.getAccountById(widget.transaction.accountId!)
+                              : Future.value(null),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Text('Loading...');

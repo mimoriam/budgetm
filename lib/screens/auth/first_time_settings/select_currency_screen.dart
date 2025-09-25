@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/data/local/category_initializer.dart';
 
 class SelectCurrencyScreen extends StatefulWidget {
   const SelectCurrencyScreen({super.key});
@@ -14,6 +16,8 @@ class SelectCurrencyScreen extends StatefulWidget {
 
 class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
   Currency? _selectedCurrency;
+  bool _isLoading = false;
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   @override
   void initState() {
@@ -187,28 +191,70 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                     vertical: 18,
                                   ),
                                 ),
-                                onPressed: () {
+                                onPressed: _isLoading ? null : () async {
                                   if (_selectedCurrency != null) {
-                                    final currencyProvider =
-                                        Provider.of<CurrencyProvider>(context, listen: false);
-                                    currencyProvider.setCurrency(_selectedCurrency!.code);
-                                  }
-                                  if (context.mounted) {
-                                    Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const MainScreen(),
-                                      ),
-                                      (route) => false,
-                                    );
+                                    setState(() {
+                                      _isLoading = true;
+                                    });
+
+                                    try {
+                                      final currencyProvider =
+                                          Provider.of<CurrencyProvider>(context, listen: false);
+                                      await currencyProvider.setCurrency(_selectedCurrency!, 1.0);
+
+                                      // Initialize categories for authenticated users
+                                      await CategoryInitializer.initializeCategories();
+
+                                      // Create default account if user has no accounts
+                                      await _firestoreService.createDefaultAccountIfNeeded(
+                                        _selectedCurrency!.code,
+                                        _selectedCurrency!.symbol,
+                                      );
+
+                                      if (context.mounted) {
+                                        Navigator.pushAndRemoveUntil(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const MainScreen(),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error during setup: $e'),
+                                            backgroundColor: AppColors.errorColor,
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                      }
+                                    }
                                   }
                                 },
-                                child: Text(
-                                  'Continue',
-                                  style: Theme.of(context).textTheme.labelLarge
-                                      ?.copyWith(color: Colors.white),
-                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        'Continue',
+                                        style: Theme.of(context).textTheme.labelLarge
+                                            ?.copyWith(color: Colors.white),
+                                      ),
                               ),
                             ),
                           ],

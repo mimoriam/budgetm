@@ -1,15 +1,18 @@
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/data/local/app_database.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:budgetm/data/local/models/transaction_model.dart';
-import 'package:budgetm/data/local/models/task_model.dart';
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/models/firestore_transaction.dart';
+import 'package:budgetm/models/firestore_task.dart';
+import 'package:budgetm/models/firestore_account.dart';
+import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/transaction.dart' as model;
+import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/screens/dashboard/navbar/feedback_modal.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/analytics/analytics_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -20,8 +23,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Data structure to hold a transaction with its associated account and category
 class TransactionWithAccount {
-  final Transaction transaction;
-  final Account? account;
+  final FirestoreTransaction transaction;
+  final FirestoreAccount? account;
   final Category? category;
 
   TransactionWithAccount({
@@ -31,23 +34,21 @@ class TransactionWithAccount {
   });
 }
 
-// Helper function to convert database transaction to UI transaction
-model.Transaction _convertToUiTransaction(Transaction dbTransaction) {
+// Helper function to convert Firestore transaction to UI transaction
+model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction) {
   return model.Transaction(
-    id: dbTransaction.id, // Pass database transaction ID
-    title: dbTransaction.description,
-    description: dbTransaction.description,
-    amount: dbTransaction.amount,
-    type: dbTransaction.type == 'income'
-        ? model.TransactionType.income
-        : model.TransactionType.expense,
-    date: dbTransaction.date,
+    id: firestoreTransaction.id, // ID is already String in Firestore
+    title: firestoreTransaction.description,
+    description: firestoreTransaction.description,
+    amount: firestoreTransaction.amount,
+    type: firestoreTransaction.type == 'income'
+        ? TransactionType.income
+        : TransactionType.expense,
+    date: firestoreTransaction.date,
     icon: const Icon(Icons.account_balance), // Default icon
     iconBackgroundColor: Colors.grey.shade100, // Default color
-    accountId:
-        dbTransaction.accountId, // Pass accountId from database transaction
-    categoryId:
-        dbTransaction.categoryId, // Pass categoryId from database transaction
+    accountId: firestoreTransaction.accountId, // Pass accountId from Firestore transaction
+    categoryId: firestoreTransaction.categoryId, // Already String in Firestore
   );
 }
 
@@ -60,20 +61,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late ScrollController _scrollController;
-  late AppDatabase _database;
+  late FirestoreService _firestoreService;
   List<DateTime> _months = [];
   int _selectedMonthIndex = 0;
 
-  List<Transaction> _transactions = [];
+  List<FirestoreTransaction> _transactions = [];
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
   List<TransactionWithAccount> _transactionsWithAccounts = [];
-  List<Task> _upcomingTasks = [];
+  List<FirestoreTask> _upcomingTasks = [];
 
   @override
   void initState() {
     super.initState();
-    _database = AppDatabase();
+    _firestoreService = FirestoreService.instance;
     _scrollController = ScrollController();
     _loadMonths();
     _loadTransactions();
@@ -149,218 +150,208 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadTransactions() async {
-    // Load all transactions
-    final transactions = await _database.select(_database.transactions).get();
+    try {
+      // Load all transactions
+      final transactions = await _firestoreService.getAllTransactions();
 
-    // Load all accounts for mapping
-    final accounts = await _database.select(_database.accounts).get();
-    final accountMap = {for (var account in accounts) account.id: account};
+      // Load all accounts for mapping
+      final accounts = await _firestoreService.getAllAccounts();
+      final accountMap = {for (var account in accounts) account.id: account};
 
-    // Load all categories for mapping
-    final categories = await _database.select(_database.categories).get();
-    final categoryMap = {
-      for (var category in categories) category.id: category,
-    };
+      // Load all categories for mapping
+      final categories = await _firestoreService.getAllCategories();
+      final categoryMap = {
+        for (var category in categories) category.id: category,
+      };
 
-    // Create TransactionWithAccount objects
-    final transactionsWithAccounts = transactions.map((transaction) {
-      return TransactionWithAccount(
-        transaction: transaction,
-        account: transaction.accountId != null
-            ? accountMap[transaction.accountId]
-            : null,
-        category: transaction.categoryId != null
-            ? categoryMap[transaction.categoryId]
-            : null,
-      );
-    }).toList();
+      // Create TransactionWithAccount objects
+      final transactionsWithAccounts = transactions.map((transaction) {
+        return TransactionWithAccount(
+          transaction: transaction,
+          account: transaction.accountId != null
+              ? accountMap[transaction.accountId]
+              : null,
+          category: transaction.categoryId != null
+              ? categoryMap[transaction.categoryId]
+              : null,
+        );
+      }).toList();
 
-    setState(() {
-      _transactions = transactions;
-      _transactionsWithAccounts = transactionsWithAccounts;
-    });
+      setState(() {
+        _transactions = transactions;
+        _transactionsWithAccounts = transactionsWithAccounts;
+      });
+    } catch (e) {
+      print('Error loading transactions: $e');
+    }
   }
 
   Future<void> _loadIncomeAndExpenses() async {
-    final now = DateTime.now();
-    final startOfMonth = DateTime(now.year, now.month, 1);
-    final endOfMonth = DateTime(now.year, now.month + 1, 0);
+    try {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
-    // Query for income transactions
-    final incomeQuery = _database.select(_database.transactions)
-      ..where(
-        (tbl) =>
-            tbl.type.equals('income') &
-            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
+      // Get income and expense totals using Firestore helper method
+      final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
+        startOfMonth,
+        endOfMonth,
       );
-    final incomeTransactions = await incomeQuery.get();
-    final totalIncome = incomeTransactions.fold<double>(
-      0.0,
-      (sum, tx) => sum + tx.amount,
-    );
 
-    // Query for expense transactions
-    final expenseQuery = _database.select(_database.transactions)
-      ..where(
-        (tbl) =>
-            tbl.type.equals('expense') &
-            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
-      );
-    final expenseTransactions = await expenseQuery.get();
-    final totalExpenses = expenseTransactions.fold<double>(
-      0.0,
-      (sum, tx) => sum + tx.amount,
-    );
-
-    setState(() {
-      _totalIncome = totalIncome;
-      _totalExpenses = totalExpenses;
-    });
+      setState(() {
+        _totalIncome = totals['income'] ?? 0.0;
+        _totalExpenses = totals['expenses'] ?? 0.0;
+      });
+    } catch (e) {
+      print('Error loading income and expenses: $e');
+      setState(() {
+        _totalIncome = 0.0;
+        _totalExpenses = 0.0;
+      });
+    }
   }
 
   Future<void> _loadCurrentMonthTransactions() async {
-    final now = DateTime.now();
-    final startOfMonth = DateTime(now.year, now.month, 1);
-    final endOfMonth = DateTime(now.year, now.month + 1, 0);
+    try {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
-    final transactionsQuery = _database.select(_database.transactions)
-      ..where((tbl) => tbl.date.isBetweenValues(startOfMonth, endOfMonth));
-    final transactions = await transactionsQuery.get();
-
-    // Load all accounts for mapping
-    final accounts = await _database.select(_database.accounts).get();
-    final accountMap = {for (var account in accounts) account.id: account};
-
-    // Load all categories for mapping
-    final categories = await _database.select(_database.categories).get();
-    final categoryMap = {
-      for (var category in categories) category.id: category,
-    };
-
-    // Create TransactionWithAccount objects
-    final transactionsWithAccounts = transactions.map((transaction) {
-      return TransactionWithAccount(
-        transaction: transaction,
-        account: transaction.accountId != null
-            ? accountMap[transaction.accountId]
-            : null,
-        category: transaction.categoryId != null
-            ? categoryMap[transaction.categoryId]
-            : null,
+      // Get transactions for current month
+      final transactions = await _firestoreService.getTransactionsForDateRange(
+        startOfMonth,
+        endOfMonth,
       );
-    }).toList();
 
-    setState(() {
-      _transactions = transactions;
-      _transactionsWithAccounts = transactionsWithAccounts;
-    });
+      // Load all accounts for mapping
+      final accounts = await _firestoreService.getAllAccounts();
+      final accountMap = {for (var account in accounts) account.id: account};
+
+      // Load all categories for mapping
+      final categories = await _firestoreService.getAllCategories();
+      final categoryMap = {
+        for (var category in categories) category.id: category,
+      };
+
+      // Create TransactionWithAccount objects
+      final transactionsWithAccounts = transactions.map((transaction) {
+        return TransactionWithAccount(
+          transaction: transaction,
+          account: transaction.accountId != null
+              ? accountMap[transaction.accountId]
+              : null,
+          category: transaction.categoryId != null
+              ? categoryMap[transaction.categoryId]
+              : null,
+        );
+      }).toList();
+
+      setState(() {
+        _transactions = transactions;
+        _transactionsWithAccounts = transactionsWithAccounts;
+      });
+    } catch (e) {
+      print('Error loading current month transactions: $e');
+    }
   }
 
   Future<void> _loadUpcomingTasks() async {
-    final now = DateTime.now();
-    final endOfMonth = DateTime(now.year, now.month + 1, 0);
+    try {
+      final now = DateTime.now();
+      final endOfMonth = DateTime(now.year, now.month + 1, 0);
 
-    final tasksQuery = _database.select(_database.tasks)
-      ..where(
-        (tbl) =>
-            tbl.dueDate.isBetweenValues(now, endOfMonth) &
-            tbl.isCompleted.equals(false),
-      );
-    final tasks = await tasksQuery.get();
+      // Get upcoming tasks using Firestore helper method
+      final tasks = await _firestoreService.getUpcomingTasksForDateRange(now, endOfMonth);
 
-    setState(() {
-      _upcomingTasks = tasks;
-    });
+      setState(() {
+        _upcomingTasks = tasks;
+      });
+    } catch (e) {
+      print('Error loading upcoming tasks: $e');
+    }
   }
 
   Future<void> _loadIncomeAndExpensesForMonth(DateTime month) async {
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(month.year, month.month + 1, 0);
+    try {
+      final startOfMonth = DateTime(month.year, month.month, 1);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0);
 
-    // Query for income transactions
-    final incomeQuery = _database.select(_database.transactions)
-      ..where(
-        (tbl) =>
-            tbl.type.equals('income') &
-            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
+      // Get income and expense totals using Firestore helper method
+      final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
+        startOfMonth,
+        endOfMonth,
       );
-    final incomeTransactions = await incomeQuery.get();
-    final totalIncome = incomeTransactions.fold<double>(
-      0.0,
-      (sum, tx) => sum + tx.amount,
-    );
 
-    // Query for expense transactions
-    final expenseQuery = _database.select(_database.transactions)
-      ..where(
-        (tbl) =>
-            tbl.type.equals('expense') &
-            tbl.date.isBetweenValues(startOfMonth, endOfMonth),
-      );
-    final expenseTransactions = await expenseQuery.get();
-    final totalExpenses = expenseTransactions.fold<double>(
-      0.0,
-      (sum, tx) => sum + tx.amount,
-    );
-
-    setState(() {
-      _totalIncome = totalIncome;
-      _totalExpenses = totalExpenses;
-    });
+      setState(() {
+        _totalIncome = totals['income'] ?? 0.0;
+        _totalExpenses = totals['expenses'] ?? 0.0;
+      });
+    } catch (e) {
+      print('Error loading income and expenses for month: $e');
+      setState(() {
+        _totalIncome = 0.0;
+        _totalExpenses = 0.0;
+      });
+    }
   }
 
   Future<void> _loadTransactionsForMonth(DateTime month) async {
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(month.year, month.month + 1, 0);
+    try {
+      final startOfMonth = DateTime(month.year, month.month, 1);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0);
 
-    final transactionsQuery = _database.select(_database.transactions)
-      ..where((tbl) => tbl.date.isBetweenValues(startOfMonth, endOfMonth));
-    final transactions = await transactionsQuery.get();
-
-    // Load all accounts for mapping
-    final accounts = await _database.select(_database.accounts).get();
-    final accountMap = {for (var account in accounts) account.id: account};
-
-    // Load all categories for mapping
-    final categories = await _database.select(_database.categories).get();
-    final categoryMap = {
-      for (var category in categories) category.id: category,
-    };
-
-    // Create TransactionWithAccount objects
-    final transactionsWithAccounts = transactions.map((transaction) {
-      return TransactionWithAccount(
-        transaction: transaction,
-        account: transaction.accountId != null
-            ? accountMap[transaction.accountId]
-            : null,
-        category: transaction.categoryId != null
-            ? categoryMap[transaction.categoryId]
-            : null,
+      // Get transactions for the specified month
+      final transactions = await _firestoreService.getTransactionsForDateRange(
+        startOfMonth,
+        endOfMonth,
       );
-    }).toList();
 
-    setState(() {
-      _transactions = transactions;
-      _transactionsWithAccounts = transactionsWithAccounts;
-    });
+      // Load all accounts for mapping
+      final accounts = await _firestoreService.getAllAccounts();
+      final accountMap = {for (var account in accounts) account.id: account};
+
+      // Load all categories for mapping
+      final categories = await _firestoreService.getAllCategories();
+      final categoryMap = {
+        for (var category in categories) category.id: category,
+      };
+
+      // Create TransactionWithAccount objects
+      final transactionsWithAccounts = transactions.map((transaction) {
+        return TransactionWithAccount(
+          transaction: transaction,
+          account: transaction.accountId != null
+              ? accountMap[transaction.accountId]
+              : null,
+          category: transaction.categoryId != null
+              ? categoryMap[transaction.categoryId]
+              : null,
+        );
+      }).toList();
+
+      setState(() {
+        _transactions = transactions;
+        _transactionsWithAccounts = transactionsWithAccounts;
+      });
+    } catch (e) {
+      print('Error loading transactions for month: $e');
+    }
   }
 
   Future<void> _loadUpcomingTasksForMonth(DateTime month) async {
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(month.year, month.month + 1, 0);
+    try {
+      final startOfMonth = DateTime(month.year, month.month, 1);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0);
 
-    final tasksQuery = _database.select(_database.tasks)
-      ..where(
-        (tbl) =>
-            tbl.dueDate.isBetweenValues(startOfMonth, endOfMonth) &
-            tbl.isCompleted.equals(false),
-      );
-    final tasks = await tasksQuery.get();
+      // Get upcoming tasks for the specified month using Firestore helper method
+      final tasks = await _firestoreService.getUpcomingTasksForDateRange(startOfMonth, endOfMonth);
 
-    setState(() {
-      _upcomingTasks = tasks;
-    });
+      setState(() {
+        _upcomingTasks = tasks;
+      });
+    } catch (e) {
+      print('Error loading upcoming tasks for month: $e');
+    }
   }
 
   void _scrollToSelectedMonth() {
@@ -386,6 +377,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // );
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
+    final currencyProvider = context.watch<CurrencyProvider>();
 
     // Check if we should refresh the data
     if (homeScreenProvider.shouldRefresh) {
@@ -443,6 +435,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildAppBar(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
+    final currencyProvider = context.watch<CurrencyProvider>();
     final statusBarHeight = MediaQuery.of(context).padding.top;
     return Container(
       height:
@@ -490,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '\$ ${(_totalIncome - _totalExpenses).toStringAsFixed(2)}',
+                      '${currencyProvider.currencySymbol} ${(( _totalIncome - _totalExpenses ) * currencyProvider.conversionRate).toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
@@ -616,6 +609,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildBalanceCards() {
+    final currencyProvider = context.watch<CurrencyProvider>();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
@@ -623,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Expanded(
             child: _buildInfoCard(
               'Income',
-              '+ \$${_totalIncome.toStringAsFixed(2)}',
+              '+ ${currencyProvider.currencySymbol}${(_totalIncome * currencyProvider.conversionRate).toStringAsFixed(2)}',
               Colors.green,
               HugeIcons.strokeRoundedChartUp,
               AppColors.incomeBackground,
@@ -633,7 +627,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Expanded(
             child: _buildInfoCard(
               'Expense',
-              '- \$${_totalExpenses.toStringAsFixed(2)}',
+              '- ${currencyProvider.currencySymbol}${(_totalExpenses * currencyProvider.conversionRate).toStringAsFixed(2)}',
               Colors.red,
               HugeIcons.strokeRoundedChartDown,
               AppColors.expenseBackground,
@@ -694,6 +688,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildTransactionSectionContent() {
+    final currencyProvider = context.watch<CurrencyProvider>();
     Map<String, List<TransactionWithAccount>> groupedTransactions = {};
     for (var tx in _transactionsWithAccounts) {
       String dateKey = DateFormat('MMM d, yyyy').format(tx.transaction.date);
@@ -732,7 +727,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   ...groupedTransactions[date]!.map(
-                    (tx) => _buildTransactionItem(tx),
+                    (tx) => _buildTransactionItem(tx, currencyProvider),
                   ),
                 ],
               );
@@ -746,7 +741,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildTransactionItem(TransactionWithAccount transactionWithAccount) {
+  Widget _buildTransactionItem(TransactionWithAccount transactionWithAccount, CurrencyProvider currencyProvider) {
     final transaction = transactionWithAccount.transaction;
     final account = transactionWithAccount.account;
     final uiTransaction = _convertToUiTransaction(transaction);
@@ -818,7 +813,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             Text(
-              '${transaction.type == 'income' ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}',
+              '${transaction.type == 'income' ? '+' : '-'} ${currencyProvider.currencySymbol}${(transaction.amount * currencyProvider.conversionRate).toStringAsFixed(2)}',
               style: TextStyle(
                 color: transaction.type == 'income' ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,
@@ -832,6 +827,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildUpcomingTasksSection() {
+    final currencyProvider = context.watch<CurrencyProvider>();
     if (_upcomingTasks.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -846,13 +842,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          ..._upcomingTasks.map((task) => _buildTaskItem(task)).toList(),
+          ..._upcomingTasks.map((task) => _buildTaskItem(task, currencyProvider)).toList(),
         ],
       ),
     );
   }
 
-  Widget _buildTaskItem(Task task) {
+  Widget _buildTaskItem(FirestoreTask task, CurrencyProvider currencyProvider) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
@@ -904,7 +900,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
           Text(
-            '${task.type == 'income' ? '+' : '-'} \$${task.amount.toStringAsFixed(2)}',
+            '${task.type == 'income' ? '+' : '-'} ${currencyProvider.currencySymbol}${(task.amount * currencyProvider.conversionRate).toStringAsFixed(2)}',
             style: TextStyle(
               color: task.type == 'income' ? Colors.green : Colors.red,
               fontWeight: FontWeight.bold,

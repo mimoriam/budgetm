@@ -3,8 +3,8 @@ import 'package:budgetm/screens/dashboard/profile/categories/add_category/add_ca
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
-import 'package:budgetm/data/local/app_database.dart';
-import 'package:drift/drift.dart' as drift;
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/models/category.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
@@ -17,20 +17,39 @@ class _CategoryScreenState extends State<CategoryScreen> {
   bool _isExpenseSelected = true;
   List<Category> _categories = [];
   bool _isLoading = true;
+  late FirestoreService _firestoreService;
 
   @override
   void initState() {
     super.initState();
+    _firestoreService = FirestoreService.instance;
     _loadCategories();
   }
 
   Future<void> _loadCategories() async {
-    final database = AppDatabase.instance;
-    final categories = await database.getCategoriesOrdered();
-    setState(() {
-      _categories = categories;
-      _isLoading = false;
-    });
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final categories = await _firestoreService.getAllCategories();
+      
+      // Filter out duplicate categories based on ID to prevent GlobalKey errors
+      final uniqueCategories = <String, Category>{};
+      for (final category in categories) {
+        uniqueCategories[category.id] = category;
+      }
+      
+      setState(() {
+        _categories = uniqueCategories.values.toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading categories: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -255,7 +274,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ),
         ),
         title: Text(
-          category.name ?? '',
+          category.name ?? 'Unnamed Category',
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         trailing: IconButton(
@@ -275,57 +294,62 @@ class _CategoryScreenState extends State<CategoryScreen> {
     int newIndex,
     List<Category> currentCategories,
   ) async {
-    // Adjust newIndex if it's greater than oldIndex
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
-
-    // Create a copy of the current categories list
-    final updatedCategories = List<Category>.from(currentCategories);
-
-    // Reorder the categories in the list
-    final movedCategory = updatedCategories.removeAt(oldIndex);
-    updatedCategories.insert(newIndex, movedCategory);
-
-    // Update the display order in the database
-    final categoryOrderPairs = <MapEntry<int, int>>[];
-    for (int i = 0; i < updatedCategories.length; i++) {
-      categoryOrderPairs.add(MapEntry(updatedCategories[i].id, i));
-    }
-
-    final database = AppDatabase.instance;
-    await database.updateMultipleCategoryDisplayOrders(categoryOrderPairs);
-
-    // Update the state with the new display orders
-    setState(() {
-      // Create a map of category id to new display order
-      final orderMap = <int, int>{};
-      for (int i = 0; i < updatedCategories.length; i++) {
-        orderMap[updatedCategories[i].id] = i;
+    try {
+      // Adjust newIndex if it's greater than oldIndex
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
       }
 
-      // Update the _categories list with new display orders
-      _categories = _categories.map((category) {
-        final newDisplayOrder = orderMap[category.id];
-        if (newDisplayOrder != null) {
-          // Create a new Category object with updated displayOrder
-          return category.copyWith(displayOrder: newDisplayOrder);
-        }
-        return category;
-      }).toList();
+      // Create a copy of the current categories list
+      final updatedCategories = List<Category>.from(currentCategories);
 
-      // Sort the categories by display order to ensure correct UI order
-      _categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-    });
+      // Reorder the categories in the list
+      final movedCategory = updatedCategories.removeAt(oldIndex);
+      updatedCategories.insert(newIndex, movedCategory);
+
+      // Update the display order in Firestore
+      for (int i = 0; i < updatedCategories.length; i++) {
+        final category = updatedCategories[i];
+        final updatedCategory = category.copyWith(displayOrder: i);
+        await _firestoreService.updateCategory(updatedCategory.id, updatedCategory);
+      }
+
+      // Update the state with the new display orders
+      setState(() {
+        // Update the _categories list with new display orders
+        for (int i = 0; i < updatedCategories.length; i++) {
+          final categoryId = updatedCategories[i].id;
+          final categoryIndex = _categories.indexWhere((cat) => cat.id == categoryId);
+          if (categoryIndex != -1) {
+            _categories[categoryIndex] = _categories[categoryIndex].copyWith(displayOrder: i);
+          }
+        }
+
+        // Sort the categories by display order to ensure correct UI order
+        _categories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+      });
+    } catch (e) {
+      print('Error reordering categories: $e');
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reorder categories: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _deleteCategory(Category category) async {
-    final database = AppDatabase.instance;
-    await database.customUpdate(
-      'DELETE FROM categories WHERE id = ?',
-      variables: [drift.Variable.withInt(category.id)],
-      updates: {database.categories},
-    );
-    await _loadCategories(); // Reload categories after deletion
+    try {
+      await _firestoreService.deleteCategory(category.id);
+      await _loadCategories(); // Reload categories after deletion
+    } catch (e) {
+      print('Error deleting category: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete category: $e')),
+        );
+      }
+    }
   }
 }
