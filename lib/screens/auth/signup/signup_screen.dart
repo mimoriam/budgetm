@@ -364,29 +364,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                             true,
                                           );
 
-                                          // Create a default account for the new user
-                                          try {
-                                            await _firestoreService
-                                                .createDefaultAccount(
-                                                  'Cash',
-                                                  'USD',
-                                                );
-                                          } catch (e) {
-                                            // Handle any errors in creating the default account
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Failed to create default account: $e',
-                                                  ),
-                                                  backgroundColor:
-                                                      AppColors.errorColor,
-                                                ),
-                                              );
-                                            }
-                                          }
+                                          // The default account is now created in the SelectCurrencyScreen
 
                                           if (context.mounted) {
                                             Navigator.pushAndRemoveUntil(
@@ -502,20 +480,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                           true,
                                         );
                                          
-                                         // Create a default account for the new user
-                                         try {
-                                           await _firestoreService.createDefaultAccount('Cash', 'USD');
-                                         } catch (e) {
-                                           // Handle any errors in creating the default account
-                                           if (mounted) {
-                                             ScaffoldMessenger.of(context).showSnackBar(
-                                               SnackBar(
-                                                 content: Text('Failed to create default account: $e'),
-                                                 backgroundColor: AppColors.errorColor,
-                                               ),
-                                             );
-                                           }
-                                         }
+                                         // The default account is now created in the SelectCurencyScreen
 
                                         if (mounted) {
                                           Navigator.pushAndRemoveUntil(

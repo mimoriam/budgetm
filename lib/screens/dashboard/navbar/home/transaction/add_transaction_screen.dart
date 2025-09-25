@@ -43,28 +43,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Get all accounts
       final accounts = await _firestoreService.getAllAccounts();
       
-      // If no accounts exist, create a default one
-      if (accounts.isEmpty) {
-        await _firestoreService.createDefaultAccount("Default Account", "USD");
-        final updatedAccounts = await _firestoreService.getAllAccounts();
-        if (updatedAccounts.isNotEmpty) {
-          setState(() {
-            _accounts = updatedAccounts;
-            _selectedAccountId = updatedAccounts.first.id;
-          });
-        }
-      } else {
-        // Find the default account or select the first one
-        final defaultAccount = accounts.firstWhere(
-          (account) => account.isDefault == true,
-          orElse: () => accounts.first,
-        );
-        
-        setState(() {
-          _accounts = accounts;
-          _selectedAccountId = defaultAccount.id;
-        });
-      }
+      // Find the default account or select the first one
+      final defaultAccount = accounts.firstWhere(
+        (account) => account.isDefault == true,
+        orElse: () => accounts.first,
+      );
+      
+      setState(() {
+        _accounts = accounts;
+        _selectedAccountId = defaultAccount.id;
+      });
     } catch (e) {
       // Handle error
       debugPrint('Error loading accounts: $e');

@@ -1,7 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
-import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,80 +16,77 @@ class BalanceScreen extends StatefulWidget {
 class _BalanceScreenState extends State<BalanceScreen> {
   int touchedIndex = -1;
   late FirestoreService _firestoreService;
-  List<FirestoreAccount> _accounts = [];
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
-    _loadAccounts();
-  }
-
-  Future<void> _loadAccounts() async {
-    try {
-      final accounts = await _firestoreService.getAllAccounts();
-      setState(() {
-        _accounts = accounts;
-      });
-    } catch (e) {
-      print('Error loading accounts: $e');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<HomeScreenProvider>(
-      builder: (context, homeScreenProvider, child) {
-        // Refresh accounts if needed
-        if (homeScreenProvider.shouldRefresh || homeScreenProvider.shouldRefreshAccounts) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _loadAccounts();
-            homeScreenProvider.completeRefresh();
-          });
-        }
+    return Consumer<CurrencyProvider>(
+      builder: (context, currencyProvider, child) {
+        return StreamBuilder<List<FirestoreAccount>>(
+          stream: _firestoreService.streamAccounts(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No accounts found.'));
+            }
 
-        return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      body: Column(
-        children: [
-          _buildCustomAppBar(context),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 16.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            final _accounts = snapshot.data!;
+
+            return Scaffold(
+              backgroundColor: AppColors.scaffoldBackground,
+              body: Column(
                 children: [
-                  _buildPieChart(),
-                  const SizedBox(height: 16),
-                  _buildLegend(),
-                  const SizedBox(height: 24),
-                  _buildSectionHeader('MY ACCOUNTS'),
-                  const SizedBox(height: 12),
-                  ..._accounts.map((account) => Column(
+                  _buildCustomAppBar(context),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 16.0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildAccountItem(
-                            icon: Icons.account_balance,
-                            iconColor: Colors.black,
-                            iconBackgroundColor: Colors.grey.shade200,
-                            accountName: account.name,
-                            amount: account.balance,
-                            accountType: account.accountType,
-                            creditLimit: account.creditLimit,
-                            balanceLimit: account.balanceLimit,
-                          ),
+                          _buildPieChart(_accounts),
+                          const SizedBox(height: 16),
+                          _buildLegend(_accounts, currencyProvider.currencySymbol),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader('MY ACCOUNTS'),
                           const SizedBox(height: 12),
+                          ..._accounts.map((account) => Column(
+                                children: [
+                                  _buildAccountItem(
+                                    icon: Icons.account_balance,
+                                    iconColor: Colors.black,
+                                    iconBackgroundColor: Colors.grey.shade200,
+                                    accountName: account.name,
+                                    amount: account.balance,
+                                    accountType: account.accountType,
+                                    creditLimit: account.creditLimit,
+                                    balanceLimit: account.balanceLimit,
+                                    currencySymbol: currencyProvider.currencySymbol,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                              )),
                         ],
-                      )),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
+            );
+          },
+        );
       },
     );
   }
@@ -152,7 +149,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
     );
   }
 
-  Widget _buildPieChart() {
+  Widget _buildPieChart(List<FirestoreAccount> accounts) {
+    if (accounts.isEmpty) {
+      return const SizedBox(height: 250);
+    }
     return SizedBox(
       height: 250,
       child: PieChart(
@@ -174,19 +174,19 @@ class _BalanceScreenState extends State<BalanceScreen> {
           borderData: FlBorderData(show: false),
           sectionsSpace: 0,
           centerSpaceRadius: 0,
-          sections: showingSections(),
+          sections: showingSections(accounts),
         ),
       ),
     );
   }
 
-  List<PieChartSectionData> showingSections() {
-    if (_accounts.isEmpty) {
+  List<PieChartSectionData> showingSections(List<FirestoreAccount> accounts) {
+    if (accounts.isEmpty) {
       return [];
     }
 
     // Calculate total balance
-    final totalBalance = _accounts.fold<double>(0.0, (sum, account) => sum + account.balance);
+    final totalBalance = accounts.fold<double>(0.0, (sum, account) => sum + account.balance);
     
     // Define a list of colors for the pie chart sections
     final colors = [
@@ -198,10 +198,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
       const Color(0xFFEC4899),
     ];
 
-    return List.generate(_accounts.length, (i) {
+    return List.generate(accounts.length, (i) {
       final isTouched = i == touchedIndex;
       final radius = isTouched ? 120.0 : 100.0;
-      final account = _accounts[i];
+      final account = accounts[i];
       
       return PieChartSectionData(
         color: colors[i % colors.length],
@@ -212,8 +212,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
     });
   }
 
-  Widget _buildLegend() {
-    if (_accounts.isEmpty) {
+  Widget _buildLegend(List<FirestoreAccount> accounts, String currencySymbol) {
+    if (accounts.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -229,7 +229,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
     return Column(
       children: [
-        ..._accounts.asMap().entries.map((entry) {
+        ...accounts.asMap().entries.map((entry) {
           final index = entry.key;
           final account = entry.value;
           return Column(
@@ -238,8 +238,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 colors[index % colors.length],
                 account.name,
                 account.balance,
+                currencySymbol,
               ),
-              if (index < _accounts.length - 1) const SizedBox(height: 12),
+              if (index < accounts.length - 1) const SizedBox(height: 12),
             ],
           );
         }).toList(),
@@ -247,7 +248,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
     );
   }
 
-  Widget _buildLegendItem(Color color, String label, double amount) {
+  Widget _buildLegendItem(Color color, String label, double amount, String currencySymbol) {
     return Row(
       children: [
         Container(
@@ -262,7 +263,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
         Text(label, style: Theme.of(context).textTheme.bodyLarge),
         const Spacer(),
         Text(
-          '\$${amount.toStringAsFixed(2)}',
+          '$currencySymbol${amount.toStringAsFixed(2)}',
           style: Theme.of(
             context,
           ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -290,6 +291,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
     required String accountType,
     double? creditLimit,
     double? balanceLimit,
+    required String currencySymbol,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -334,14 +336,14 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 ),
                 if (creditLimit != null)
                   Text(
-                    'Credit Limit: \$${creditLimit.toStringAsFixed(2)}',
+                    'Credit Limit: $currencySymbol${creditLimit.toStringAsFixed(2)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.secondaryTextColorLight,
                         ),
                   )
                 else if (balanceLimit != null)
                   Text(
-                    'Balance Limit: \$${balanceLimit.toStringAsFixed(2)}',
+                    'Balance Limit: $currencySymbol${balanceLimit.toStringAsFixed(2)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.secondaryTextColorLight,
                         ),
@@ -350,7 +352,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
             ),
           ),
           Text(
-            '\$${amount.toStringAsFixed(2)}',
+            '$currencySymbol${amount.toStringAsFixed(2)}',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),

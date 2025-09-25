@@ -48,22 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Store first-time user flag
         await prefs.setBool('isFirstTimeUser', isFirstTime);
 
-        // If this is a first-time user, create a default account
-        if (isFirstTime) {
-          try {
-            await _firestoreService.createDefaultAccount('Cash', 'USD');
-          } catch (e) {
-            // Handle any errors in creating the default account
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to create default account: $e'),
-                  backgroundColor: AppColors.errorColor,
-                ),
-              );
-            }
-          }
-        }
+        // The default account is now created in the SelectCurrencyScreen
         // Store the first login timestamp if it doesn't exist
         if (prefs.getString('firstLoginDate') == null) {
           await prefs.setString(
@@ -368,31 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             isFirstTime,
                                           );
 
-                                          // If this is a first-time user, create a default account
-                                          if (isFirstTime) {
-                                            try {
-                                              await _firestoreService
-                                                  .createDefaultAccount(
-                                                    'Cash',
-                                                    'USD',
-                                                  );
-                                            } catch (e) {
-                                              // Handle any errors in creating the default account
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      'Failed to create default account: $e',
-                                                    ),
-                                                    backgroundColor:
-                                                        AppColors.errorColor,
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          }
+                                          // The default account is now created in the SelectCurrencyScreen
 
                                           // Store the first login timestamp if it doesn't exist
                                           if (prefs.getString(
