@@ -153,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       // Load all transactions
       final transactions = await _firestoreService.getAllTransactions();
+      transactions.sort((a, b) => b.date.compareTo(a.date));
 
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
@@ -222,6 +223,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         startOfMonth,
         endOfMonth,
       );
+      transactions.sort((a, b) => b.date.compareTo(a.date));
 
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
@@ -305,6 +307,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         startOfMonth,
         endOfMonth,
       );
+      transactions.sort((a, b) => b.date.compareTo(a.date));
 
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
@@ -697,7 +700,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       groupedTransactions[dateKey]!.add(tx);
     }
-    List<String> sortedKeys = groupedTransactions.keys.toList();
+    List<String> sortedKeys = groupedTransactions.keys.toList()
+      ..sort((a, b) {
+        DateTime dateA = DateFormat('MMM d, yyyy').parse(a);
+        DateTime dateB = DateFormat('MMM d, yyyy').parse(b);
+        return dateB.compareTo(dateA);
+      });
 
     return Container(
       decoration: const BoxDecoration(
@@ -707,36 +715,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           topRight: Radius.circular(30),
         ),
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 16),
-        child: Column(
-          children: [
-            ...sortedKeys.map((date) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                    child: Text(
-                      date.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  ...groupedTransactions[date]!.map(
-                    (tx) => _buildTransactionItem(tx, currencyProvider),
-                  ),
-                ],
-              );
-            }).toList(),
-            const SizedBox(height: 16),
-            _buildUpcomingTasksSection(),
-            const SizedBox(height: 70), // To avoid FAB overlap
-          ],
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    ...sortedKeys.map((date) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                            child: Text(
+                              date.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          ...groupedTransactions[date]!.map(
+                            (tx) => _buildTransactionItem(tx, currencyProvider),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                    const SizedBox(height: 16),
+                    _buildUpcomingTasksSection(),
+                    const SizedBox(height: 70), // To avoid FAB overlap
+                    // Fills remaining space when content is short
+                    const SizedBox(height: 0),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -829,7 +848,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildUpcomingTasksSection() {
     final currencyProvider = context.watch<CurrencyProvider>();
     if (_upcomingTasks.isEmpty) {
-      return const SizedBox.shrink();
+      // Return a minimal height widget so the parent Column does not collapse
+      return const SizedBox(height: 1);
     }
 
     return Container(
