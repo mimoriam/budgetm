@@ -8,7 +8,8 @@ import 'package:budgetm/models/category.dart';
 import 'package:flutter/services.dart';
 
 class AddCategoryScreen extends StatefulWidget {
-  const AddCategoryScreen({super.key});
+  final String? initialCategoryType;
+  const AddCategoryScreen({super.key, this.initialCategoryType});
 
   @override
   State<AddCategoryScreen> createState() => _AddCategoryScreenState();
@@ -104,6 +105,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                         'Type',
                         FormBuilderDropdown<String>(
                           name: 'type',
+                          initialValue: widget.initialCategoryType,
                           decoration: _inputDecoration(
                             hintText: 'Select type',
                           ),

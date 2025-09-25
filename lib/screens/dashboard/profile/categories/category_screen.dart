@@ -92,9 +92,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
         padding: const EdgeInsets.only(bottom: 20.0), // Uplift FAB
         child: FloatingActionButton(
           onPressed: () async {
+            final initialType = _isExpenseSelected ? 'expense' : 'income';
             final result = await PersistentNavBarNavigator.pushNewScreen(
               context,
-              screen: const AddCategoryScreen(),
+              screen: AddCategoryScreen(initialCategoryType: initialType),
               withNavBar: false,
               pageTransitionAnimation: PageTransitionAnimation.cupertino,
             );
