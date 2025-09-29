@@ -70,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   double _totalExpenses = 0.0;
   List<TransactionWithAccount> _transactionsWithAccounts = [];
   List<FirestoreTask> _upcomingTasks = [];
+  bool? _previousVacationMode;
 
   @override
   void initState() {
@@ -77,10 +78,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _firestoreService = FirestoreService.instance;
     _scrollController = ScrollController();
     _loadMonths();
-    _loadTransactions();
-    _loadIncomeAndExpenses();
-    _loadCurrentMonthTransactions();
-    _loadUpcomingTasks();
+
+    // Defer data loads until after build so we can read VacationProvider from context.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isVacationMode =
+          Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+      _previousVacationMode = isVacationMode;
+      _loadTransactions(isVacation: isVacationMode);
+      _loadIncomeAndExpenses(isVacation: isVacationMode);
+      _loadCurrentMonthTransactions(isVacation: isVacationMode);
+      _loadUpcomingTasks();
+    });
+
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -100,16 +109,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentVacationMode =
+        Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+    // If we have a previous value and it differs from current, vacation mode was toggled
+    if (_previousVacationMode != null && currentVacationMode != _previousVacationMode) {
+      _refreshData();
+    }
+    // Update previous state for future comparisons
+    _previousVacationMode = currentVacationMode;
+  }
+
   Future<void> _refreshData() async {
-    await _loadTransactions();
-    await _loadIncomeAndExpensesForMonth(_months[_selectedMonthIndex]);
-    await _loadTransactionsForMonth(_months[_selectedMonthIndex]);
+    final isVacationMode =
+        Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+    await _loadTransactions(isVacation: isVacationMode);
+    await _loadIncomeAndExpensesForMonth(
+      _months[_selectedMonthIndex],
+      isVacation: isVacationMode,
+    );
+    await _loadTransactionsForMonth(
+      _months[_selectedMonthIndex],
+      isVacation: isVacationMode,
+    );
     await _loadUpcomingTasksForMonth(_months[_selectedMonthIndex]);
   }
 
   Future<void> _refreshAccountData() async {
-    await _loadIncomeAndExpenses();
-    await _loadTransactions();
+    final isVacationMode =
+        Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+    await _loadIncomeAndExpenses(isVacation: isVacationMode);
+    await _loadTransactions(isVacation: isVacationMode);
     // Add any other account-specific data loading if necessary
   }
 
@@ -149,22 +181,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _loadTransactions() async {
+  Future<void> _loadTransactions({required bool isVacation}) async {
     try {
-      // Load all transactions
-      final transactions = await _firestoreService.getAllTransactions();
+      // Load all transactions (filtered by vacation mode)
+      final transactions =
+          await _firestoreService.getAllTransactions(isVacation: isVacation);
       transactions.sort((a, b) => b.date.compareTo(a.date));
-
+  
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
       final accountMap = {for (var account in accounts) account.id: account};
-
+  
       // Load all categories for mapping
       final categories = await _firestoreService.getAllCategories();
       final categoryMap = {
         for (var category in categories) category.id: category,
       };
-
+  
       // Create TransactionWithAccount objects
       final transactionsWithAccounts = transactions.map((transaction) {
         return TransactionWithAccount(
@@ -177,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               : null,
         );
       }).toList();
-
+  
       setState(() {
         _transactions = transactions;
         _transactionsWithAccounts = transactionsWithAccounts;
@@ -187,18 +220,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadIncomeAndExpenses() async {
+  Future<void> _loadIncomeAndExpenses({required bool isVacation}) async {
     try {
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
       final endOfMonth = DateTime(now.year, now.month + 1, 0);
-
+  
       // Get income and expense totals using Firestore helper method
       final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
         startOfMonth,
         endOfMonth,
+        isVacation: isVacation,
       );
-
+  
       setState(() {
         _totalIncome = totals['income'] ?? 0.0;
         _totalExpenses = totals['expenses'] ?? 0.0;
@@ -212,29 +246,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadCurrentMonthTransactions() async {
+  Future<void> _loadCurrentMonthTransactions({required bool isVacation}) async {
     try {
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
       final endOfMonth = DateTime(now.year, now.month + 1, 0);
-
+  
       // Get transactions for current month
       final transactions = await _firestoreService.getTransactionsForDateRange(
         startOfMonth,
         endOfMonth,
+        isVacation: isVacation,
       );
       transactions.sort((a, b) => b.date.compareTo(a.date));
-
+  
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
       final accountMap = {for (var account in accounts) account.id: account};
-
+  
       // Load all categories for mapping
       final categories = await _firestoreService.getAllCategories();
       final categoryMap = {
         for (var category in categories) category.id: category,
       };
-
+  
       // Create TransactionWithAccount objects
       final transactionsWithAccounts = transactions.map((transaction) {
         return TransactionWithAccount(
@@ -247,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               : null,
         );
       }).toList();
-
+  
       setState(() {
         _transactions = transactions;
         _transactionsWithAccounts = transactionsWithAccounts;
@@ -273,17 +308,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadIncomeAndExpensesForMonth(DateTime month) async {
+  Future<void> _loadIncomeAndExpensesForMonth(
+    DateTime month, {
+    required bool isVacation,
+  }) async {
     try {
       final startOfMonth = DateTime(month.year, month.month, 1);
       final endOfMonth = DateTime(month.year, month.month + 1, 0);
-
+  
       // Get income and expense totals using Firestore helper method
       final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
         startOfMonth,
         endOfMonth,
+        isVacation: isVacation,
       );
-
+  
       setState(() {
         _totalIncome = totals['income'] ?? 0.0;
         _totalExpenses = totals['expenses'] ?? 0.0;
@@ -297,28 +336,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadTransactionsForMonth(DateTime month) async {
+  Future<void> _loadTransactionsForMonth(DateTime month,
+      {required bool isVacation}) async {
     try {
       final startOfMonth = DateTime(month.year, month.month, 1);
       final endOfMonth = DateTime(month.year, month.month + 1, 0);
-
+  
       // Get transactions for the specified month
       final transactions = await _firestoreService.getTransactionsForDateRange(
         startOfMonth,
         endOfMonth,
+        isVacation: isVacation,
       );
       transactions.sort((a, b) => b.date.compareTo(a.date));
-
+  
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
       final accountMap = {for (var account in accounts) account.id: account};
-
+  
       // Load all categories for mapping
       final categories = await _firestoreService.getAllCategories();
       final categoryMap = {
         for (var category in categories) category.id: category,
       };
-
+  
       // Create TransactionWithAccount objects
       final transactionsWithAccounts = transactions.map((transaction) {
         return TransactionWithAccount(
@@ -331,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               : null,
         );
       }).toList();
-
+  
       setState(() {
         _transactions = transactions;
         _transactionsWithAccounts = transactionsWithAccounts;
@@ -581,8 +622,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               setState(() {
                 _selectedMonthIndex = index;
               });
-              _loadIncomeAndExpensesForMonth(_months[index]);
-              _loadTransactionsForMonth(_months[index]);
+              final isVacationMode =
+                  Provider.of<VacationProvider>(context, listen: false)
+                      .isVacationMode;
+              _loadIncomeAndExpensesForMonth(
+                _months[index],
+                isVacation: isVacationMode,
+              );
+              _loadTransactionsForMonth(
+                _months[index],
+                isVacation: isVacationMode,
+              );
               _loadUpcomingTasksForMonth(_months[index]);
             },
             child: Container(

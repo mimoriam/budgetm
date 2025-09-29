@@ -72,10 +72,11 @@ class FirestoreService {
 
   // ================ TRANSACTION OPERATIONS ================
 
-  // Create a new transaction
-  Future<String> createTransaction(FirestoreTransaction transaction) async {
+  // Create a new transaction (accepts optional vacation flag)
+  Future<String> createTransaction(FirestoreTransaction transaction, {bool isVacation = false}) async {
     try {
-      final docRef = await _transactionsCollection.add(transaction);
+      final toSave = transaction.copyWith(isVacation: isVacation);
+      final docRef = await _transactionsCollection.add(toSave);
       return docRef.id;
     } catch (e) {
       print('Error creating transaction: $e');
@@ -94,10 +95,11 @@ class FirestoreService {
     }
   }
 
-  // Get all transactions
-  Future<List<FirestoreTransaction>> getAllTransactions() async {
+  // Get all transactions (optionally filtered by vacation mode)
+  Future<List<FirestoreTransaction>> getAllTransactions({bool isVacation = false}) async {
     try {
-      final querySnapshot = await _transactionsCollection.get();
+      final query = _transactionsCollection.where('isVacation', isEqualTo: isVacation);
+      final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Error getting transactions: $e');
@@ -105,17 +107,19 @@ class FirestoreService {
     }
   }
 
-  // Get transactions for a date range
+  // Get transactions for a date range (optionally filtered by vacation mode)
   Future<List<FirestoreTransaction>> getTransactionsForDateRange(
     DateTime startDate,
-    DateTime endDate,
-  ) async {
+    DateTime endDate, {
+    bool isVacation = false,
+  }) async {
     try {
-      final querySnapshot = await _transactionsCollection
+      final query = _transactionsCollection
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-          .orderBy('date', descending: true)
-          .get();
+          .where('isVacation', isEqualTo: isVacation)
+          .orderBy('date', descending: true);
+      final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Error getting transactions for date range: $e');
@@ -426,13 +430,18 @@ class FirestoreService {
 
   // ================ ANALYTICS HELPERS ================
 
-  // Get total income and expenses for a date range
+  // Get total income and expenses for a date range (optionally filtered by vacation mode)
   Future<Map<String, double>> getIncomeAndExpensesForDateRange(
     DateTime startDate,
-    DateTime endDate,
-  ) async {
+    DateTime endDate, {
+    bool isVacation = false,
+  }) async {
     try {
-      final transactions = await getTransactionsForDateRange(startDate, endDate);
+      final transactions = await getTransactionsForDateRange(
+        startDate,
+        endDate,
+        isVacation: isVacation,
+      );
       
       double totalIncome = 0.0;
       double totalExpenses = 0.0;

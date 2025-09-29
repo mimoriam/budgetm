@@ -15,6 +15,7 @@ class FirestoreTransaction {
   final String? color;
   final String? notes;
   final bool? paid;
+  final bool isVacation;
 
   FirestoreTransaction({
     required this.id,
@@ -31,6 +32,7 @@ class FirestoreTransaction {
     this.color,
     this.notes,
     this.paid,
+    this.isVacation = false,
   });
 
   // Convert FirestoreTransaction to JSON for Firestore
@@ -49,6 +51,7 @@ class FirestoreTransaction {
       'color': color,
       'notes': notes,
       'paid': paid,
+      'isVacation': isVacation,
     };
   }
 
@@ -70,6 +73,7 @@ class FirestoreTransaction {
       color: data['color'],
       notes: data['notes'],
       paid: data['paid'],
+      isVacation: data['isVacation'] ?? false,
     );
   }
 
@@ -80,7 +84,7 @@ class FirestoreTransaction {
       description: json['description'] ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
       type: json['type'] ?? '',
-      date: json['date'] is Timestamp 
+      date: json['date'] is Timestamp
           ? (json['date'] as Timestamp).toDate()
           : json['date'] is DateTime
               ? json['date']
@@ -94,6 +98,7 @@ class FirestoreTransaction {
       color: json['color'],
       notes: json['notes'],
       paid: json['paid'],
+      isVacation: json['isVacation'] ?? false,
     );
   }
 
@@ -113,6 +118,7 @@ class FirestoreTransaction {
     String? color,
     String? notes,
     bool? paid,
+    bool? isVacation,
   }) {
     return FirestoreTransaction(
       id: id ?? this.id,
@@ -129,12 +135,13 @@ class FirestoreTransaction {
       color: color ?? this.color,
       notes: notes ?? this.notes,
       paid: paid ?? this.paid,
+      isVacation: isVacation ?? this.isVacation,
     );
   }
 
   @override
   String toString() {
-    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, notes: $notes, paid: $paid)';
+    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, notes: $notes, paid: $paid, isVacation: $isVacation)';
   }
 
   @override
@@ -154,14 +161,15 @@ class FirestoreTransaction {
         other.icon == icon &&
         other.color == color &&
         other.notes == notes &&
-        other.paid == paid;
+        other.paid == paid &&
+        other.isVacation == isVacation;
   }
 
   @override
   int get hashCode {
     return Object.hash(
       id, description, amount, type, date, categoryId, accountId,
-      time, repeat, remind, icon, color, notes, paid,
+      time, repeat, remind, icon, color, notes, paid, isVacation,
     );
   }
 }
