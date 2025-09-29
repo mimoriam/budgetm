@@ -109,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final isVacationMode =
           Provider.of<VacationProvider>(context, listen: false).isVacationMode;
       _previousVacationMode = isVacationMode;
-      _loadTransactions(isVacation: isVacationMode);
       _loadIncomeAndExpenses(isVacation: isVacationMode);
       _loadCurrentMonthTransactions(isVacation: isVacationMode);
       _loadUpcomingTasks();
@@ -151,7 +150,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _refreshData() async {
     final isVacationMode =
         Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-    await _loadTransactions(isVacation: isVacationMode);
     await _loadIncomeAndExpensesForMonth(
       _months[_selectedMonthIndex],
       isVacation: isVacationMode,
@@ -167,7 +165,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final isVacationMode =
         Provider.of<VacationProvider>(context, listen: false).isVacationMode;
     await _loadIncomeAndExpenses(isVacation: isVacationMode);
-    await _loadTransactions(isVacation: isVacationMode);
     // Add any other account-specific data loading if necessary
   }
 
@@ -207,44 +204,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _loadTransactions({required bool isVacation}) async {
-    try {
-      // Load all transactions (filtered by vacation mode)
-      final transactions =
-          await _firestoreService.getAllTransactions(isVacation: isVacation);
-      transactions.sort((a, b) => a.date.compareTo(b.date));
-  
-      // Load all accounts for mapping
-      final accounts = await _firestoreService.getAllAccounts();
-      final accountMap = {for (var account in accounts) account.id: account};
-  
-      // Load all categories for mapping
-      final categories = await _firestoreService.getAllCategories();
-      final categoryMap = {
-        for (var category in categories) category.id: category,
-      };
-  
-      // Create TransactionWithAccount objects
-      final transactionsWithAccounts = transactions.map((transaction) {
-        return TransactionWithAccount(
-          transaction: transaction,
-          account: transaction.accountId != null
-              ? accountMap[transaction.accountId]
-              : null,
-          category: transaction.categoryId != null
-              ? categoryMap[transaction.categoryId]
-              : null,
-        );
-      }).toList();
-  
-      setState(() {
-        _transactions = transactions;
-        _transactionsWithAccounts = transactionsWithAccounts;
-      });
-    } catch (e) {
-      print('Error loading transactions: $e');
-    }
-  }
 
   Future<void> _loadIncomeAndExpenses({required bool isVacation}) async {
     try {
