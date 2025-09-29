@@ -12,10 +12,31 @@ class BalanceScreen extends StatefulWidget {
   const BalanceScreen({super.key});
 
   @override
-  State<BalanceScreen> createState() => _BalanceScreenState();
+  State<BalanceScreen> createState() => _BalanceScreenHolderState();
 }
 
-class _BalanceScreenState extends State<BalanceScreen> {
+/// A thin holder state that renders the actual stateful body widget.
+/// This change converts the original `_BalanceScreenState` into a
+/// `StatefulWidget` (`_BalanceScreenState`) as requested, while keeping
+/// `BalanceScreen` as the entrypoint.
+class _BalanceScreenHolderState extends State<BalanceScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return const _BalanceScreenState();
+  }
+}
+
+/// Converted from the previous `_BalanceScreenState` `State` into a
+/// `StatefulWidget`. Its `State` (`_BalanceScreenStateInner`) holds the
+/// stream subscriptions and UI logic.
+class _BalanceScreenState extends StatefulWidget {
+  const _BalanceScreenState({super.key});
+
+  @override
+  State<_BalanceScreenState> createState() => _BalanceScreenStateInner();
+}
+
+class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   int touchedIndex = -1;
   late FirestoreService _firestoreService;
   Stream<List<Map<String, dynamic>>>? _accountsWithTransactionsStream;
@@ -29,6 +50,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
   @override
   void initState() {
     super.initState();
+    _initStreams();
+  }
+
+  void _initStreams() {
     _firestoreService = FirestoreService.instance;
 
     _accountsWithTransactionsController = StreamController<List<Map<String, dynamic>>>.broadcast();
@@ -53,10 +78,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
     for (var transaction in transactions) {
       final accId = transaction.accountId;
       if (accId == null) continue;
+      final isIncome = transaction.type != null &&
+          transaction.type.toString().toLowerCase().contains('income');
+      final txnAmount = isIncome ? transaction.amount : -transaction.amount;
       transactionAmounts.update(
         accId,
-        (value) => value + transaction.amount,
-        ifAbsent: () => transaction.amount,
+        (value) => value + txnAmount,
+        ifAbsent: () => txnAmount,
       );
     }
 
@@ -94,7 +122,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text('No accounts found.'));
             }
-    
+
             final accountsWithData = snapshot.data!;
             final accounts = accountsWithData.map((d) => d['account'] as FirestoreAccount).toList();
 

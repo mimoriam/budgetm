@@ -154,7 +154,47 @@ class FirestoreService {
   // Delete transaction
   Future<void> deleteTransaction(String id) async {
     try {
-      await _transactionsCollection.doc(id).delete();
+      final transactionDocRef = _transactionsCollection.doc(id);
+
+      await _firestore.runTransaction((transaction) async {
+        // 1. Get the transaction document
+        final transactionSnapshot = await transaction.get(transactionDocRef);
+        if (!transactionSnapshot.exists) {
+          throw Exception("Transaction does not exist!");
+        }
+        final transactionData = transactionSnapshot.data()!;
+        final accountId = transactionData.accountId;
+        
+        if (accountId == null || accountId.isEmpty) {
+          // If no account is linked, just delete the transaction
+          transaction.delete(transactionDocRef);
+          return;
+        }
+
+        // 2. Get the associated account document
+        final accountDocRef = _accountsCollection.doc(accountId);
+        final accountSnapshot = await transaction.get(accountDocRef);
+        if (!accountSnapshot.exists) {
+          // If account doesn't exist, just delete the transaction
+          transaction.delete(transactionDocRef);
+          return;
+        }
+
+        // 3. Calculate the new balance
+        final currentBalance = accountSnapshot.data()!.balance;
+        final transactionAmount = transactionData.amount;
+        final transactionType = transactionData.type;
+
+        final newBalance = (transactionType == 'income')
+            ? currentBalance - transactionAmount
+            : currentBalance + transactionAmount;
+
+        // 4. Update the account balance
+        transaction.update(accountDocRef, {'balance': newBalance});
+
+        // 5. Delete the transaction
+        transaction.delete(transactionDocRef);
+      });
     } catch (e) {
       print('Error deleting transaction: $e');
       rethrow;
