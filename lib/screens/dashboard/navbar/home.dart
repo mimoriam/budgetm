@@ -438,7 +438,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Check for account-specific refresh
     else if (homeScreenProvider.shouldRefreshAccounts) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _refreshAccountData(); // New method to refresh only account-related data
+        final isVacationMode = vacationProvider.isVacationMode;
+        await _refreshAccountData(); // Refresh account-related data
+        // Re-filter transactions for the currently selected month after account changes
+        if (_months.isNotEmpty &&
+            _selectedMonthIndex >= 0 &&
+            _selectedMonthIndex < _months.length) {
+          await _loadTransactionsForMonth(
+            _months[_selectedMonthIndex],
+            isVacation: isVacationMode,
+          );
+        }
         // Mark refresh as complete
         homeScreenProvider.completeRefresh();
       });

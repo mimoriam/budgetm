@@ -605,7 +605,7 @@ class FirestoreService {
       final defaultAccount = FirestoreAccount(
         id: '', // Firestore will generate
         name: accountName,
-        accountType: 'cash', // Default to cash account
+        accountType: 'Cash', // Default to Cash account
         balance: 0.0,
         description: 'Default $currency account',
         color: 'green',
@@ -634,7 +634,7 @@ class FirestoreService {
           final defaultAccount = FirestoreAccount(
             id: defaultId,
             name: 'Wallet',
-            accountType: 'cash',
+            accountType: 'Cash',
             balance: 0.0,
             description: 'Default $currencyCode account',
             color: 'green',
