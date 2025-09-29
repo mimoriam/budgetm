@@ -12,6 +12,7 @@ class FirestoreAccount {
   final double? creditLimit;
   final double? balanceLimit;
   final bool? isDefault;
+  final DateTime? createdAt;
 
   FirestoreAccount({
     required this.id,
@@ -25,6 +26,7 @@ class FirestoreAccount {
     this.creditLimit,
     this.balanceLimit,
     this.isDefault,
+    this.createdAt,
   });
 
   // Convert FirestoreAccount to JSON for Firestore
@@ -40,6 +42,8 @@ class FirestoreAccount {
       'creditLimit': creditLimit,
       'balanceLimit': balanceLimit,
       'isDefault': isDefault,
+      // For new accounts where createdAt is null, use server timestamp
+      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
     };
   }
 
@@ -58,11 +62,22 @@ class FirestoreAccount {
       creditLimit: (data['creditLimit'] as num?)?.toDouble(),
       balanceLimit: (data['balanceLimit'] as num?)?.toDouble(),
       isDefault: data['isDefault'] as bool?,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
 
   // Create FirestoreAccount from JSON
   factory FirestoreAccount.fromJson(Map<String, dynamic> json, String id) {
+    final dynamic createdAtRaw = json['createdAt'];
+    DateTime? createdAt;
+    if (createdAtRaw is Timestamp) {
+      createdAt = createdAtRaw.toDate();
+    } else if (createdAtRaw is DateTime) {
+      createdAt = createdAtRaw;
+    } else {
+      createdAt = null;
+    }
+
     return FirestoreAccount(
       id: id,
       name: json['name'] ?? '',
@@ -75,6 +90,7 @@ class FirestoreAccount {
       creditLimit: (json['creditLimit'] as num?)?.toDouble(),
       balanceLimit: (json['balanceLimit'] as num?)?.toDouble(),
       isDefault: json['isDefault'] as bool?,
+      createdAt: createdAt,
     );
   }
 
@@ -91,6 +107,7 @@ class FirestoreAccount {
     double? creditLimit,
     double? balanceLimit,
     bool? isDefault,
+    DateTime? createdAt,
   }) {
     return FirestoreAccount(
       id: id ?? this.id,
@@ -104,12 +121,13 @@ class FirestoreAccount {
       creditLimit: creditLimit ?? this.creditLimit,
       balanceLimit: balanceLimit ?? this.balanceLimit,
       isDefault: isDefault ?? this.isDefault,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return 'FirestoreAccount(id: $id, name: $name, accountType: $accountType, balance: $balance, description: $description, color: $color, icon: $icon, currency: $currency, creditLimit: $creditLimit, balanceLimit: $balanceLimit, isDefault: $isDefault)';
+    return 'FirestoreAccount(id: $id, name: $name, accountType: $accountType, balance: $balance, description: $description, color: $color, icon: $icon, currency: $currency, creditLimit: $creditLimit, balanceLimit: $balanceLimit, isDefault: $isDefault, createdAt: $createdAt)';
   }
 
   @override
@@ -126,13 +144,14 @@ class FirestoreAccount {
         other.currency == currency &&
         other.creditLimit == creditLimit &&
         other.balanceLimit == balanceLimit &&
-        other.isDefault == isDefault;
+        other.isDefault == isDefault &&
+        other.createdAt == createdAt;
   }
 
   @override
   int get hashCode {
     return Object.hash(
-      id, name, accountType, balance, description, color, icon, currency, creditLimit, balanceLimit, isDefault,
+      id, name, accountType, balance, description, color, icon, currency, creditLimit, balanceLimit, isDefault, createdAt,
     );
   }
 }

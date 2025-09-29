@@ -325,7 +325,16 @@ class FirestoreService {
   // Create a new account
   Future<String> createAccount(FirestoreAccount account) async {
     try {
-      final docRef = await _accountsCollection.add(account);
+      // Use a raw map write so we can ensure createdAt is set to server timestamp for new accounts
+      final accountsRef = _firestore
+          .collection('users')
+          .doc(_userId!)
+          .collection('accounts');
+      final data = account.toJson() as Map<String, Object?>;
+      if (data['createdAt'] == null) {
+        data['createdAt'] = FieldValue.serverTimestamp();
+      }
+      final docRef = await accountsRef.add(data);
       return docRef.id;
     } catch (e) {
       print('Error creating account: $e');
@@ -355,6 +364,20 @@ class FirestoreService {
     }
   }
 
+  // Check if an account with the given name exists (exact match)
+  Future<bool> doesAccountNameExist(String name) async {
+    try {
+      final querySnapshot = await _accountsCollection
+          .where('name', isEqualTo: name)
+          .limit(1)
+          .get();
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking account name existence: $e');
+      return false;
+    }
+  }
+
   // Update account
   Future<void> updateAccount(String id, FirestoreAccount account) async {
     try {
@@ -379,6 +402,7 @@ class FirestoreService {
   Stream<List<FirestoreAccount>> streamAccounts() {
     try {
       return _accountsCollection
+          .orderBy('createdAt', descending: false)
           .snapshots()
           .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
     } catch (e) {

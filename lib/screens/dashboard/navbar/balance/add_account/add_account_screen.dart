@@ -454,6 +454,19 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       isDefault: false,
                     );
     
+                    // Prevent duplicate account names
+                    final nameExists = await _firestoreService.doesAccountNameExist(name);
+                    if (nameExists) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('An account with this name already exists. Please choose a different name.'),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+    
                     final accountId = await _firestoreService.createAccount(newAccount);
     
                     // Check if 'include_in_total' is enabled and create initial balance transaction
