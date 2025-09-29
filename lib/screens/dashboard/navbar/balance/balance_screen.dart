@@ -165,11 +165,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           const SizedBox(height: 24),
                           _buildSectionHeader('MY ACCOUNTS'),
                           const SizedBox(height: 12),
-                          ...accountsWithData.map((accountData) => Column(
+                          ...accountsWithData.asMap().entries.map((entry) => Column(
                                 children: [
                                   Builder(builder: (context) {
+                                    final index = entry.key;
+                                    final accountData = entry.value;
                                     final account = accountData['account'] as FirestoreAccount;
                                     final transactionsAmount = (accountData['transactionsAmount'] as double?) ?? 0.0;
+                                    final isHighlighted = index == touchedIndex;
                                     return _buildAccountItem(
                                       icon: Icons.account_balance,
                                       iconColor: Colors.black,
@@ -180,6 +183,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                       creditLimit: account.creditLimit,
                                       balanceLimit: account.balanceLimit,
                                       currencySymbol: currencyProvider.currencySymbol,
+                                      isHighlighted: isHighlighted,
                                     );
                                   }),
                                   const SizedBox(height: 12),
@@ -419,18 +423,22 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     double? creditLimit,
     double? balanceLimit,
     required String currencySymbol,
+    required bool isHighlighted,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isHighlighted ? AppColors.gradientStart.withOpacity(0.08) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isHighlighted ? AppColors.gradientStart : Colors.grey.shade200,
+          width: isHighlighted ? 2.0 : 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withOpacity(isHighlighted ? 0.12 : 0.08),
             spreadRadius: 1,
-            blurRadius: 10,
+            blurRadius: isHighlighted ? 12 : 10,
           ),
         ],
       ),

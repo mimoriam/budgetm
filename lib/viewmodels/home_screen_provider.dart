@@ -2,24 +2,28 @@ import 'package:flutter/material.dart';
 
 class HomeScreenProvider with ChangeNotifier {
   bool _shouldRefresh = false;
-  bool _shouldRefreshAccounts = false; // New field
+  bool _shouldRefreshAccounts = false;
+  DateTime? _transactionDate;
 
   bool get shouldRefresh => _shouldRefresh;
-  bool get shouldRefreshAccounts => _shouldRefreshAccounts; // New getter
+  bool get shouldRefreshAccounts => _shouldRefreshAccounts;
+  DateTime? get transactionDate => _transactionDate;
 
-  void triggerRefresh() {
+  void triggerRefresh({DateTime? transactionDate}) {
     _shouldRefresh = true;
+    _transactionDate = transactionDate;
     notifyListeners();
   }
 
-  void triggerAccountRefresh() { // New method
+  void triggerAccountRefresh() {
     _shouldRefreshAccounts = true;
     notifyListeners();
   }
 
   void completeRefresh() {
     _shouldRefresh = false;
-    _shouldRefreshAccounts = false; // Reset the new flag
+    _shouldRefreshAccounts = false;
+    _transactionDate = null;
     notifyListeners();
   }
 }

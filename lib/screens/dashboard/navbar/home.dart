@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Load all transactions (filtered by vacation mode)
       final transactions =
           await _firestoreService.getAllTransactions(isVacation: isVacation);
-      transactions.sort((a, b) => b.date.compareTo(a.date));
+      transactions.sort((a, b) => a.date.compareTo(b.date));
   
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
@@ -276,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 0);
+      final endOfMonth = DateTime(now.year, now.month + 1, 1);
   
       // Get transactions for current month
       final transactions = await _firestoreService.getTransactionsForDateRange(
@@ -284,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         endOfMonth,
         isVacation: isVacation,
       );
-      transactions.sort((a, b) => b.date.compareTo(a.date));
+      transactions.sort((a, b) => a.date.compareTo(b.date));
   
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
@@ -366,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       {required bool isVacation}) async {
     try {
       final startOfMonth = DateTime(month.year, month.month, 1);
-      final endOfMonth = DateTime(month.year, month.month + 1, 0);
+      final endOfMonth = DateTime(month.year, month.month + 1, 1);
   
       // Get transactions for the specified month
       final transactions = await _firestoreService.getTransactionsForDateRange(
@@ -374,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         endOfMonth,
         isVacation: isVacation,
       );
-      transactions.sort((a, b) => b.date.compareTo(a.date));
+      transactions.sort((a, b) => a.date.compareTo(b.date));
   
       // Load all accounts for mapping
       final accounts = await _firestoreService.getAllAccounts();
@@ -452,7 +452,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Check if we should refresh the data
     if (homeScreenProvider.shouldRefresh) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _refreshData();
+        final transactionDate = homeScreenProvider.transactionDate;
+        if (transactionDate != null) {
+          final newMonthIndex = _months.indexWhere((month) =>
+              month.year == transactionDate.year &&
+              month.month == transactionDate.month);
+
+          if (newMonthIndex != -1) {
+            // Clear current transactions before switching month
+            setState(() {
+              _transactionsWithAccounts = [];
+              _selectedMonthIndex = newMonthIndex;
+            });
+            _scrollToSelectedMonth();
+            await _refreshData();
+          } else {
+            await _refreshData();
+          }
+        } else {
+          await _refreshData();
+        }
         // Mark refresh as complete
         homeScreenProvider.completeRefresh();
       });
@@ -780,7 +799,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ..sort((a, b) {
         DateTime dateA = DateFormat('MMM d, yyyy').parse(a);
         DateTime dateB = DateFormat('MMM d, yyyy').parse(b);
-        return dateB.compareTo(dateA);
+        return dateA.compareTo(dateB);
       });
 
     return Container(

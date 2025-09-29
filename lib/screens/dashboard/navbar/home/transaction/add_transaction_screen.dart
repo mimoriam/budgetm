@@ -716,7 +716,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       await _firestoreService.updateAccount(updatedAccount.id, updatedAccount);
       
       if (mounted) {
-        Provider.of<HomeScreenProvider>(context, listen: false).triggerRefresh();
+        Provider.of<HomeScreenProvider>(context, listen: false)
+            .triggerRefresh(transactionDate: transactionDate);
         Navigator.of(context).pop(true); // Pass true to indicate success
       }
     } catch (e) {
