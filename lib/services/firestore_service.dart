@@ -174,6 +174,28 @@ class FirestoreService {
     }
   }
 
+  // Calculate total amount of transactions for a specific account
+  Future<double> getTransactionsAmountForAccount(String accountId) async {
+    double totalAmount = 0.0;
+    try {
+      final querySnapshot = await _transactionsCollection
+          .where('accountId', isEqualTo: accountId)
+          .get();
+
+      for (final doc in querySnapshot.docs) {
+        final transaction = doc.data();
+        if (transaction.type == 'income') {
+          totalAmount += transaction.amount;
+        } else {
+          totalAmount -= transaction.amount;
+        }
+      }
+    } catch (e) {
+      print('Error getting transactions amount for account: $e');
+    }
+    return totalAmount;
+  }
+
   // ================ CATEGORY OPERATIONS ================
 
   // Create a new category

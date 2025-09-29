@@ -182,7 +182,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             await _deleteTransaction();
                             // Navigate back to the previous screen
                             if (context.mounted) {
-                              Navigator.of(context).pop();
+                              Navigator.of(context).pop(true);
                             }
                           },
                           style: ElevatedButton.styleFrom(

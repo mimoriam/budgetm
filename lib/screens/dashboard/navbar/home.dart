@@ -816,7 +816,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final uiTransaction = _convertToUiTransaction(transaction);
 
     return InkWell(
-      onTap: () {
+      onTap: () async {
         // Navigator.push(
         //   context,
         //   MaterialPageRoute(
@@ -824,12 +824,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         //         ExpenseDetailScreen(transaction: uiTransaction),
         //   ),
         // );
-        PersistentNavBarNavigator.pushNewScreen(
+        final result = await PersistentNavBarNavigator.pushNewScreen(
           context,
           screen: ExpenseDetailScreen(transaction: uiTransaction),
           withNavBar: false,
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );
+
+        if (result == true) {
+          _refreshData();
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

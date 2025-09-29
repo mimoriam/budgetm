@@ -1,10 +1,12 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 
 class BalanceScreen extends StatefulWidget {
   const BalanceScreen({super.key});
@@ -16,19 +18,72 @@ class BalanceScreen extends StatefulWidget {
 class _BalanceScreenState extends State<BalanceScreen> {
   int touchedIndex = -1;
   late FirestoreService _firestoreService;
+  Stream<List<Map<String, dynamic>>>? _accountsWithTransactionsStream;
+
+  StreamController<List<Map<String, dynamic>>>? _accountsWithTransactionsController;
+  StreamSubscription<List<FirestoreAccount>>? _accountsSub;
+  StreamSubscription<List<FirestoreTransaction>>? _transactionsSub;
+  List<FirestoreAccount>? _latestAccounts;
+  List<FirestoreTransaction>? _latestTransactions;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
+
+    _accountsWithTransactionsController = StreamController<List<Map<String, dynamic>>>.broadcast();
+    _accountsWithTransactionsStream = _accountsWithTransactionsController!.stream;
+
+    _accountsSub = _firestoreService.streamAccounts().listen((accounts) {
+      _latestAccounts = accounts;
+      _tryEmitCombined();
+    });
+
+    _transactionsSub = _firestoreService.streamTransactions().listen((transactions) {
+      _latestTransactions = transactions;
+      _tryEmitCombined();
+    });
+  }
+
+  void _tryEmitCombined() {
+    if (_latestAccounts == null || _latestTransactions == null) return;
+
+    final transactions = _latestTransactions!;
+    final transactionAmounts = <String, double>{};
+    for (var transaction in transactions) {
+      final accId = transaction.accountId;
+      if (accId == null) continue;
+      transactionAmounts.update(
+        accId,
+        (value) => value + transaction.amount,
+        ifAbsent: () => transaction.amount,
+      );
+    }
+
+    final accountsWithData = _latestAccounts!.map((account) {
+      return {
+        'account': account,
+        'transactionsAmount': transactionAmounts[account.id] ?? 0.0,
+      };
+    }).toList();
+
+    _accountsWithTransactionsController?.add(accountsWithData);
+  }
+
+  @override
+  void dispose() {
+    _accountsSub?.cancel();
+    _transactionsSub?.cancel();
+    _accountsWithTransactionsController?.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<CurrencyProvider>(
       builder: (context, currencyProvider, child) {
-        return StreamBuilder<List<FirestoreAccount>>(
-          stream: _firestoreService.streamAccounts(),
+        return StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _accountsWithTransactionsStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -39,8 +94,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text('No accounts found.'));
             }
-
-            final _accounts = snapshot.data!;
+    
+            final accountsWithData = snapshot.data!;
+            final accounts = accountsWithData.map((d) => d['account'] as FirestoreAccount).toList();
 
             return Scaffold(
               backgroundColor: AppColors.scaffoldBackground,
@@ -56,25 +112,29 @@ class _BalanceScreenState extends State<BalanceScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildPieChart(_accounts),
+                          _buildPieChart(accountsWithData),
                           const SizedBox(height: 16),
-                          _buildLegend(_accounts, currencyProvider.currencySymbol),
+                          _buildLegend(accountsWithData, currencyProvider.currencySymbol),
                           const SizedBox(height: 24),
                           _buildSectionHeader('MY ACCOUNTS'),
                           const SizedBox(height: 12),
-                          ..._accounts.map((account) => Column(
+                          ...accountsWithData.map((accountData) => Column(
                                 children: [
-                                  _buildAccountItem(
-                                    icon: Icons.account_balance,
-                                    iconColor: Colors.black,
-                                    iconBackgroundColor: Colors.grey.shade200,
-                                    accountName: account.name,
-                                    amount: account.balance,
-                                    accountType: account.accountType,
-                                    creditLimit: account.creditLimit,
-                                    balanceLimit: account.balanceLimit,
-                                    currencySymbol: currencyProvider.currencySymbol,
-                                  ),
+                                  Builder(builder: (context) {
+                                    final account = accountData['account'] as FirestoreAccount;
+                                    final transactionsAmount = (accountData['transactionsAmount'] as double?) ?? 0.0;
+                                    return _buildAccountItem(
+                                      icon: Icons.account_balance,
+                                      iconColor: Colors.black,
+                                      iconBackgroundColor: Colors.grey.shade200,
+                                      accountName: account.name,
+                                      amount: account.balance,
+                                      accountType: account.accountType,
+                                      creditLimit: account.creditLimit,
+                                      balanceLimit: account.balanceLimit,
+                                      currencySymbol: currencyProvider.currencySymbol,
+                                    );
+                                  }),
                                   const SizedBox(height: 12),
                                 ],
                               )),
@@ -149,10 +209,29 @@ class _BalanceScreenState extends State<BalanceScreen> {
     );
   }
 
-  Widget _buildPieChart(List<FirestoreAccount> accounts) {
-    if (accounts.isEmpty) {
+  Widget _buildPieChart(List<Map<String, dynamic>> accountsWithData) {
+    if (accountsWithData.isEmpty) {
       return const SizedBox(height: 250);
     }
+  
+    // If there's only one account, show the app logo instead of the pie chart
+    if (accountsWithData.length == 1) {
+      return SizedBox(
+        height: 250,
+        child: Center(
+          child: SizedBox(
+            width: 150,
+            height: 150,
+            child: Image.asset(
+              'images/launcher/logo.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      );
+    }
+  
+    // For two or more accounts, show the pie chart as before
     return SizedBox(
       height: 250,
       child: PieChart(
@@ -174,19 +253,17 @@ class _BalanceScreenState extends State<BalanceScreen> {
           borderData: FlBorderData(show: false),
           sectionsSpace: 0,
           centerSpaceRadius: 0,
-          sections: showingSections(accounts),
+          sections: showingSections(accountsWithData),
         ),
       ),
     );
   }
 
-  List<PieChartSectionData> showingSections(List<FirestoreAccount> accounts) {
-    if (accounts.isEmpty) {
+  List<PieChartSectionData> showingSections(List<Map<String, dynamic>> accountsWithData) {
+    if (accountsWithData.isEmpty) {
       return [];
     }
 
-    // Calculate total balance
-    final totalBalance = accounts.fold<double>(0.0, (sum, account) => sum + account.balance);
     
     // Define a list of colors for the pie chart sections
     final colors = [
@@ -197,26 +274,28 @@ class _BalanceScreenState extends State<BalanceScreen> {
       const Color(0xFF8B5CF6),
       const Color(0xFFEC4899),
     ];
-
-    return List.generate(accounts.length, (i) {
+  
+    return List.generate(accountsWithData.length, (i) {
       final isTouched = i == touchedIndex;
       final radius = isTouched ? 120.0 : 100.0;
-      final account = accounts[i];
+      final accountData = accountsWithData[i];
+      final account = accountData['account'] as FirestoreAccount;
+      final value = account.balance;
       
       return PieChartSectionData(
         color: colors[i % colors.length],
-        value: account.balance,
+        value: value,
         title: '',
         radius: radius,
       );
     });
   }
 
-  Widget _buildLegend(List<FirestoreAccount> accounts, String currencySymbol) {
-    if (accounts.isEmpty) {
+  Widget _buildLegend(List<Map<String, dynamic>> accountsWithData, String currencySymbol) {
+    if (accountsWithData.isEmpty) {
       return const SizedBox.shrink();
     }
-
+  
     // Define a list of colors for the legend items
     final colors = [
       const Color(0xFF2563EB),
@@ -226,12 +305,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
       const Color(0xFF8B5CF6),
       const Color(0xFFEC4899),
     ];
-
+  
     return Column(
       children: [
-        ...accounts.asMap().entries.map((entry) {
+        ...accountsWithData.asMap().entries.map((entry) {
           final index = entry.key;
-          final account = entry.value;
+          final accountData = entry.value;
+          final account = accountData['account'] as FirestoreAccount;
           return Column(
             children: [
               _buildLegendItem(
@@ -240,7 +320,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 account.balance,
                 currencySymbol,
               ),
-              if (index < accounts.length - 1) const SizedBox(height: 12),
+              if (index < accountsWithData.length - 1) const SizedBox(height: 12),
             ],
           );
         }).toList(),
