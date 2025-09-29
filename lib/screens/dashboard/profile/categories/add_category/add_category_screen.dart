@@ -18,6 +18,7 @@ class AddCategoryScreen extends StatefulWidget {
 class _AddCategoryScreenState extends State<AddCategoryScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   late FirestoreService _firestoreService;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -28,6 +29,9 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
   Future<void> _saveCategory() async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       try {
+        setState(() {
+          _isSaving = true;
+        });
         final formValue = _formKey.currentState!.value;
         final name = formValue['name'] as String;
         final type = formValue['type'] as String;
@@ -64,6 +68,12 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to add category: $e')),
           );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSaving = false;
+          });
         }
       }
     }
@@ -280,7 +290,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _saveCategory,
+              onPressed: _isSaving ? null : _saveCategory,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -288,13 +298,22 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
-                'Add',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
+              child: _isSaving
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.0,
+                      ),
+                    )
+                  : Text(
+                      'Add',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
             ),
           ),
         ],

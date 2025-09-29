@@ -25,6 +25,7 @@ class AddTransactionScreen extends StatefulWidget {
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isMoreOptionsVisible = false;
+  bool _isSaving = false;
   late FirestoreService _firestoreService;
   List<FirestoreAccount> _accounts = [];
   List<Category> _categories = [];
@@ -615,11 +616,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState?.saveAndValidate() ?? false) {
-                  _saveTransaction();
-                }
-              },
+              onPressed: _isSaving
+                  ? null
+                  : () {
+                      if (_formKey.currentState?.saveAndValidate() ?? false) {
+                        _saveTransaction();
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -627,13 +630,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
-                'Create',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Create',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -643,6 +655,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _saveTransaction() async {
     try {
+      if (mounted) {
+        setState(() {
+          _isSaving = true;
+        });
+      } else {
+        _isSaving = true;
+      }
+
       final formData = _formKey.currentState!.value;
       
       // Get the selected account
@@ -706,6 +726,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save transaction: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      } else {
+        _isSaving = false;
       }
     }
   }

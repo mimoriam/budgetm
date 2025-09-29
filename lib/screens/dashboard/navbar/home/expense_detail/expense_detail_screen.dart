@@ -18,6 +18,7 @@ class ExpenseDetailScreen extends StatefulWidget {
 
 class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   late FirestoreService _firestoreService;
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -27,11 +28,18 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
 
   Future<void> _deleteTransaction() async {
     try {
+      setState(() {
+        _isDeleting = true;
+      });
       // Delete the transaction from Firestore
       await _firestoreService.deleteTransaction(widget.transaction.id);
     } catch (e) {
       print('Error deleting transaction: $e');
       rethrow;
+    } finally {
+      setState(() {
+        _isDeleting = false;
+      });
     }
   }
 
@@ -177,14 +185,16 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                       // const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () async {
-                            // Add delete logic
-                            await _deleteTransaction();
-                            // Navigate back to the previous screen
-                            if (context.mounted) {
-                              Navigator.of(context).pop(true);
-                            }
-                          },
+                          onPressed: _isDeleting
+                              ? null
+                              : () async {
+                                  // Add delete logic
+                                  await _deleteTransaction();
+                                  // Navigate back to the previous screen
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop(true);
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -192,11 +202,20 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               borderRadius: BorderRadius.circular(30.0),
                             ),
                           ),
-                          child: Text(
-                            'Delete',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.white, fontSize: 14),
-                          ),
+                          child: _isDeleting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  'Delete',
+                                  style: Theme.of(context).textTheme.labelLarge
+                                      ?.copyWith(color: Colors.white, fontSize: 14),
+                                ),
                         ),
                       ),
                     ],
