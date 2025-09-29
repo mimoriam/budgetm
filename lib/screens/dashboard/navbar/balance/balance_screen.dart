@@ -3,8 +3,10 @@ import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
@@ -38,10 +40,12 @@ class _BalanceScreenState extends StatefulWidget {
 
 class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   int touchedIndex = -1;
+  late ScrollController _scrollController;
   late FirestoreService _firestoreService;
   Stream<List<Map<String, dynamic>>>? _accountsWithTransactionsStream;
 
-  StreamController<List<Map<String, dynamic>>>? _accountsWithTransactionsController;
+  StreamController<List<Map<String, dynamic>>>?
+      _accountsWithTransactionsController;
   StreamSubscription<List<FirestoreAccount>>? _accountsSub;
   StreamSubscription<List<FirestoreTransaction>>? _transactionsSub;
   List<FirestoreAccount>? _latestAccounts;
@@ -50,6 +54,19 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(() {
+      if (!_scrollController.hasClients) return;
+      final provider =
+          Provider.of<NavbarVisibilityProvider>(context, listen: false);
+      final direction = _scrollController.position.userScrollDirection;
+
+      if (direction == ScrollDirection.reverse) {
+        provider.setNavBarVisibility(false);
+      } else if (direction == ScrollDirection.forward) {
+        provider.setNavBarVisibility(true);
+      }
+    });
     _initStreams();
   }
 
@@ -100,6 +117,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _accountsSub?.cancel();
     _transactionsSub?.cancel();
     _accountsWithTransactionsController?.close();
@@ -133,6 +151,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   _buildCustomAppBar(context),
                   Expanded(
                     child: SingleChildScrollView(
+                      controller: _scrollController,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20.0,
                         vertical: 16.0,

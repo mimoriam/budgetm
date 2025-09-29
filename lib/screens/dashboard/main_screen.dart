@@ -14,6 +14,7 @@ import 'package:budgetm/screens/dashboard/navbar/personal/add_lent/add_lent.dart
 import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -135,6 +136,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
+    final navbarVisibility = context.watch<NavbarVisibilityProvider>();
     return Scaffold(
       body: Stack(
         children: [
@@ -149,7 +151,7 @@ class _MainScreenState extends State<MainScreen> {
             resizeToAvoidBottomInset: true,
             stateManagement: true,
             hideNavigationBarWhenKeyboardAppears: true,
-            navBarHeight: kBottomNavigationBarHeight + 20,
+            navBarHeight: navbarVisibility.isNavBarVisible ? kBottomNavigationBarHeight + 20 : 0,
             margin: const EdgeInsets.fromLTRB(8, 0, 8, 16),
             padding: const EdgeInsets.only(left: 6),
             decoration: NavBarDecoration(
@@ -167,28 +169,32 @@ class _MainScreenState extends State<MainScreen> {
           Positioned(
             bottom: 100,
             right: 20,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (_isFabMenuOpen)
-                  ..._buildFabMenuItemsForCurrentScreen(vacationProvider),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: FloatingActionButton(
-                    onPressed: _toggleFabMenu,
-                    elevation: 1,
-                    backgroundColor: AppColors.gradientEnd,
-                    shape: const CircleBorder(),
-                    child: Icon(
-                      _isFabMenuOpen ? Icons.close : Icons.add,
-                      color: Colors.white,
+            child: AnimatedSlide(
+              offset: navbarVisibility.isNavBarVisible ? Offset.zero : const Offset(0, 3),
+              duration: const Duration(milliseconds: 150),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (_isFabMenuOpen)
+                    ..._buildFabMenuItemsForCurrentScreen(vacationProvider),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: FloatingActionButton(
+                      onPressed: _toggleFabMenu,
+                      elevation: 1,
+                      backgroundColor: AppColors.gradientEnd,
+                      shape: const CircleBorder(),
+                      child: Icon(
+                        _isFabMenuOpen ? Icons.close : Icons.add,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

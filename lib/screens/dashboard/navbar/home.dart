@@ -12,8 +12,13 @@ import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_det
 import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -60,7 +65,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  late ScrollController _scrollController;
+  late ScrollController _monthScrollController;
+  late ScrollController _contentScrollController;
   late FirestoreService _firestoreService;
   List<DateTime> _months = [];
   int _selectedMonthIndex = 0;
@@ -72,11 +78,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<FirestoreTask> _upcomingTasks = [];
   bool? _previousVacationMode;
 
+  double _lastContentOffset = 0.0;
+
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
-    _scrollController = ScrollController();
+    _monthScrollController = ScrollController();
+    _contentScrollController = ScrollController();
+    _lastContentOffset = 0.0;
+
+    // Listen to vertical content scrolls to toggle navbar visibility.
+    _contentScrollController.addListener(() {
+      if (!_contentScrollController.hasClients) return;
+      final provider =
+          Provider.of<NavbarVisibilityProvider>(context, listen: false);
+      final direction = _contentScrollController.position.userScrollDirection;
+
+      if (direction == ScrollDirection.reverse) {
+        provider.setNavBarVisibility(false);
+      } else if (direction == ScrollDirection.forward) {
+        provider.setNavBarVisibility(true);
+      }
+    });
+
     _loadMonths();
 
     // Defer data loads until after build so we can read VacationProvider from context.
@@ -96,7 +121,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _scrollController.dispose();
+    _monthScrollController.dispose();
+    _contentScrollController.dispose();
     super.dispose();
   }
 
@@ -175,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (_monthScrollController.hasClients) {
         _scrollToSelectedMonth();
       }
     });
@@ -406,8 +432,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           (_selectedMonthIndex * itemWidth) -
           (screenWidth / 2) +
           (itemWidth / 2);
-      _scrollController.animateTo(
-        offset.clamp(0.0, _scrollController.position.maxScrollExtent),
+      _monthScrollController.animateTo(
+        offset.clamp(0.0, _monthScrollController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
@@ -610,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return SizedBox(
       height: 40,
       child: ListView.builder(
-        controller: _scrollController,
+        controller: _monthScrollController,
         scrollDirection: Axis.horizontal,
         itemCount: _months.length,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -768,6 +794,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
+            controller: _contentScrollController,
             padding: const EdgeInsets.only(top: 16),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
