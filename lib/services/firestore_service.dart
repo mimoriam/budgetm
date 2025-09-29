@@ -547,7 +547,7 @@ class FirestoreService {
         if (!snap.exists) {
           final defaultAccount = FirestoreAccount(
             id: defaultId,
-            name: 'Cash',
+            name: 'Wallet',
             accountType: 'cash',
             balance: 0.0,
             description: 'Default $currencyCode account',

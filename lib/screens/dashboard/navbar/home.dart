@@ -447,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? AppColors.aiGradientStart
               : AppColors.gradientStart,
         ),
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 350),
         curve: Curves.easeOut,
         builder: (context, color, child) {
           return Container(
