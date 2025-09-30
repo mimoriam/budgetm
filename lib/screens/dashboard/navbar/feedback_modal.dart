@@ -52,22 +52,36 @@ class _FeedbackModalState extends State<FeedbackModal> {
             ),
           ),
           const SizedBox(height: 28),
-          RatingBar(
-            initialRating: _rating,
-            minRating: 1,
-            direction: Axis.horizontal,
-            itemCount: 5,
-            // Reverted item padding to prevent wrapping
-            itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-            ratingWidget: RatingWidget(
-              full: const Icon(Icons.star, color: AppColors.gradientEnd),
-              half: const Icon(Icons.star_half, color: AppColors.gradientEnd),
-              empty: const Icon(Icons.star_border, color: Colors.grey),
-            ),
-            onRatingUpdate: (rating) {
-              setState(() {
-                _rating = rating;
-              });
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final int itemCount = 5;
+              final double spacing = 8.0;
+              // Reserve horizontal padding that mirrors the container padding (24 left + 24 right)
+              final double reservedPadding = 48.0;
+              final double availableWidth = constraints.maxWidth - reservedPadding;
+              final double calculatedItemSize =
+                  (availableWidth - (itemCount - 1) * spacing) / itemCount;
+              final double itemSize = calculatedItemSize < 20.0
+                  ? 20.0
+                  : (calculatedItemSize > 40.0 ? 40.0 : calculatedItemSize);
+              return RatingBar(
+                initialRating: _rating,
+                minRating: 1,
+                direction: Axis.horizontal,
+                itemCount: itemCount,
+                itemSize: itemSize,
+                itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                ratingWidget: RatingWidget(
+                  full: const Icon(Icons.star, color: AppColors.gradientEnd),
+                  half: const Icon(Icons.star_half, color: AppColors.gradientEnd),
+                  empty: const Icon(Icons.star_border, color: Colors.grey),
+                ),
+                onRatingUpdate: (rating) {
+                  setState(() {
+                    _rating = rating;
+                  });
+                },
+              );
             },
           ),
           const SizedBox(height: 28),

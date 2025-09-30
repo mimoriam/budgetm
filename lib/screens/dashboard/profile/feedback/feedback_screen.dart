@@ -2,6 +2,8 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -200,7 +202,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Hi, Shehroz Khan', // Updated Title
+                "Hi, ${FirebaseAuth.instance.currentUser?.displayName ?? FirebaseAuth.instance.currentUser?.email?.split('@')[0] ?? 'User'}",
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -247,8 +249,32 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         ),
         const SizedBox(height: 8),
         TextButton(
-          onPressed: () {
-            // TODO: Implement email functionality using a package like url_launcher
+          onPressed: () async {
+            final Uri emailUri = Uri(
+              scheme: 'mailto',
+              path: 'shehroz.khan@email.com',
+            );
+            try {
+              if (!await launchUrl(emailUri, mode: LaunchMode.externalApplication)) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open email client.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            } catch (_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not open email client.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
           },
           child: const Text(
             'Send an Email Instead',

@@ -91,23 +91,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'addBudgetButton',
-        onPressed: () {
-          final completedNames = _allBudgets
-              .where((b) => b.currentAmount >= b.totalAmount)
-              .map((b) => b.name)
-              .toList();
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const AddBudgetScreen(),
-              settings: RouteSettings(arguments: {'completedBudgetNames': completedNames}),
-            ),
-          );
-        },
-        backgroundColor: AppColors.gradientEnd,
-        child: const Icon(Icons.add),
-      ),
       body: Column(
         children: [
           _buildCustomAppBar(context),
@@ -128,7 +111,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildPieChart([]),
+                            _buildPieChart([], 0),
                             const SizedBox(height: 12),
                             _buildLegend([]),
                             const SizedBox(height: 16),
@@ -142,7 +125,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildPieChart([]),
+                            _buildPieChart([], 0),
                             const SizedBox(height: 12),
                             _buildLegend([]),
                             const SizedBox(height: 16),
@@ -154,28 +137,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       }
       
                       final budgetsFromSnapshot = snapshot.data ?? [];
-      
-                      // schedule state update to store all budgets and compute total safely after frame
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          final activeFromSnapshot = budgetsFromSnapshot.where((b) => b.currentAmount < b.totalAmount).toList();
-                          final activeTotal = activeFromSnapshot.fold<double>(0.0, (sum, b) => sum + b.totalAmount);
-                          setState(() {
-                            _allBudgets = budgetsFromSnapshot;
-                            _totalBudgetAmount = activeTotal;
-                          });
-                        }
-                      });
-      
-                      // Use cached _allBudgets for UI if available, otherwise fallback to snapshot data
-                      final sourceBudgets = _allBudgets.isNotEmpty ? _allBudgets : budgetsFromSnapshot;
-                      final activeBudgets = sourceBudgets.where((b) => b.currentAmount < b.totalAmount).toList();
-                      final completedBudgets = sourceBudgets.where((b) => b.currentAmount >= b.totalAmount).toList();
+                      
+                      // Derive UI data directly from snapshot to avoid post-frame updates and flicker
+                      final activeBudgets = budgetsFromSnapshot.where((b) => b.currentAmount < b.totalAmount).toList();
+                      final completedBudgets = budgetsFromSnapshot.where((b) => b.currentAmount >= b.totalAmount).toList();
+                      final totalBudgetAmount = activeBudgets.fold<double>(0.0, (sum, b) => sum + b.totalAmount);
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildPieChart(activeBudgets),
+                          _buildPieChart(activeBudgets, totalBudgetAmount),
                           const SizedBox(height: 24),
                           _buildLegend(activeBudgets),
                           const SizedBox(height: 16),
@@ -318,9 +289,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  Widget _buildPieChart(List<Budget> activeBudgets) {
+  Widget _buildPieChart(List<Budget> activeBudgets, double totalBudgetAmount) {
     final bool isIndividual = _selectedBudget != null;
-
+  
     return SizedBox(
       height: 200,
       child: Stack(
@@ -363,7 +334,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               Text(
                 isIndividual
                     ? '\$${_selectedBudget!.totalAmount.toStringAsFixed(0)}'
-                    : '\$${_totalBudgetAmount.toStringAsFixed(0)}',
+                    : '\$${totalBudgetAmount.toStringAsFixed(0)}',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 28),
               ),
             ],
