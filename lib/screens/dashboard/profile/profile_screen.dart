@@ -7,6 +7,7 @@ import 'package:budgetm/screens/dashboard/profile/currency/currency_rates.dart';
 import 'package:budgetm/screens/dashboard/profile/export_data/export_data_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final showChangePassword = currentUser?.providerData.any((p) => p.providerId == 'password') ?? false;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -83,8 +86,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 20),
                   _buildSectionHeader('ACCOUNT'),
-                  _buildProfileMenuItem(Icons.person_outline, 'Edit profile'),
-                  _buildProfileMenuItem(Icons.lock_outline, 'Change Password'),
+                  // _buildProfileMenuItem(Icons.person_outline, 'Edit profile'),
+                  if (showChangePassword)
+                    _buildProfileMenuItem(Icons.lock_outline, 'Change Password'),
                   _buildProfileMenuItem(
                     Icons.category_outlined,
                     'Categories',
@@ -278,13 +282,126 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
                 final user = snapshot.data!;
                 final displayName = user.displayName ?? user.email ?? 'User Name';
-                return Text(
-                  displayName,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        final TextEditingController _controller =
+                            TextEditingController(text: displayName);
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            bool isSaving = false;
+                            return StatefulBuilder(
+                              builder: (context, setState) {
+                                return AlertDialog(
+                                  title: const Text('Edit display name'),
+                                  content: TextField(
+                                    controller: _controller,
+                                    autofocus: true,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Enter display name',
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: isSaving
+                                          ? null
+                                          : () async {
+                                              final newName = _controller.text.trim();
+                                              if (newName.isEmpty) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Display name cannot be empty'),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                                return;
+                                              }
+                                              setState(() {
+                                                isSaving = true;
+                                              });
+                                              try {
+                                                final user = FirebaseAuth.instance.currentUser;
+                                                if (user != null) {
+                                                  await user.updateDisplayName(newName);
+                                                  await user.reload();
+                                                  // Also update the user's Firestore profile document so the
+                                                  // display name is persisted in Firestore and works with
+                                                  // offline persistence.
+                                                  try {
+                                                    await FirestoreService.instance.updateUserData(
+                                                      user.uid,
+                                                      {'displayName': newName},
+                                                    );
+                                                  } catch (e) {
+                                                    // Non-fatal: log and continue; UI already updated from auth.
+                                                    print('Failed to update Firestore user document: $e');
+                                                  }
+                                                }
+                                                if (context.mounted) {
+                                                  Navigator.of(context).pop();
+                                                }
+                                              } on FirebaseAuthException catch (e) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(e.message ?? 'Failed to update display name.'),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              } catch (e) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('Error: $e'),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              } finally {
+                                                if (context.mounted) {
+                                                  setState(() {
+                                                    isSaving = false;
+                                                  });
+                                                }
+                                              }
+                                            },
+                                      child: isSaving
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : const Text('Save'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                      child: Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  
+                  ],
                 );
               },
             ),
