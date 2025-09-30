@@ -4,6 +4,7 @@ import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_task.dart';
+import 'package:budgetm/models/budget.dart';
 
 class FirestoreService {
   static FirestoreService? _instance;
@@ -45,6 +46,70 @@ class FirestoreService {
         );
   }
 
+  CollectionReference<Budget> get _budgetsCollection {
+    if (_userId == null) throw Exception('User not authenticated');
+    return _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('budgets')
+        .withConverter<Budget>(
+          fromFirestore: (snapshot, _) => Budget.fromFirestore(snapshot),
+          toFirestore: (budget, _) => budget.toJson(),
+        );
+  }
+
+  // Create a new budget
+  Future<String> createBudget(Budget budget) async {
+    try {
+      final docRef = await _budgetsCollection.add(budget);
+      return docRef.id;
+    } catch (e) {
+      print('Error creating budget: $e');
+      rethrow;
+    }
+  }
+
+  // Stream budgets (real-time)
+  Stream<List<Budget>> streamBudgets({bool onlyActive = false}) {
+    try {
+      return _budgetsCollection
+          .orderBy('endDate', descending: false)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((d) => d.data()).toList());
+    } catch (e) {
+      print('Error streaming budgets: $e');
+      return Stream.empty();
+    }
+  }
+
+  Future<Budget?> getBudgetById(String id) async {
+    try {
+      final doc = await _budgetsCollection.doc(id).get();
+      return doc.data();
+    } catch (e) {
+      print('Error getting budget: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateBudget(String id, Budget budget) async {
+    try {
+      await _budgetsCollection.doc(id).update(budget.toJson());
+    } catch (e) {
+      print('Error updating budget: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteBudget(String id) async {
+    try {
+      await _budgetsCollection.doc(id).delete();
+    } catch (e) {
+      print('Error deleting budget: $e');
+      rethrow;
+    }
+  }
+
   CollectionReference<FirestoreAccount> get _accountsCollection {
     if (_userId == null) throw Exception('User not authenticated');
     return _firestore
@@ -77,6 +142,30 @@ class FirestoreService {
     try {
       final toSave = transaction.copyWith(isVacation: isVacation);
       final docRef = await _transactionsCollection.add(toSave);
+
+      // If this is an expense tied to a budget, update the budget's currentAmount atomically
+      if (toSave.type == 'expense' && toSave.budgetId != null && toSave.budgetId!.isNotEmpty) {
+        final budgetDocRef = _budgetsCollection.doc(toSave.budgetId!);
+        await _firestore.runTransaction((t) async {
+          final budgetSnapshot = await t.get(budgetDocRef);
+          if (budgetSnapshot.exists) {
+            final budget = budgetSnapshot.data()!;
+            final newCurrent = budget.currentAmount + toSave.amount;
+
+            // Check if the transaction exceeds the budget
+            if (newCurrent > budget.totalAmount) {
+              // Throw a specific error to be caught by the UI
+              throw FirebaseException(
+                plugin: 'Firestore',
+                code: 'aborted',
+                message: 'This transaction exceeds the budget limit.',
+              );
+            }
+            t.update(budgetDocRef, {'currentAmount': newCurrent});
+          }
+        });
+      }
+
       return docRef.id;
     } catch (e) {
       print('Error creating transaction: $e');
@@ -155,7 +244,7 @@ class FirestoreService {
   Future<void> deleteTransaction(String id) async {
     try {
       final transactionDocRef = _transactionsCollection.doc(id);
-
+ 
       await _firestore.runTransaction((transaction) async {
         // 1. Get the transaction document
         final transactionSnapshot = await transaction.get(transactionDocRef);
@@ -166,32 +255,63 @@ class FirestoreService {
         final accountId = transactionData.accountId;
         
         if (accountId == null || accountId.isEmpty) {
-          // If no account is linked, just delete the transaction
+          // If no account is linked, handle potential budget rollback then delete the transaction
+          if (transactionData.type == 'income' && transactionData.budgetId != null && transactionData.budgetId!.isNotEmpty) {
+            final budgetDocRefRollback = _budgetsCollection.doc(transactionData.budgetId!);
+            final budgetSnap = await transaction.get(budgetDocRefRollback);
+            if (budgetSnap.exists) {
+              final budget = budgetSnap.data()!;
+              final newCurrent = (budget.currentAmount - transactionData.amount).clamp(0.0, double.infinity);
+              transaction.update(budgetDocRefRollback, {'currentAmount': newCurrent});
+            }
+          }
+
           transaction.delete(transactionDocRef);
           return;
         }
-
+ 
         // 2. Get the associated account document
         final accountDocRef = _accountsCollection.doc(accountId);
         final accountSnapshot = await transaction.get(accountDocRef);
         if (!accountSnapshot.exists) {
-          // If account doesn't exist, just delete the transaction
+          // If account doesn't exist, handle potential budget rollback then delete the transaction
+          if (transactionData.type == 'income' && transactionData.budgetId != null && transactionData.budgetId!.isNotEmpty) {
+            final budgetDocRefRollback = _budgetsCollection.doc(transactionData.budgetId!);
+            final budgetSnap = await transaction.get(budgetDocRefRollback);
+            if (budgetSnap.exists) {
+              final budget = budgetSnap.data()!;
+              final newCurrent = (budget.currentAmount - transactionData.amount).clamp(0.0, double.infinity);
+              transaction.update(budgetDocRefRollback, {'currentAmount': newCurrent});
+            }
+          }
+
           transaction.delete(transactionDocRef);
           return;
         }
-
+ 
         // 3. Calculate the new balance
         final currentBalance = accountSnapshot.data()!.balance;
         final transactionAmount = transactionData.amount;
         final transactionType = transactionData.type;
-
+ 
         final newBalance = (transactionType == 'income')
             ? currentBalance - transactionAmount
             : currentBalance + transactionAmount;
-
+ 
         // 4. Update the account balance
         transaction.update(accountDocRef, {'balance': newBalance});
 
+        // 4b. If this was an income tied to a budget, roll back the budget currentAmount
+        if (transactionType == 'income' && transactionData.budgetId != null && transactionData.budgetId!.isNotEmpty) {
+          final budgetDocRefRollback = _budgetsCollection.doc(transactionData.budgetId!);
+          final budgetSnap = await transaction.get(budgetDocRefRollback);
+          if (budgetSnap.exists) {
+            final budget = budgetSnap.data()!;
+            final newCurrent = (budget.currentAmount - transactionAmount).clamp(0.0, double.infinity);
+            transaction.update(budgetDocRefRollback, {'currentAmount': newCurrent});
+          }
+        }
+ 
         // 5. Delete the transaction
         transaction.delete(transactionDocRef);
       });

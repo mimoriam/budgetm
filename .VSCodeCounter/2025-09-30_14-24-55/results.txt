@@ -1,0 +1,214 @@
+Date : 2025-09-30 14:24:55
+Directory : /Users/hum/StudioProjects/budgetm
+Total : 96 files,  15324 codes, 522 comments, 939 blanks, all 16785 lines
+
+Languages
++------------+------------+------------+------------+------------+------------+
+| language   | files      | code       | comment    | blank      | total      |
++------------+------------+------------+------------+------------+------------+
+| Dart       |         54 |     14,559 |        380 |        785 |     15,724 |
+| Markdown   |         13 |        351 |          0 |         96 |        447 |
+| XML        |         13 |        193 |         53 |         13 |        259 |
+| JSON       |          5 |         92 |          0 |          2 |         94 |
+| YAML       |          5 |         70 |         84 |         24 |        178 |
+| Ruby       |          1 |         31 |          3 |         10 |         44 |
+| Swift      |          2 |         19 |          2 |          6 |         27 |
+| Properties |          2 |          8 |          0 |          2 |         10 |
+| C++        |          1 |          1 |          0 |          1 |          2 |
++------------+------------+------------+------------+------------+------------+
+
+Directories
++------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                             | files      | code       | comment    | blank      | total      |
++------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                |         96 |     15,324 |        522 |        939 |     16,785 |
+| . (Files)                                                                                                        |          9 |        254 |         84 |         77 |        415 |
+| .roo                                                                                                             |          4 |         22 |          0 |          0 |         22 |
+| .roo/rules-architect                                                                                             |          1 |          6 |          0 |          0 |          6 |
+| .roo/rules-ask                                                                                                   |          1 |          5 |          0 |          0 |          5 |
+| .roo/rules-code                                                                                                  |          1 |          7 |          0 |          0 |          7 |
+| .roo/rules-debug                                                                                                 |          1 |          4 |          0 |          0 |          4 |
+| android                                                                                                          |         14 |        179 |         51 |         13 |        243 |
+| android (Files)                                                                                                  |          1 |          3 |          0 |          1 |          4 |
+| android/app                                                                                                      |         12 |        171 |         51 |         11 |        233 |
+| android/app (Files)                                                                                              |          1 |         46 |          0 |          0 |         46 |
+| android/app/src                                                                                                  |         11 |        125 |         51 |         11 |        187 |
+| android/app/src/debug                                                                                            |          1 |          3 |          4 |          1 |          8 |
+| android/app/src/main                                                                                             |          9 |        119 |         43 |          9 |        171 |
+| android/app/src/main (Files)                                                                                     |          1 |         36 |         11 |          2 |         49 |
+| android/app/src/main/res                                                                                         |          8 |         83 |         32 |          7 |        122 |
+| android/app/src/main/res/drawable                                                                                |          1 |          9 |          0 |          1 |         10 |
+| android/app/src/main/res/drawable-v21                                                                            |          1 |          9 |          0 |          1 |         10 |
+| android/app/src/main/res/mipmap-anydpi-v26                                                                       |          1 |          9 |          0 |          1 |         10 |
+| android/app/src/main/res/values                                                                                  |          2 |         17 |          9 |          1 |         27 |
+| android/app/src/main/res/values-night                                                                            |          1 |         13 |          9 |          1 |         23 |
+| android/app/src/main/res/values-night-v31                                                                        |          1 |         13 |          7 |          1 |         21 |
+| android/app/src/main/res/values-v31                                                                              |          1 |         13 |          7 |          1 |         21 |
+| android/app/src/profile                                                                                          |          1 |          3 |          4 |          1 |          8 |
+| android/gradle                                                                                                   |          1 |          5 |          0 |          1 |          6 |
+| android/gradle/wrapper                                                                                           |          1 |          5 |          0 |          1 |          6 |
+| ios                                                                                                              |         10 |        167 |          7 |         23 |        197 |
+| ios (Files)                                                                                                      |          1 |         31 |          3 |         10 |         44 |
+| ios/Runner                                                                                                       |          8 |        129 |          2 |          9 |        140 |
+| ios/Runner (Files)                                                                                               |          2 |         13 |          0 |          3 |         16 |
+| ios/Runner/Assets.xcassets                                                                                       |          4 |         48 |          0 |          4 |         52 |
+| ios/Runner/Assets.xcassets/AppIcon.appiconset                                                                    |          1 |          1 |          0 |          0 |          1 |
+| ios/Runner/Assets.xcassets/LaunchBackground.imageset                                                             |          1 |         21 |          0 |          1 |         22 |
+| ios/Runner/Assets.xcassets/LaunchImage.imageset                                                                  |          2 |         26 |          0 |          3 |         29 |
+| ios/Runner/Base.lproj                                                                                            |          2 |         68 |          2 |          2 |         72 |
+| ios/RunnerTests                                                                                                  |          1 |          7 |          2 |          4 |         13 |
+| lib                                                                                                              |         54 |     14,559 |        380 |        785 |     15,724 |
+| lib (Files)                                                                                                      |          3 |        219 |         33 |         39 |        291 |
+| lib/constants                                                                                                    |          3 |         28 |          1 |          3 |         32 |
+| lib/data                                                                                                         |          1 |         43 |          6 |          9 |         58 |
+| lib/data/local                                                                                                   |          1 |         43 |          6 |          9 |         58 |
+| lib/models                                                                                                       |          8 |        719 |         18 |         57 |        794 |
+| lib/screens                                                                                                      |         31 |     12,384 |        217 |        530 |     13,131 |
+| lib/screens/auth                                                                                                 |          5 |      1,798 |         49 |         68 |      1,915 |
+| lib/screens/auth/first_time_settings                                                                             |          2 |        527 |          5 |         21 |        553 |
+| lib/screens/auth/login                                                                                           |          2 |        726 |         28 |         30 |        784 |
+| lib/screens/auth/login (Files)                                                                                   |          1 |        479 |         23 |         21 |        523 |
+| lib/screens/auth/login/forgot_password                                                                           |          1 |        247 |          5 |          9 |        261 |
+| lib/screens/auth/signup                                                                                          |          1 |        545 |         16 |         17 |        578 |
+| lib/screens/dashboard                                                                                            |         25 |     10,404 |        167 |        448 |     11,019 |
+| lib/screens/dashboard (Files)                                                                                    |          1 |        427 |          4 |         15 |        446 |
+| lib/screens/dashboard/navbar                                                                                     |         18 |      8,017 |        133 |        341 |      8,491 |
+| lib/screens/dashboard/navbar (Files)                                                                             |          2 |      1,016 |         42 |         74 |      1,132 |
+| lib/screens/dashboard/navbar/balance                                                                             |          2 |        960 |         42 |         63 |      1,065 |
+| lib/screens/dashboard/navbar/balance (Files)                                                                     |          1 |        430 |         33 |         37 |        500 |
+| lib/screens/dashboard/navbar/balance/add_account                                                                 |          1 |        530 |          9 |         26 |        565 |
+| lib/screens/dashboard/navbar/budget                                                                              |          2 |        854 |          2 |         34 |        890 |
+| lib/screens/dashboard/navbar/budget (Files)                                                                      |          1 |        405 |          2 |         19 |        426 |
+| lib/screens/dashboard/navbar/budget/add_budget                                                                   |          1 |        449 |          0 |         15 |        464 |
+| lib/screens/dashboard/navbar/goals                                                                               |          3 |      1,156 |          1 |         38 |      1,195 |
+| lib/screens/dashboard/navbar/goals (Files)                                                                       |          1 |        406 |          0 |         17 |        423 |
+| lib/screens/dashboard/navbar/goals/create_goal                                                                   |          1 |        510 |          0 |         15 |        525 |
+| lib/screens/dashboard/navbar/goals/goals_detailed                                                                |          1 |        240 |          1 |          6 |        247 |
+| lib/screens/dashboard/navbar/home                                                                                |          4 |      1,838 |         45 |         70 |      1,953 |
+| lib/screens/dashboard/navbar/home/analytics                                                                      |          2 |        783 |          0 |         28 |        811 |
+| lib/screens/dashboard/navbar/home/analytics (Files)                                                              |          1 |        558 |          0 |         18 |        576 |
+| lib/screens/dashboard/navbar/home/analytics/calendar                                                             |          1 |        225 |          0 |         10 |        235 |
+| lib/screens/dashboard/navbar/home/expense_detail                                                                 |          1 |        295 |         24 |         10 |        329 |
+| lib/screens/dashboard/navbar/home/transaction                                                                    |          1 |        760 |         21 |         32 |        813 |
+| lib/screens/dashboard/navbar/personal                                                                            |          5 |      2,193 |          1 |         62 |      2,256 |
+| lib/screens/dashboard/navbar/personal (Files)                                                                    |          2 |      1,001 |          1 |         31 |      1,033 |
+| lib/screens/dashboard/navbar/personal/add_borrowed                                                               |          1 |        479 |          0 |         12 |        491 |
+| lib/screens/dashboard/navbar/personal/add_lent                                                                   |          1 |        506 |          0 |         12 |        518 |
+| lib/screens/dashboard/navbar/personal/detailed_item                                                              |          1 |        207 |          0 |          7 |        214 |
+| lib/screens/dashboard/profile                                                                                    |          6 |      1,960 |         30 |         92 |      2,082 |
+| lib/screens/dashboard/profile (Files)                                                                            |          1 |        372 |          2 |          9 |        383 |
+| lib/screens/dashboard/profile/categories                                                                         |          2 |        630 |         16 |         39 |        685 |
+| lib/screens/dashboard/profile/categories (Files)                                                                 |          1 |        328 |         10 |         23 |        361 |
+| lib/screens/dashboard/profile/categories/add_category                                                            |          1 |        302 |          6 |         16 |        324 |
+| lib/screens/dashboard/profile/currency                                                                           |          1 |        358 |          4 |         19 |        381 |
+| lib/screens/dashboard/profile/export_data                                                                        |          1 |        353 |          1 |         12 |        366 |
+| lib/screens/dashboard/profile/feedback                                                                           |          1 |        247 |          7 |         13 |        267 |
+| lib/screens/onboarding                                                                                           |          1 |        182 |          1 |         14 |        197 |
+| lib/services                                                                                                     |          2 |        841 |         92 |        102 |      1,035 |
+| lib/utils                                                                                                        |          1 |        144 |          1 |          7 |        152 |
+| lib/viewmodels                                                                                                   |          5 |        181 |         12 |         38 |        231 |
+| memory-bank                                                                                                      |          5 |        143 |          0 |         41 |        184 |
++------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| filename                                                                                                         | language   | code       | comment    | blank      | total      |
++------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| /Users/hum/StudioProjects/budgetm/.roo/rules-architect/AGENTS.md                                                 | Markdown   |          6 |          0 |          0 |          6 |
+| /Users/hum/StudioProjects/budgetm/.roo/rules-ask/AGENTS.md                                                       | Markdown   |          5 |          0 |          0 |          5 |
+| /Users/hum/StudioProjects/budgetm/.roo/rules-code/AGENTS.md                                                      | Markdown   |          7 |          0 |          0 |          7 |
+| /Users/hum/StudioProjects/budgetm/.roo/rules-debug/AGENTS.md                                                     | Markdown   |          4 |          0 |          0 |          4 |
+| /Users/hum/StudioProjects/budgetm/AGENTS.md                                                                      | Markdown   |         35 |          0 |          7 |         42 |
+| /Users/hum/StudioProjects/budgetm/README.md                                                                      | Markdown   |         10 |          0 |          7 |         17 |
+| /Users/hum/StudioProjects/budgetm/analysis_options.yaml                                                          | YAML       |          3 |         22 |          4 |         29 |
+| /Users/hum/StudioProjects/budgetm/android/app/google-services.json                                               | JSON       |         46 |          0 |          0 |         46 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/debug/AndroidManifest.xml                                      | XML        |          3 |          4 |          1 |          8 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/AndroidManifest.xml                                       | XML        |         36 |         11 |          2 |         49 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/drawable-v21/launch_background.xml                    | XML        |          9 |          0 |          1 |         10 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/drawable/launch_background.xml                        | XML        |          9 |          0 |          1 |         10 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml                     | XML        |          9 |          0 |          1 |         10 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/values-night-v31/styles.xml                           | XML        |         13 |          7 |          1 |         21 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/values-night/styles.xml                               | XML        |         13 |          9 |          1 |         23 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/values-v31/styles.xml                                 | XML        |         13 |          7 |          1 |         21 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/values/colors.xml                                     | XML        |          4 |          0 |          0 |          4 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/main/res/values/styles.xml                                     | XML        |         13 |          9 |          1 |         23 |
+| /Users/hum/StudioProjects/budgetm/android/app/src/profile/AndroidManifest.xml                                    | XML        |          3 |          4 |          1 |          8 |
+| /Users/hum/StudioProjects/budgetm/android/gradle.properties                                                      | Properties |          3 |          0 |          1 |          4 |
+| /Users/hum/StudioProjects/budgetm/android/gradle/wrapper/gradle-wrapper.properties                               | Properties |          5 |          0 |          1 |          6 |
+| /Users/hum/StudioProjects/budgetm/devtools_options.yaml                                                          | YAML       |          3 |          0 |          1 |          4 |
+| /Users/hum/StudioProjects/budgetm/firebase.json                                                                  | JSON       |          1 |          0 |          0 |          1 |
+| /Users/hum/StudioProjects/budgetm/flutter_launcher_icons.yaml                                                    | YAML       |         10 |          2 |          2 |         14 |
+| /Users/hum/StudioProjects/budgetm/flutter_native_splash.yaml                                                     | YAML       |          8 |          0 |          2 |         10 |
+| /Users/hum/StudioProjects/budgetm/ios/Podfile                                                                    | Ruby       |         31 |          3 |         10 |         44 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/AppDelegate.swift                                                   | Swift      |         12 |          0 |          2 |         14 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json                    | JSON       |          1 |          0 |          0 |          1 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/Assets.xcassets/LaunchBackground.imageset/Contents.json             | JSON       |         21 |          0 |          1 |         22 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json                  | JSON       |         23 |          0 |          1 |         24 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md                      | Markdown   |          3 |          0 |          2 |          5 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/Base.lproj/LaunchScreen.storyboard                                  | XML        |         43 |          1 |          1 |         45 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/Base.lproj/Main.storyboard                                          | XML        |         25 |          1 |          1 |         27 |
+| /Users/hum/StudioProjects/budgetm/ios/Runner/Runner-Bridging-Header.h                                            | C++        |          1 |          0 |          1 |          2 |
+| /Users/hum/StudioProjects/budgetm/ios/RunnerTests/RunnerTests.swift                                              | Swift      |          7 |          2 |          4 |         13 |
+| /Users/hum/StudioProjects/budgetm/lib/auth_gate.dart                                                             | Dart       |        116 |         18 |         26 |        160 |
+| /Users/hum/StudioProjects/budgetm/lib/constants/appColors.dart                                                   | Dart       |         26 |          1 |          3 |         30 |
+| /Users/hum/StudioProjects/budgetm/lib/constants/goal_type_enum.dart                                              | Dart       |          1 |          0 |          0 |          1 |
+| /Users/hum/StudioProjects/budgetm/lib/constants/transaction_type_enum.dart                                       | Dart       |          1 |          0 |          0 |          1 |
+| /Users/hum/StudioProjects/budgetm/lib/data/local/category_initializer.dart                                       | Dart       |         43 |          6 |          9 |         58 |
+| /Users/hum/StudioProjects/budgetm/lib/firebase_options.dart                                                      | Dart       |         53 |         12 |          4 |         69 |
+| /Users/hum/StudioProjects/budgetm/lib/main.dart                                                                  | Dart       |         50 |          3 |          9 |         62 |
+| /Users/hum/StudioProjects/budgetm/lib/models/budget.dart                                                         | Dart       |         95 |          0 |          9 |        104 |
+| /Users/hum/StudioProjects/budgetm/lib/models/category.dart                                                       | Dart       |         83 |          4 |          9 |         96 |
+| /Users/hum/StudioProjects/budgetm/lib/models/firestore_account.dart                                              | Dart       |        150 |          5 |         10 |        165 |
+| /Users/hum/StudioProjects/budgetm/lib/models/firestore_task.dart                                                 | Dart       |        113 |          4 |          9 |        126 |
+| /Users/hum/StudioProjects/budgetm/lib/models/firestore_transaction.dart                                          | Dart       |        170 |          4 |          9 |        183 |
+| /Users/hum/StudioProjects/budgetm/lib/models/goal.dart                                                           | Dart       |         18 |          0 |          2 |         20 |
+| /Users/hum/StudioProjects/budgetm/lib/models/subscription.dart                                                   | Dart       |         16 |          0 |          2 |         18 |
+| /Users/hum/StudioProjects/budgetm/lib/models/transaction.dart                                                    | Dart       |         74 |          1 |          7 |         82 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/auth/first_time_settings/choose_theme_screen.dart                  | Dart       |        267 |          1 |         11 |        279 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/auth/first_time_settings/select_currency_screen.dart               | Dart       |        260 |          4 |         10 |        274 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/auth/login/forgot_password/forgot_password_screen.dart             | Dart       |        247 |          5 |          9 |        261 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/auth/login/login_screen.dart                                       | Dart       |        479 |         23 |         21 |        523 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/auth/signup/signup_screen.dart                                     | Dart       |        545 |         16 |         17 |        578 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/main_screen.dart                                         | Dart       |        427 |          4 |         15 |        446 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/balance/add_account/add_account_screen.dart       | Dart       |        530 |          9 |         26 |        565 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/balance/balance_screen.dart                       | Dart       |        430 |         33 |         37 |        500 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/budget/add_budget/add_budget_screen.dart          | Dart       |        449 |          0 |         15 |        464 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/budget/budget_screen.dart                         | Dart       |        405 |          2 |         19 |        426 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/feedback_modal.dart                               | Dart       |        119 |          3 |          6 |        128 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/goals/create_goal/create_goal_screen.dart         | Dart       |        510 |          0 |         15 |        525 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/goals/goals_detailed/goals_detailed_screen.dart   | Dart       |        240 |          1 |          6 |        247 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/goals/goals_screen.dart                           | Dart       |        406 |          0 |         17 |        423 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/home.dart                                         | Dart       |        897 |         39 |         68 |      1,004 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/home/analytics/analytics_screen.dart              | Dart       |        558 |          0 |         18 |        576 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/home/analytics/calendar/calendar_screen.dart      | Dart       |        225 |          0 |         10 |        235 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart    | Dart       |        295 |         24 |         10 |        329 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart      | Dart       |        760 |         21 |         32 |        813 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/personal/add_borrowed.dart                        | Dart       |        506 |          0 |         12 |        518 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/personal/add_borrowed/add_borrowed.dart           | Dart       |        479 |          0 |         12 |        491 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/personal/add_lent/add_lent.dart                   | Dart       |        506 |          0 |         12 |        518 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/personal/detailed_item/detailed_item_screen.dart  | Dart       |        207 |          0 |          7 |        214 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/navbar/personal/personal_screen.dart                     | Dart       |        495 |          1 |         19 |        515 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/profile/categories/add_category/add_category_screen.dart | Dart       |        302 |          6 |         16 |        324 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/profile/categories/category_screen.dart                  | Dart       |        328 |         10 |         23 |        361 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/profile/currency/currency_rates.dart                     | Dart       |        358 |          4 |         19 |        381 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/profile/export_data/export_data_screen.dart              | Dart       |        353 |          1 |         12 |        366 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/profile/feedback/feedback_screen.dart                    | Dart       |        247 |          7 |         13 |        267 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/dashboard/profile/profile_screen.dart                              | Dart       |        372 |          2 |          9 |        383 |
+| /Users/hum/StudioProjects/budgetm/lib/screens/onboarding/onboarding_screen.dart                                  | Dart       |        182 |          1 |         14 |        197 |
+| /Users/hum/StudioProjects/budgetm/lib/services/firebase_auth_service.dart                                        | Dart       |        107 |         22 |         12 |        141 |
+| /Users/hum/StudioProjects/budgetm/lib/services/firestore_service.dart                                            | Dart       |        734 |         70 |         90 |        894 |
+| /Users/hum/StudioProjects/budgetm/lib/utils/appTheme.dart                                                        | Dart       |        144 |          1 |          7 |        152 |
+| /Users/hum/StudioProjects/budgetm/lib/viewmodels/currency_provider.dart                                          | Dart       |         86 |         11 |         17 |        114 |
+| /Users/hum/StudioProjects/budgetm/lib/viewmodels/home_screen_provider.dart                                       | Dart       |         24 |          0 |          5 |         29 |
+| /Users/hum/StudioProjects/budgetm/lib/viewmodels/navbar_visibility_provider.dart                                 | Dart       |         11 |          0 |          3 |         14 |
+| /Users/hum/StudioProjects/budgetm/lib/viewmodels/theme_provider.dart                                             | Dart       |         33 |          0 |          6 |         39 |
+| /Users/hum/StudioProjects/budgetm/lib/viewmodels/vacation_mode_provider.dart                                     | Dart       |         27 |          1 |          7 |         35 |
+| /Users/hum/StudioProjects/budgetm/memory-bank/activeContext.md                                                   | Markdown   |         25 |          0 |          8 |         33 |
+| /Users/hum/StudioProjects/budgetm/memory-bank/decisionLog.md                                                     | Markdown   |         36 |          0 |          8 |         44 |
+| /Users/hum/StudioProjects/budgetm/memory-bank/productContext.md                                                  | Markdown   |         12 |          0 |          8 |         20 |
+| /Users/hum/StudioProjects/budgetm/memory-bank/progress.md                                                        | Markdown   |         42 |          0 |          9 |         51 |
+| /Users/hum/StudioProjects/budgetm/memory-bank/systemPatterns.md                                                  | Markdown   |         28 |          0 |          8 |         36 |
+| /Users/hum/StudioProjects/budgetm/plan.md                                                                        | Markdown   |        138 |          0 |         39 |        177 |
+| /Users/hum/StudioProjects/budgetm/pubspec.yaml                                                                   | YAML       |         46 |         60 |         15 |        121 |
+| Total                                                                                                            |            |     15,324 |        522 |        939 |     16,785 |
++------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+

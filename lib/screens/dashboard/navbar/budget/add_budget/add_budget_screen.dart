@@ -4,9 +4,14 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/models/category.dart';
+import 'package:budgetm/models/budget.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddBudgetScreen extends StatefulWidget {
-  const AddBudgetScreen({super.key});
+  final List<String>? completedBudgetNames;
+  const AddBudgetScreen({super.key, this.completedBudgetNames});
 
   @override
   State<AddBudgetScreen> createState() => _AddBudgetScreenState();
@@ -14,7 +19,62 @@ class AddBudgetScreen extends StatefulWidget {
 
 class _AddBudgetScreenState extends State<AddBudgetScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
-  bool _isMoreOptionsVisible = false;
+  bool _isLoadingCategories = true;
+  late FirestoreService _firestoreService;
+  List<Category> _categories = [];
+  String? _selectedCategoryId;
+  bool _isSaving = false;
+  List<String> _completedBudgetNames = [];
+  bool _didLoadRouteArgs = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _firestoreService = FirestoreService.instance;
+    _loadCategories();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didLoadRouteArgs) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is List<String>) {
+        _completedBudgetNames = args;
+      } else if (widget.completedBudgetNames != null) {
+        _completedBudgetNames = widget.completedBudgetNames!;
+      } else {
+        _completedBudgetNames = [];
+      }
+      _didLoadRouteArgs = true;
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final allCategories = await _firestoreService.getAllCategories();
+      final incomeCategories = allCategories
+          .where((c) => c.type == 'income')
+          .toList();
+      incomeCategories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+      setState(() {
+        _categories = incomeCategories;
+        _isLoadingCategories = false;
+        if (_categories.isNotEmpty) {
+          final misc = _categories.firstWhere(
+            (c) => (c.name ?? '').toLowerCase() == 'misc',
+            orElse: () => _categories.first,
+          );
+          _selectedCategoryId = misc.id;
+        }
+      });
+    } catch (e) {
+      debugPrint('Error loading income categories: $e');
+      setState(() {
+        _isLoadingCategories = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,9 +114,19 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                   decoration: _inputDecoration(
                                     hintText: 'Askari Bank',
                                   ),
-                                  validator: FormBuilderValidators.required(
-                                    errorText: 'Name is required',
-                                  ),
+                                  validator: FormBuilderValidators.compose([
+                                    FormBuilderValidators.required(
+                                      errorText: 'Name is required',
+                                    ),
+                                    (val) {
+                                      if (val == null || val.trim().isEmpty) return null;
+                                      final lower = val.trim().toLowerCase();
+                                      if (_completedBudgetNames.any((e) => e.trim().toLowerCase() == lower)) {
+                                        return 'This name is already used by a completed budget.';
+                                      }
+                                      return null;
+                                    },
+                                  ]),
                                 ),
                               ),
                             ),
@@ -65,42 +135,70 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                               child: _buildFormSection(
                                 context,
                                 'Category',
-                                FormBuilderDropdown(
-                                  name: 'category',
-                                  decoration: _inputDecoration(
-                                    hintText: 'Select',
-                                  ),
-                                  isDense: true,
-                                  items: ['Food', 'Shopping', 'Transport']
-                                      .map(
-                                        (category) => DropdownMenuItem(
-                                          value: category,
-                                          child: Text(
-                                            category,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                            ),
+                                _isLoadingCategories
+                                    ? SizedBox(
+                                        height: 48,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                           ),
                                         ),
                                       )
-                                      .toList(),
-                                  validator: FormBuilderValidators.required(
-                                    errorText: 'Please select a category',
-                                  ),
-                                ),
+                                    : FormBuilderDropdown(
+                                        name: 'category',
+                                        decoration: _inputDecoration(
+                                          hintText: 'Select',
+                                        ),
+                                        isDense: true,
+                                        items: _categories
+                                            .map(
+                                              (category) => DropdownMenuItem(
+                                                value: category.id,
+                                                child: Text(
+                                                  category.name ??
+                                                      'Unnamed Category',
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        initialValue: _selectedCategoryId,
+                                        validator:
+                                            FormBuilderValidators.required(
+                                              errorText:
+                                                  'Please select a category',
+                                            ),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _selectedCategoryId =
+                                                value as String?;
+                                          });
+                                        },
+                                      ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        _buildMoreOptionsToggle(),
-                        const SizedBox(height: 10),
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          child: Visibility(
-                            visible: _isMoreOptionsVisible,
-                            child: _buildMoreOptions(),
+                        _buildFormSection(
+                          context,
+                          'End Date',
+                          FormBuilderDateTimePicker(
+                            name: 'end_date',
+                            initialValue: DateTime.now().add(
+                              const Duration(days: 1),
+                            ),
+                            inputType: InputType.date,
+                            format: DateFormat('dd/MM/yyyy'),
+                            style: const TextStyle(fontSize: 13),
+                            decoration: _inputDecoration(
+                              suffixIcon: HugeIcons.strokeRoundedCalendar01,
+                            ),
+                            validator: FormBuilderValidators.required(
+                              errorText: 'End date is required',
+                            ),
                           ),
                         ),
                       ],
@@ -109,7 +207,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                 ),
               ),
             ),
-            _buildBottomButtons(context),
+            _buildBottomButtons(),
           ],
         ),
       ),
@@ -131,7 +229,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
         const SizedBox(height: 4),
         FormBuilderTextField(
           name: 'amount',
-          initialValue: "100,000",
           style: const TextStyle(
             color: AppColors.primaryTextColorLight,
             fontSize: 26,
@@ -153,103 +250,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
           ]),
           keyboardType: TextInputType.number,
         ),
-      ],
-    );
-  }
-
-  Widget _buildMoreOptions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildFormSection(
-                context,
-                'Start Date',
-                FormBuilderDateTimePicker(
-                  name: 'start_date',
-                  initialValue: DateTime.now(),
-                  inputType: InputType.date,
-                  format: DateFormat('dd/MM/yyyy'),
-                  style: const TextStyle(fontSize: 13),
-                  decoration: _inputDecoration(
-                    suffixIcon: HugeIcons.strokeRoundedCalendar01,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildFormSection(
-                context,
-                'End Date',
-                FormBuilderDateTimePicker(
-                  name: 'end_date',
-                  initialValue: DateTime.now().add(const Duration(days: 1)),
-                  inputType: InputType.date,
-                  format: DateFormat('dd/MM/yyyy'),
-                  style: const TextStyle(fontSize: 13),
-                  decoration: _inputDecoration(
-                    suffixIcon: HugeIcons.strokeRoundedCalendar01,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        FormBuilderSwitch(
-          name: 'add_progress',
-          title: const Text('Add Progress'),
-          initialValue: true,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-          ),
-          controlAffinity: ListTileControlAffinity.trailing,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMoreOptionsToggle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Expanded(child: Divider(color: Colors.grey)),
-        TextButton(
-          onPressed: () {
-            setState(() {
-              _isMoreOptionsVisible = !_isMoreOptionsVisible;
-            });
-          },
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'More',
-                style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                _isMoreOptionsVisible
-                    ? Icons.keyboard_arrow_up
-                    : Icons.keyboard_arrow_down,
-                color: Theme.of(context).primaryColor,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
-        const Expanded(child: Divider(color: Colors.grey)),
       ],
     );
   }
@@ -375,7 +375,55 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
     );
   }
 
-  Widget _buildBottomButtons(BuildContext context) {
+  Future<void> _saveBudget() async {
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      final formData = _formKey.currentState!.value;
+      final name = formData['name'] as String;
+      final amountRaw = formData['amount'] as String;
+      final totalAmount =
+          double.tryParse(amountRaw.replaceAll(',', '')) ??
+          double.parse(amountRaw);
+      final categoryId =
+          formData['category'] as String? ?? _selectedCategoryId ?? '';
+      final endDate =
+          formData['end_date'] as DateTime? ??
+          DateTime.now().add(const Duration(days: 1));
+      final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+      final budget = Budget(
+        id: '',
+        name: name,
+        totalAmount: totalAmount,
+        currentAmount: 0.0,
+        categoryId: categoryId,
+        endDate: endDate,
+        userId: userId,
+      );
+
+      final newId = await _firestoreService.createBudget(budget);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      debugPrint('Error saving budget: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save budget: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildBottomButtons() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       color: const Color(0xFFFAFAFA),
@@ -404,12 +452,13 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState?.saveAndValidate() ?? false) {
-                  debugPrint(_formKey.currentState?.value.toString());
-                  Navigator.of(context).pop();
-                }
-              },
+              onPressed: _isSaving
+                  ? null
+                  : () {
+                      if (_formKey.currentState?.saveAndValidate() ?? false) {
+                        _saveBudget();
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -417,13 +466,23 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
-                'Add',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
+              child: _isSaving
+                  ? SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Add',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
             ),
           ),
         ],

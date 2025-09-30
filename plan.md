@@ -1,53 +1,177 @@
-# Plan: Hide/Show Scroll Behavior for Bottom Navigation Bar and FAB
+# Budgeting Feature: Technical Plan
 
-This document outlines the plan to implement a hide/show scroll behavior for the bottom navigation bar and the Floating Action Button (FAB) in `lib/screens/dashboard/main_screen.dart`.
+This document outlines the technical plan for implementing the budgeting feature.
 
-## 1. State Management with `ChangeNotifier`
+## 1. Data Model
 
-- **Create a new `ChangeNotifier`:**
-  - A new file will be created at `lib/viewmodels/navbar_visibility_provider.dart`.
-  - This file will contain a class `NavbarVisibilityProvider` that extends `ChangeNotifier`.
-  - The provider will hold a boolean state, `isNavBarVisible`, which defaults to `true`.
-  - A method, `setNavBarVisibility(bool isVisible)`, will be created to update the state and notify listeners.
+### 1.1. `Budget` Model
 
-## 2. Detect Scroll Direction in `home.dart`
+A new file `lib/models/budget.dart` will be created to define the `Budget` model.
 
-- **Use `ScrollController` in `HomeScreen`:**
-  - In `lib/screens/dashboard/navbar/home.dart`, the `_HomeScreenState` will use its existing `_scrollController`.
-  - A listener will be added to the `_scrollController` in the `initState` method.
-  - The listener will monitor `_scrollController.position.userScrollDirection`.
-- **Update `NavbarVisibilityProvider`:**
-  - When the user scrolls down (`ScrollDirection.reverse`), the `NavbarVisibilityProvider`'s `isNavBarVisible` will be set to `false`.
-  - When the user scrolls up (`ScrollDirection.forward`), the `isNavBarVisible` will be set to `true`.
-  - The `SingleChildScrollView` inside `_buildTransactionSectionContent` will be assigned the `_scrollController`.
+```dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-## 3. Communicate State to `main_screen.dart`
+class Budget {
+  final String id;
+  final String name;
+  final double totalAmount;
+  final double currentAmount;
+  final String categoryId;
+  final DateTime endDate;
+  final String userId;
 
-- **Provide the `ChangeNotifier`:**
-  - In `lib/main.dart`, the `MultiProvider` widget will be updated to include `ChangeNotifierProvider<NavbarVisibilityProvider>`.
-- **Consume the `ChangeNotifier`:**
-  - In `lib/screens/dashboard/main_screen.dart`, the `_MainScreenState` will access the `NavbarVisibilityProvider` using `context.watch<NavbarVisibilityProvider>()`.
+  Budget({
+    required this.id,
+    required this.name,
+    required this.totalAmount,
+    required this.currentAmount,
+    required this.categoryId,
+    required this.endDate,
+    required this.userId,
+  });
 
-## 4. Animate UI Elements in `main_screen.dart`
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'totalAmount': totalAmount,
+      'currentAmount': currentAmount,
+      'categoryId': categoryId,
+      'endDate': Timestamp.fromDate(endDate),
+      'userId': userId,
+    };
+  }
 
-- **Animate the Bottom Navigation Bar:**
-  - The `PersistentTabView` widget has a `hideNavigationBar` property.
-  - This property will be bound to the inverse of `isNavBarVisible` from the provider (`!isNavBarVisible`).
-- **Animate the Floating Action Button (FAB):**
-  - The `Positioned` widget containing the FAB will be wrapped in an `AnimatedSlide` widget.
-  - The `offset` of the `AnimatedSlide` will be dynamically changed based on `isNavBarVisible` to slide the FAB in and out of view. An `Offset(0, 2)` could be used to hide it, and `Offset.zero` to show it.
+  factory Budget.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return Budget(
+      id: doc.id,
+      name: data['name'] ?? '',
+      totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
+      currentAmount: (data['currentAmount'] as num?)?.toDouble() ?? 0.0,
+      categoryId: data['categoryId'] ?? '',
+      endDate: (data['endDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      userId: data['userId'] ?? '',
+    );
+  }
+}
+```
 
-## Mermaid Diagram
+### 1.2. `FirestoreTransaction` Model Modification
+
+The `lib/models/firestore_transaction.dart` file will be modified to include an optional `budgetId` field.
+
+-   **Add new field:** `final String? budgetId;`
+-   **Update constructor:** Add `this.budgetId`
+-   **Update `toJson()`:** Add `'budgetId': budgetId,`
+-   **Update `fromFirestore()`:** Add `budgetId: data['budgetId'],`
+-   **Update `copyWith()`:** Add `String? budgetId` parameter and logic.
+
+## 2. Firestore Schema
+
+A new `budgets` collection will be created under `/users/{userId}/budgets`.
+
+**Structure of a budget document:**
+
+```json
+{
+  "name": "Monthly Savings",
+  "totalAmount": 500.00,
+  "currentAmount": 150.00,
+  "categoryId": "some_income_category_id",
+  "endDate": "timestamp",
+  "userId": "user_id_abc"
+}
+```
+
+## 3. `FirestoreService` Modifications
+
+The `lib/services/firestore_service.dart` file will be updated with the following changes:
+
+### 3.1. New `_budgetsCollection` Reference
+
+```dart
+CollectionReference<Budget> get _budgetsCollection {
+  if (_userId == null) throw Exception('User not authenticated');
+  return _firestore
+      .collection('users')
+      .doc(_userId!)
+      .collection('budgets')
+      .withConverter<Budget>(
+        fromFirestore: (snapshot, _) => Budget.fromFirestore(snapshot),
+        toFirestore: (budget, _) => budget.toJson(),
+      );
+}
+```
+
+### 3.2. Budget CRUD Operations
+
+-   `Future<String> createBudget(Budget budget)`
+-   `Stream<List<Budget>> getBudgets()`
+-   `Future<void> updateBudget(String budgetId, double amount)`
+-   `Future<void> deleteBudget(String budgetId)`
+-   `Future<Budget?> getBudgetById(String budgetId)`
+
+### 3.3. Logic for `updateBudget`
+
+When an income transaction with a `budgetId` is created, the `currentAmount` of the corresponding budget should be increased.
+
+The `createTransaction` method in `firestore_service.dart` will be modified:
+
+```dart
+// Inside createTransaction method
+if (transaction.type == 'income' && transaction.budgetId != null) {
+  final budgetDocRef = _budgetsCollection.doc(transaction.budgetId!);
+  final budgetSnapshot = await budgetDocRef.get();
+  if (budgetSnapshot.exists) {
+    final budget = budgetSnapshot.data()!;
+    final newCurrentAmount = budget.currentAmount + transaction.amount;
+    await budgetDocRef.update({'currentAmount': newCurrentAmount});
+  }
+}
+```
+
+## 4. Implementation Steps (for `code` mode)
+
+### 4.1. `add_budget_screen.dart`
+
+-   Remove the "More" toggle and make the `End Date` field visible by default.
+-   Remove the "Add Progress" checkbox.
+-   The "Category" dropdown should only show categories of type "INCOME".
+-   The `createBudget` method from `FirestoreService` will be called on save.
+
+### 4.2. `add_transaction_screen.dart`
+
+-   If the transaction type is "Income", an optional dropdown to select a budget should be displayed.
+-   The dropdown should list all active (not fully funded) budgets. A budget is active if `currentAmount` < `totalAmount`.
+-   When a budget is selected, the `budgetId` should be saved with the transaction.
+-   Budgets that are fully funded (`currentAmount` >= `totalAmount`) should not appear in the dropdown.
+
+### 4.3. `budget_screen.dart`
+
+-   Fetch and display a list of active budgets using a `StreamBuilder` connected to `firestore_service.getBudgets()`.
+-   For each budget, display:
+    -   Name
+    -   Category Name (requires fetching category details using `categoryId`)
+    -   Progress bar showing `currentAmount` / `totalAmount`.
+    -   Days remaining until `endDate`.
+
+## 5. Mermaid Diagram
+
+Here is a diagram illustrating the data flow:
 
 ```mermaid
 graph TD
-    A[User Scrolls in HomeScreen] --> B{ScrollController Listener};
-    B -- Scroll Down --> C[NavbarVisibilityProvider.isNavBarVisible = false];
-    B -- Scroll Up --> D[NavbarVisibilityProvider.isNavBarVisible = true];
-    C --> E[MainScreen Rebuilds];
+    subgraph "Add Transaction Screen"
+        A[User adds Income Transaction] --> B{Selects a Budget?};
+    end
+
+    subgraph "Firestore Service"
+        B -- Yes --> C[createTransaction];
+        C --> D{Update Budget's currentAmount};
+    end
+
+    subgraph "Budget Screen"
+        E[StreamBuilder listens for Budget updates] --> F[UI displays updated progress];
+    end
+
     D --> E;
-    E --> F{PersistentTabView hideNavigationBar = !isNavBarVisible};
-    E --> G{AnimatedSlide offset changes};
-    F --> H[Bottom Nav Bar Hides/Shows];
-    G --> I[FAB Hides/Shows];
-```

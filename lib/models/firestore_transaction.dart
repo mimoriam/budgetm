@@ -7,6 +7,7 @@ class FirestoreTransaction {
   final String type; // e.g., 'income', 'expense'
   final DateTime date;
   final String? categoryId;
+  final String? budgetId;
   final String? accountId;
   final String? time;
   final String? repeat;
@@ -24,6 +25,7 @@ class FirestoreTransaction {
     required this.type,
     required this.date,
     this.categoryId,
+    this.budgetId,
     this.accountId,
     this.time,
     this.repeat,
@@ -43,6 +45,7 @@ class FirestoreTransaction {
       'type': type,
       'date': Timestamp.fromDate(date),
       'categoryId': categoryId,
+      'budgetId': budgetId,
       'accountId': accountId,
       'time': time,
       'repeat': repeat,
@@ -65,6 +68,7 @@ class FirestoreTransaction {
       type: data['type'] ?? '',
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       categoryId: data['categoryId'],
+      budgetId: data['budgetId'],
       accountId: data['accountId'],
       time: data['time'],
       repeat: data['repeat'],
@@ -90,6 +94,7 @@ class FirestoreTransaction {
               ? json['date']
               : DateTime.now(),
       categoryId: json['categoryId'],
+      budgetId: json['budgetId'],
       accountId: json['accountId'],
       time: json['time'],
       repeat: json['repeat'],
@@ -110,6 +115,7 @@ class FirestoreTransaction {
     String? type,
     DateTime? date,
     String? categoryId,
+    String? budgetId,
     String? accountId,
     String? time,
     String? repeat,
@@ -127,6 +133,7 @@ class FirestoreTransaction {
       type: type ?? this.type,
       date: date ?? this.date,
       categoryId: categoryId ?? this.categoryId,
+      budgetId: budgetId ?? this.budgetId,
       accountId: accountId ?? this.accountId,
       time: time ?? this.time,
       repeat: repeat ?? this.repeat,
@@ -154,6 +161,7 @@ class FirestoreTransaction {
         other.type == type &&
         other.date == date &&
         other.categoryId == categoryId &&
+        other.budgetId == budgetId &&
         other.accountId == accountId &&
         other.time == time &&
         other.repeat == repeat &&
@@ -164,11 +172,11 @@ class FirestoreTransaction {
         other.paid == paid &&
         other.isVacation == isVacation;
   }
-
+ 
   @override
   int get hashCode {
     return Object.hash(
-      id, description, amount, type, date, categoryId, accountId,
+      id, description, amount, type, date, categoryId, budgetId, accountId,
       time, repeat, remind, icon, color, notes, paid, isVacation,
     );
   }
