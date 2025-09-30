@@ -209,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 0);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1));
   
       // Get income and expense totals using Firestore helper method
       final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
@@ -280,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _loadUpcomingTasks() async {
     try {
       final now = DateTime.now();
-      final endOfMonth = DateTime(now.year, now.month + 1, 0);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1));
 
       // Get upcoming tasks using Firestore helper method
       final tasks = await _firestoreService.getUpcomingTasksForDateRange(now, endOfMonth);
@@ -299,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }) async {
     try {
       final startOfMonth = DateTime(month.year, month.month, 1);
-      final endOfMonth = DateTime(month.year, month.month + 1, 0);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0).add(const Duration(days: 1));
   
       // Get income and expense totals using Firestore helper method
       final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
@@ -370,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _loadUpcomingTasksForMonth(DateTime month) async {
     try {
       final startOfMonth = DateTime(month.year, month.month, 1);
-      final endOfMonth = DateTime(month.year, month.month + 1, 0);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0).add(const Duration(days: 1));
 
       // Get upcoming tasks for the specified month using Firestore helper method
       final tasks = await _firestoreService.getUpcomingTasksForDateRange(startOfMonth, endOfMonth);
