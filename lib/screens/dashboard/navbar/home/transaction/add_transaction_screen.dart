@@ -74,6 +74,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _accounts = accounts;
         _selectedAccountId = defaultAccount.id;
       });
+      _formKey.currentState?.patchValue({'account': defaultAccount.id});
     } catch (e) {
       // Handle error
       debugPrint('Error loading accounts: $e');
@@ -102,6 +103,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             orElse: () => _categories.first,
           );
           _selectedCategoryId = miscCategory.id;
+          _formKey.currentState?.patchValue({'category': miscCategory.id});
         }
       });
     } catch (e) {
@@ -114,6 +116,64 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void dispose() {
     _budgetsSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<T?> _showSelectionBottomSheet<T>({
+    required String title,
+    required List<T> items,
+    required T? selectedItem,
+    required String Function(T) getDisplayName,
+  }) async {
+    return await showModalBottomSheet<T>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final isSelected = item == selectedItem;
+                  return ListTile(
+                    title: Text(
+                      getDisplayName(item),
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Theme.of(context).primaryColor : null,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? Icon(
+                            Icons.check,
+                            color: Theme.of(context).primaryColor,
+                          )
+                        : null,
+                    onTap: () => Navigator.of(context).pop(item),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    ) ?? items.first;
   }
 
   @override
@@ -134,7 +194,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 child: FormBuilder(
                   key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  // autovalidateMode: AutovalidateMode.always,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -188,31 +248,76 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             child: _buildFormSection(
                               context,
                               'Category',
-                              FormBuilderDropdown(
+                              FormBuilderField<String>(
                                 name: 'category',
-                                decoration: _inputDecoration(
-                                  hintText: 'Select',
-                                ),
-                                isDense: true,
-                                items: _categories
-                                    .map(
-                                      (category) => DropdownMenuItem(
-                                        value: category.id,
-                                        child: Text(
-                                          category.name ?? 'Unnamed Category',
-                                          style: const TextStyle(fontSize: 13),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
                                 initialValue: _selectedCategoryId,
                                 validator: FormBuilderValidators.required(
                                   errorText: 'Please select a category',
                                 ),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedCategoryId = value as String?;
-                                  });
+                                builder: (FormFieldState<String?> field) {
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      final selectedCategory = _categories.firstWhere(
+                                        (cat) => cat.id == _selectedCategoryId,
+                                        orElse: () => _categories.first,
+                                      );
+                                      
+                                      final result = await _showSelectionBottomSheet<Category>(
+                                        title: 'Select Category',
+                                        items: _categories,
+                                        selectedItem: selectedCategory,
+                                        getDisplayName: (category) => category.name ?? 'Unnamed Category',
+                                      );
+                                      
+                                      if (result != null) {
+                                        setState(() {
+                                          _selectedCategoryId = result.id;
+                                        });
+                                        field.didChange(result.id);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30.0),
+                                        border: Border.all(
+                                          color: field.hasError
+                                              ? AppColors.errorColor
+                                              : Colors.grey.shade300,
+                                          width: field.hasError ? 1.5 : 1.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _selectedCategoryId != null
+                                                  ? (_categories.firstWhere(
+                                                      (cat) => cat.id == _selectedCategoryId,
+                                                      orElse: () => _categories.first,
+                                                    ).name ?? 'Unnamed Category')
+                                                  : 'Select',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: _selectedCategoryId != null
+                                                    ? AppColors.primaryTextColorLight
+                                                    : AppColors.lightGreyBackground,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                             ),
@@ -222,36 +327,76 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             child: _buildFormSection(
                               context,
                               'Account',
-                              FormBuilderDropdown(
+                              FormBuilderField<String>(
                                 name: 'account',
-                                decoration: _inputDecoration(
-                                  hintText: 'Select',
-                                ),
-                                isDense: true,
-                                valueTransformer: (value) => value?.id,
-                                items: _accounts
-                                    .map(
-                                      (account) => DropdownMenuItem(
-                                        value: account,
-                                        child: Text(
-                                          account.name,
-                                          style: const TextStyle(fontSize: 13),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                initialValue: _accounts.isNotEmpty
-                                    ? _accounts.firstWhere(
-                                        (account) => account.id == _selectedAccountId,
-                                        orElse: () => _accounts.first)
-                                    : null,
+                                initialValue: _selectedAccountId,
                                 validator: FormBuilderValidators.required(
                                   errorText: 'Please select an account',
                                 ),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedAccountId = value?.id;
-                                  });
+                                builder: (FormFieldState<String?> field) {
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      final selectedAccount = _accounts.firstWhere(
+                                        (acc) => acc.id == _selectedAccountId,
+                                        orElse: () => _accounts.first,
+                                      );
+                                      
+                                      final result = await _showSelectionBottomSheet<FirestoreAccount>(
+                                        title: 'Select Account',
+                                        items: _accounts,
+                                        selectedItem: selectedAccount,
+                                        getDisplayName: (account) => account.name,
+                                      );
+                                      
+                                      if (result != null) {
+                                        setState(() {
+                                          _selectedAccountId = result.id;
+                                        });
+                                        field.didChange(result.id);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30.0),
+                                        border: Border.all(
+                                          color: field.hasError
+                                              ? AppColors.errorColor
+                                              : Colors.grey.shade300,
+                                          width: field.hasError ? 1.5 : 1.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _selectedAccountId != null
+                                                  ? (_accounts.firstWhere(
+                                                      (acc) => acc.id == _selectedAccountId,
+                                                      orElse: () => _accounts.first,
+                                                    ).name)
+                                                  : 'Select',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: _selectedAccountId != null
+                                                    ? AppColors.primaryTextColorLight
+                                                    : AppColors.lightGreyBackground,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                             ),
@@ -316,18 +461,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.transactionType == TransactionType.expense)
-          FormBuilderSwitch(
-            name: 'paid',
-            title: const Text('Paid'),
-            initialValue: true,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-            ),
-            controlAffinity: ListTileControlAffinity.trailing,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-          ),
+        // Expense-only fields (paid) are intentionally disabled here.
+        // Date and Time should be available for both income and expense inside "More"
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
