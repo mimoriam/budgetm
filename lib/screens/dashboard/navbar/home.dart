@@ -15,11 +15,7 @@ import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -406,7 +402,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // );
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
-    final currencyProvider = context.watch<CurrencyProvider>();
 
     // Check if we should refresh the data
     if (homeScreenProvider.shouldRefresh) {
@@ -533,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${_selectedMonthIndex < _months.length && _selectedMonthIndex >= 0 ? DateFormat('MMMM').format(_months[_selectedMonthIndex]) : 'Balance'}',
+                      _selectedMonthIndex < _months.length && _selectedMonthIndex >= 0 ? DateFormat('MMMM').format(_months[_selectedMonthIndex]) : 'Balance',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.black54,
                         fontWeight: FontWeight.w500,
@@ -809,7 +804,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                     const SizedBox(height: 16),
                     _buildUpcomingTasksSection(),
                     const SizedBox(height: 70), // To avoid FAB overlap
@@ -931,7 +926,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          ..._upcomingTasks.map((task) => _buildTaskItem(task, currencyProvider)).toList(),
+          ..._upcomingTasks.map((task) => _buildTaskItem(task, currencyProvider)),
         ],
       ),
     );

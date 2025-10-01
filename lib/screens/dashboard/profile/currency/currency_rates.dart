@@ -4,7 +4,6 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:currency_picker/currency_picker.dart';
-import 'package:currency_picker/src/currency_utils.dart';
 
 class CurrencyRatesScreen extends StatefulWidget {
   const CurrencyRatesScreen({super.key});
@@ -14,11 +13,11 @@ class CurrencyRatesScreen extends StatefulWidget {
 }
 
 class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
- @override
+  @override
   Widget build(BuildContext context) {
     final currencyProvider = Provider.of<CurrencyProvider>(context);
     final selectedCurrency = currencyProvider.selectedCurrencyCode;
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -169,28 +168,29 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
 
   List<Widget> _buildOtherCurrencies(CurrencyProvider currencyProvider) {
     List<Widget> widgets = [];
-    
+
     for (int i = 0; i < currencyProvider.otherCurrencies.length; i++) {
       final currencyCode = currencyProvider.otherCurrencies[i];
       final flag = _getCurrencyFlag(currencyCode);
       final name = _getCurrencyName(currencyCode);
-      
+
       widgets.add(
         _buildCurrencyCard(
           context,
           flag,
           name,
           currencyCode,
-          value: '\$10.00', // This should be replaced with actual conversion logic
+          value:
+              '\$10.00', // This should be replaced with actual conversion logic
         ),
       );
-      
+
       // Add spacing between currency cards except for the last one
       if (i < currencyProvider.otherCurrencies.length - 1) {
         widgets.add(const SizedBox(height: 12));
       }
     }
-    
+
     // If there are no other currencies, show a message
     if (currencyProvider.otherCurrencies.isEmpty) {
       widgets.add(
@@ -215,7 +215,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
         ),
       );
     }
-    
+
     return widgets;
   }
 
@@ -293,8 +293,11 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
   }
 
   void _showCurrencyPicker(BuildContext context) {
-    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-    
+    final currencyProvider = Provider.of<CurrencyProvider>(
+      context,
+      listen: false,
+    );
+
     showCurrencyPicker(
       context: context,
       onSelect: (Currency currency) async {
@@ -305,8 +308,13 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
   }
 
   void _showEditRateDialog(BuildContext context, String currencyCode) {
-    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-    final controller = TextEditingController(text: currencyProvider.conversionRate.toString());
+    final currencyProvider = Provider.of<CurrencyProvider>(
+      context,
+      listen: false,
+    );
+    final controller = TextEditingController(
+      text: currencyProvider.conversionRate.toString(),
+    );
     showDialog(
       context: context,
       builder: (context) {
@@ -319,10 +327,10 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  hintText: 'e.g. 1.0',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
+                decoration: const InputDecoration(hintText: 'e.g. 1.0'),
               ),
             ],
           ),
@@ -339,7 +347,9 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                 final parsed = double.tryParse(input);
                 if (parsed == null || parsed <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid rate greater than 0')),
+                    const SnackBar(
+                      content: Text('Please enter a valid rate greater than 0'),
+                    ),
                   );
                   return;
                 }
@@ -347,7 +357,9 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                 if (currency != null) {
                   await currencyProvider.setCurrency(currency, parsed);
                 }
-                Navigator.of(context).pop();
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
               },
               child: const Text('SAVE'),
             ),
@@ -356,7 +368,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
       },
     );
   }
- 
+
   String _getCurrencyFlag(String currencyCode) {
     try {
       final currency = CurrencyService().findByCode(currencyCode);
@@ -368,7 +380,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
       return '🏳️';
     }
   }
- 
+
   String _getCurrencyName(String currencyCode) {
     try {
       final currency = CurrencyService().findByCode(currencyCode);

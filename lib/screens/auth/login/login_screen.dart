@@ -3,7 +3,6 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
-import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -25,7 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
       false; // State for email/password login loading indicator
   bool _isLoadingGoogle = false; // State for Google Sign-In loading indicator
   final FirebaseAuthService _authService = FirebaseAuthService();
-  final FirestoreService _firestoreService = FirestoreService.instance;
 
   void _handleGoogleSignIn() async {
     if (!mounted) return;

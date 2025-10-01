@@ -173,7 +173,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                         onChanged: (value) {
                                           setState(() {
                                             _selectedCategoryId =
-                                                value as String?;
+                                                value;
                                           });
                                         },
                                       ),

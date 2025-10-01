@@ -5,8 +5,7 @@ import 'package:intl/intl.dart';
 class DetailedItemScreen extends StatelessWidget {
   final String itemType;
 
-  const DetailedItemScreen({Key? key, required this.itemType})
-    : super(key: key);
+  const DetailedItemScreen({super.key, required this.itemType});
 
   String getAppBarTitle() {
     switch (itemType.toLowerCase()) {

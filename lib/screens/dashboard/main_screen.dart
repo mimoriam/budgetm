@@ -151,7 +151,9 @@ class _MainScreenState extends State<MainScreen> {
             resizeToAvoidBottomInset: true,
             stateManagement: true,
             hideNavigationBarWhenKeyboardAppears: true,
-            navBarHeight: navbarVisibility.isNavBarVisible ? kBottomNavigationBarHeight + 20 : 0,
+            navBarHeight: navbarVisibility.isNavBarVisible
+                ? kBottomNavigationBarHeight + 20
+                : 0,
             margin: const EdgeInsets.fromLTRB(8, 0, 8, 16),
             padding: const EdgeInsets.only(left: 6),
             decoration: NavBarDecoration(
@@ -170,7 +172,9 @@ class _MainScreenState extends State<MainScreen> {
             bottom: 100,
             right: 20,
             child: AnimatedSlide(
-              offset: navbarVisibility.isNavBarVisible ? Offset.zero : const Offset(0, 3),
+              offset: navbarVisibility.isNavBarVisible
+                  ? Offset.zero
+                  : const Offset(0, 3),
               duration: const Duration(milliseconds: 150),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -233,11 +237,14 @@ class _MainScreenState extends State<MainScreen> {
                   withNavBar: false,
                   pageTransitionAnimation: PageTransitionAnimation.cupertino,
                 );
-                
+
                 // If the transaction was successfully added, trigger a refresh of the home screen
                 if (result == true) {
-                  final homeScreenProvider = context.read<HomeScreenProvider>();
-                  homeScreenProvider.triggerRefresh();
+                  if (mounted) {
+                    final homeScreenProvider = context
+                        .read<HomeScreenProvider>();
+                    homeScreenProvider.triggerRefresh();
+                  }
                 }
               },
             ),
@@ -258,11 +265,13 @@ class _MainScreenState extends State<MainScreen> {
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
-              
+
               // If the transaction was successfully added, trigger a refresh of the home screen
               if (result == true) {
-                final homeScreenProvider = context.read<HomeScreenProvider>();
-                homeScreenProvider.triggerRefresh();
+                if (mounted) {
+                  final homeScreenProvider = context.read<HomeScreenProvider>();
+                  homeScreenProvider.triggerRefresh();
+                }
               }
             },
           ),
@@ -281,11 +290,13 @@ class _MainScreenState extends State<MainScreen> {
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
-              
+
               // If the transaction was successfully added, trigger a refresh of the home screen
               if (result == true) {
-                final homeScreenProvider = context.read<HomeScreenProvider>();
-                homeScreenProvider.triggerRefresh();
+                if (mounted) {
+                  final homeScreenProvider = context.read<HomeScreenProvider>();
+                  homeScreenProvider.triggerRefresh();
+                }
               }
             },
           ),

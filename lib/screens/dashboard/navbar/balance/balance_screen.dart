@@ -32,7 +32,7 @@ class _BalanceScreenHolderState extends State<BalanceScreen> {
 /// `StatefulWidget`. Its `State` (`_BalanceScreenStateInner`) holds the
 /// stream subscriptions and UI logic.
 class _BalanceScreenState extends StatefulWidget {
-  const _BalanceScreenState({super.key});
+  const _BalanceScreenState();
 
   @override
   State<_BalanceScreenState> createState() => _BalanceScreenStateInner();
@@ -142,7 +142,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             }
 
             final accountsWithData = snapshot.data!;
-            final accounts = accountsWithData.map((d) => d['account'] as FirestoreAccount).toList();
 
             return Scaffold(
               backgroundColor: AppColors.scaffoldBackground,
@@ -171,7 +170,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                     final index = entry.key;
                                     final accountData = entry.value;
                                     final account = accountData['account'] as FirestoreAccount;
-                                    final transactionsAmount = (accountData['transactionsAmount'] as double?) ?? 0.0;
                                     final isHighlighted = index == touchedIndex;
                                     return _buildAccountItem(
                                       icon: Icons.account_balance,
@@ -374,7 +372,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               if (index < accountsWithData.length - 1) const SizedBox(height: 12),
             ],
           );
-        }).toList(),
+        }),
       ],
     );
   }

@@ -4,8 +4,6 @@ import 'package:budgetm/models/subscription.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
-import 'add_borrowed/add_borrowed.dart';
-import 'add_lent/add_lent.dart';
 import 'detailed_item/detailed_item_screen.dart';
 
 class PersonalScreen extends StatefulWidget {

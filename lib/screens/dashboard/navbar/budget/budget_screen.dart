@@ -5,7 +5,6 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/category.dart';
-import 'package:budgetm/screens/dashboard/navbar/budget/add_budget/add_budget_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 
@@ -21,8 +20,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
   late FirestoreService _firestoreService;
   late Stream<List<Budget>> _budgetStream;
   List<Category> _categories = [];
-  List<Budget> _allBudgets = [];
-  double _totalBudgetAmount = 0.0;
   late ScrollController _scrollController;
   double _lastScrollOffset = 0.0;
   Budget? _selectedBudget;

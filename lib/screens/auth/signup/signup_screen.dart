@@ -482,7 +482,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                          
                                          // The default account is now created in the SelectCurencyScreen
 
-                                        if (mounted) {
+                                        if (context.mounted) {
                                           Navigator.pushAndRemoveUntil(
                                             context,
                                             MaterialPageRoute(
@@ -495,7 +495,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                       }
                                     } catch (e) {
                                       // Handle Google Sign-In errors
-                                      if (mounted) {
+                                      if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
