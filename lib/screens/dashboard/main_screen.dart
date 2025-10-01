@@ -351,21 +351,6 @@ class _MainScreenState extends State<MainScreen> {
               );
             },
           ),
-          const SizedBox(height: 16),
-          _buildFabMenuItem(
-            label: "Fulfilled Goal",
-            icon: HugeIcons.strokeRoundedCheckmarkBadge01,
-            color: Colors.green,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const CreateGoalScreen(goalType: GoalType.fulfilled),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
         ];
       case 4: // Personal
         return [

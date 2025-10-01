@@ -13,41 +13,60 @@ class CategoryInitializer {
     if (!categoriesPopulated) {
       final FirestoreService firestoreService = FirestoreService.instance;
       
-      // Default categories to insert - shared names for both income and expense
-      final List<String> defaultCategoryNames = [
-        'Salary',
-        'Investments',
-        'Business',
-        'Groceries',
+      // Expense Categories
+      final List<String> expenseCategoryNames = [
+        'Supermarket',
         'Clothing',
-        'Home',
-        'Entertainment',
+        'House',
         'Transport',
+        'Entertainment',
         'Gifts',
+        'Travel',
+        'Education',
+        'Food',
+        'Work',
+        'Electronics',
+        'Sport',
+        'Restaurant',
+        'Health',
+        'Communications',
+        'Others',
       ];
       
-      // Insert both income and expense categories for each name
-      int displayOrder = 0;
-      for (final String categoryName in defaultCategoryNames) {
-        // Insert income category
-        final incomeCategory = Category(
-          id: '', // Firestore will generate
-          name: categoryName,
-          type: 'income',
-          displayOrder: displayOrder,
-        );
-        await firestoreService.createCategory(incomeCategory);
-        
-        // Insert expense category
+      // Income Categories
+      final List<String> incomeCategoryNames = [
+        'Salary',
+        'Income',
+        'Rewards',
+        'Gifts',
+        'Business',
+        'Others',
+      ];
+      
+      // Insert expense categories with their own display order
+      int expenseDisplayOrder = 0;
+      for (final String categoryName in expenseCategoryNames) {
         final expenseCategory = Category(
           id: '', // Firestore will generate
           name: categoryName,
           type: 'expense',
-          displayOrder: displayOrder,
+          displayOrder: expenseDisplayOrder,
         );
         await firestoreService.createCategory(expenseCategory);
-        
-        displayOrder++;
+        expenseDisplayOrder++;
+      }
+      
+      // Insert income categories with their own display order
+      int incomeDisplayOrder = 0;
+      for (final String categoryName in incomeCategoryNames) {
+        final incomeCategory = Category(
+          id: '', // Firestore will generate
+          name: categoryName,
+          type: 'income',
+          displayOrder: incomeDisplayOrder,
+        );
+        await firestoreService.createCategory(incomeCategory);
+        incomeDisplayOrder++;
       }
       
       // Mark categories as populated
