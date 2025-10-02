@@ -138,32 +138,45 @@ class Budget {
     return '${userId}_${categoryId}_${type.toString().split('.').last}_${year}_$period';
   }
 
-  // Helper method to calculate week number (Monday to Sunday)
+  // Helper method to calculate week number (Sunday to Saturday) — week-of-year
   static int getWeekNumber(DateTime date) {
-    // Find the first Monday of the year
+    // Find the first Sunday of the year
     final firstDayOfYear = DateTime(date.year, 1, 1);
-    int daysToFirstMonday = (DateTime.monday - firstDayOfYear.weekday + 7) % 7;
-    if (daysToFirstMonday == 0 && firstDayOfYear.weekday != DateTime.monday) {
-      daysToFirstMonday = 7;
+    int daysToFirstSunday = (DateTime.sunday - firstDayOfYear.weekday + 7) % 7;
+    if (daysToFirstSunday == 0 && firstDayOfYear.weekday != DateTime.sunday) {
+      daysToFirstSunday = 7;
     }
-    final firstMonday = firstDayOfYear.add(Duration(days: daysToFirstMonday));
+    final firstSunday = firstDayOfYear.add(Duration(days: daysToFirstSunday));
     
-    if (date.isBefore(firstMonday)) {
-      // If date is before first Monday, it belongs to the last week of previous year
+    if (date.isBefore(firstSunday)) {
+      // If date is before first Sunday, it belongs to the last week of previous year
       return getWeekNumber(DateTime(date.year - 1, 12, 31));
     }
     
-    final daysSinceFirstMonday = date.difference(firstMonday).inDays;
-    return (daysSinceFirstMonday / 7).floor() + 1;
+    final daysSinceFirstSunday = date.difference(firstSunday).inDays;
+    return (daysSinceFirstSunday / 7).floor() + 1;
   }
 
-  // Helper method to get start of week (Monday)
+  // Helper method to get week of month (Sunday to Saturday), where week 1 starts at the first Sunday on/after
+  // the first day of the month. Days before that first Sunday are treated as part of week 1 for UI consistency.
+  static int getWeekOfMonth(DateTime date) {
+    final firstDayOfMonth = DateTime(date.year, date.month, 1);
+    final firstSunday = getStartOfWeek(firstDayOfMonth);
+    if (date.isBefore(firstSunday)) {
+      // Treat days before the month's first Sunday as week 1 so UI week chips (1-4) include early-month days.
+      return 1;
+    }
+    final daysSinceFirstSunday = date.difference(firstSunday).inDays;
+    return (daysSinceFirstSunday / 7).floor() + 1;
+  }
+
+  // Helper method to get start of week (Sunday)
   static DateTime getStartOfWeek(DateTime date) {
-    final daysFromMonday = (date.weekday - DateTime.monday + 7) % 7;
-    return DateTime(date.year, date.month, date.day).subtract(Duration(days: daysFromMonday));
+    final daysFromSunday = date.weekday % 7;
+    return DateTime(date.year, date.month, date.day).subtract(Duration(days: daysFromSunday));
   }
 
-  // Helper method to get end of week (Sunday)
+  // Helper method to get end of week (Saturday)
   static DateTime getEndOfWeek(DateTime date) {
     final startOfWeek = getStartOfWeek(date);
     return startOfWeek.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
@@ -173,14 +186,27 @@ class Budget {
   static Map<String, DateTime> getDateRange(BudgetType type, int year, int period) {
     switch (type) {
       case BudgetType.weekly:
-        // Calculate the start date of the week
-        final firstDayOfYear = DateTime(year, 1, 1);
-        int daysToFirstMonday = (DateTime.monday - firstDayOfYear.weekday + 7) % 7;
-        if (daysToFirstMonday == 0 && firstDayOfYear.weekday != DateTime.monday) {
-          daysToFirstMonday = 7;
+        // For weekly budgets we encode period as (month * 10 + weekOfMonth).
+        // Decode month and weekOfMonth here so date ranges align with the UI week-of-month selector
+        final month = period ~/ 10;
+        final weekOfMonth = period % 10;
+        // Safeguard: if decoding fails, fall back to week-of-year behavior
+        if (month < 1 || month > 12 || weekOfMonth < 1) {
+          // Fallback: treat period as week-of-year (legacy)
+          final firstDayOfYear = DateTime(year, 1, 1);
+          int daysToFirstSunday = (DateTime.sunday - firstDayOfYear.weekday + 7) % 7;
+          if (daysToFirstSunday == 0 && firstDayOfYear.weekday != DateTime.sunday) {
+            daysToFirstSunday = 7;
+          }
+          final firstSunday = firstDayOfYear.add(Duration(days: daysToFirstSunday));
+          final startDate = firstSunday.add(Duration(days: (period - 1) * 7));
+          final endDate = startDate.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+          return {'startDate': startDate, 'endDate': endDate};
         }
-        final firstMonday = firstDayOfYear.add(Duration(days: daysToFirstMonday));
-        final startDate = firstMonday.add(Duration(days: (period - 1) * 7));
+        // Calculate the first Sunday of the month and then the requested week
+        final firstDayOfMonth = DateTime(year, month, 1);
+        final firstSunday = getStartOfWeek(firstDayOfMonth);
+        final startDate = firstSunday.add(Duration(days: (weekOfMonth - 1) * 7));
         final endDate = startDate.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
         return {'startDate': startDate, 'endDate': endDate};
       

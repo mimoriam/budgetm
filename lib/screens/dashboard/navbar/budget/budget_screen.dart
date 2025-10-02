@@ -199,6 +199,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                   children: [
                     _buildBudgetTypeSelector(context, provider),
                     const SizedBox(height: 20),
+                    _buildPeriodSelector(context, provider),
+                    const SizedBox(height: 20),
                     _buildPieChart(context, provider),
                     const SizedBox(height: 24),
                     _buildCategoryList(context, provider),
@@ -336,6 +338,194 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
+  Widget _buildPeriodSelector(BuildContext context, BudgetProvider provider) {
+    switch (provider.selectedBudgetType) {
+      case BudgetType.weekly:
+        return _buildWeeklySelector(context, provider);
+      case BudgetType.monthly:
+        return _buildMonthlySelector(context, provider);
+      case BudgetType.yearly:
+        return _buildYearlySelector(context, provider);
+    }
+  }
+
+  Widget _buildWeeklySelector(BuildContext context, BudgetProvider provider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Selected Week',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          DropdownButton<int>(
+            value: provider.selectedWeek,
+            items: List<DropdownMenuItem<int>>.generate(
+              5,
+              (index) => DropdownMenuItem<int>(
+                value: index + 1,
+                child: Text('Week ${index + 1}'),
+              ),
+            ),
+            onChanged: (value) {
+              if (value != null) provider.changeSelectedWeek(value);
+            },
+            underline: const SizedBox.shrink(),
+            iconEnabledColor: AppColors.gradientEnd,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.gradientEnd,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildMonthlySelector(BuildContext context, BudgetProvider provider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () async {
+          final pickedDate = await showDatePicker(
+            context: context,
+            initialDate: provider.selectedMonth,
+            firstDate: DateTime(2020),
+            lastDate: DateTime(2100),
+            initialDatePickerMode: DatePickerMode.year,
+            helpText: 'Select Month',
+          );
+          if (pickedDate != null) {
+            provider.changeSelectedMonth(pickedDate);
+          }
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Selected Month',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            Row(
+              children: [
+                Text(
+                  _formatMonth(provider.selectedMonth),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.gradientEnd,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.calendar_month, color: AppColors.gradientEnd, size: 20),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYearlySelector(BuildContext context, BudgetProvider provider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () async {
+          final pickedDate = await showDatePicker(
+            context: context,
+            initialDate: provider.selectedYear,
+            firstDate: DateTime(2020),
+            lastDate: DateTime(2100),
+            initialDatePickerMode: DatePickerMode.year,
+            helpText: 'Select Year',
+          );
+          if (pickedDate != null) {
+            provider.changeSelectedYear(pickedDate);
+          }
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Selected Year',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            Row(
+              children: [
+                Text(
+                  '${provider.selectedYear.year}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.gradientEnd,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.calendar_today, color: AppColors.gradientEnd, size: 20),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatMonth(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
   Widget _buildPieChart(BuildContext context, BudgetProvider provider) {
     if (provider.categoryBudgetData.isEmpty) {
       return _buildEmptyState(context);
@@ -438,12 +628,18 @@ class _BudgetScreenState extends State<BudgetScreen>
     List<CategoryBudgetData> data,
   ) {
     final total = data.fold(0.0, (sum, item) => sum + item.spentAmount);
-
+    final useEqualSlices = total <= 0;
+    if (useEqualSlices) {
+      // Diagnostic: total is zero (no spending yet). Render equal slices and avoid division by zero.
+      print('BudgetScreen: totalSpent==0 - rendering equal slices for ${data.length} categories');
+    }
+ 
     return data.map((item) {
-      final percentage = (item.spentAmount / total * 100);
+      final value = useEqualSlices ? 1.0 : item.spentAmount;
+      final percentage = useEqualSlices ? 0.0 : (item.spentAmount / total * 100);
       final categoryColor = _getColorFromString(item.categoryColor);
       return PieChartSectionData(
-        value: item.spentAmount,
+        value: value,
         title: '${percentage.toStringAsFixed(1)}%',
         color: categoryColor,
         radius: 50,

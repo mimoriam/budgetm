@@ -1,152 +1,86 @@
-# Budget Refactor Architectural Plan
+# Budget Refactor Plan
 
-This document outlines the architectural plan for refactoring the budget feature in the Budgetm application.
+This document outlines the plan to refactor the budget feature to include weekly, monthly, and yearly budget selectors with fixed date ranges.
 
-## 1. Data Models
+## 1. Model Changes (`lib/models/budget.dart`)
 
-### `Budget` Model
+The `Budget` model is already in good shape, but the week calculation needs to be adjusted to meet the "Sunday to Saturday" requirement.
 
-The `Budget` model will be updated to support weekly, monthly, and yearly budgets.
+- **Update `getStartOfWeek`**: Modify this helper to consider Sunday as the first day of the week.
+- **Update `getEndOfWeek`**: Modify this helper to consider Saturday as the last day of the week.
+- **Update `getWeekNumber`**: Ensure this is compatible with the new Sunday-Saturday week definition.
+- **Update `getDateRange` for `BudgetType.weekly`**: This should use the updated `getStartOfWeek` and `getEndOfWeek` to calculate the correct date range.
 
-**File:** `lib/models/budget.dart`
-
+### Current `getStartOfWeek` (Monday-based)
 ```dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-enum BudgetType { weekly, monthly, yearly }
-
-class Budget {
-  final String id; // Composite key: {userId}_{categoryId}_{type}_{year}_{period}
-  final String categoryId;
-  final double limit;
-  final BudgetType type;
-  final int year;
-  final int period; // Week number, month number, or year
-  final DateTime startDate;
-  final DateTime endDate;
-  final String userId;
-  double spentAmount; // This will be calculated dynamically
-
-  Budget({
-    required this.id,
-    required this.categoryId,
-    required this.limit,
-    required this.type,
-    required this.year,
-    required this.period,
-    required this.startDate,
-    required this.endDate,
-    required this.userId,
-    this.spentAmount = 0.0,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'categoryId': categoryId,
-      'limit': limit,
-      'type': type.toString().split('.').last,
-      'year': year,
-      'period': period,
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
-      'userId': userId,
-    };
-  }
-
-  factory Budget.fromFirestore(DocumentSnapshot doc) {
-    final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Budget(
-      id: doc.id,
-      categoryId: data['categoryId'] ?? '',
-      limit: (data['limit'] as num?)?.toDouble() ?? 0.0,
-      type: _budgetTypeFromString(data['type']),
-      year: data['year'] ?? DateTime.now().year,
-      period: data['period'] ?? 0,
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
-      userId: data['userId'] ?? '',
-    );
-  }
-
-  static BudgetType _budgetTypeFromString(String? type) {
-    switch (type) {
-      case 'weekly':
-        return BudgetType.weekly;
-      case 'monthly':
-        return BudgetType.monthly;
-      case 'yearly':
-        return BudgetType.yearly;
-      default:
-        return BudgetType.monthly;
-    }
-  }
+static DateTime getStartOfWeek(DateTime date) {
+  final daysFromMonday = (date.weekday - DateTime.monday + 7) % 7;
+  return DateTime(date.year, date.month, date.day).subtract(Duration(days: daysFromMonday));
 }
 ```
 
-## 2. Screen Structure
+### Proposed `getStartOfWeek` (Sunday-based)
+```dart
+static DateTime getStartOfWeek(DateTime date) {
+  final daysFromSunday = date.weekday % 7;
+  return DateTime(date.year, date.month, date.day).subtract(Duration(days: daysFromSunday));
+}
+```
 
-### `budget_screen.dart`
+## 2. Provider/State Management Changes (`lib/viewmodels/budget_provider.dart`)
 
-*   **State Management:** The screen will be a `StatefulWidget` to manage the selected filter chip.
-*   **Widgets:**
-    *   `AppBar`: Will remain mostly the same.
-    *   `Filter Chips`: A `Row` of `ChoiceChip` widgets for "Weekly", "Monthly", and "Yearly".
-    *   `(+) Button`: An `IconButton` next to the "Categories" title.
-    *   `Budget List`: A `ListView.builder` to display budget cards.
-    *   `Empty State`: A widget to show when there are no budgets.
+The `BudgetProvider` needs to be updated to manage the state for the new selectors and to filter the budgets correctly.
 
-### `add_budget_screen.dart` (New File)
+- **Add State for Selectors**:
+  - `_selectedWeek`: An integer to store the selected week number (1-4).
+  - `_selectedMonth`: A `DateTime` to store the selected month.
+  - `_selectedYear`: A `DateTime` to store the selected year.
 
-*   **State Management:** A `StatefulWidget` to manage the form state.
-*   **Widgets:**
-    *   `AppBar`: With a title "Add Budget".
-    *   `Category Selector`: A dropdown or a list to select a category.
-    *   `Balance Limit Input`: A `TextFormField` for the budget limit.
-    *   `Budget Type Selector`: `ChoiceChip` widgets for "Weekly", "Monthly", and "Yearly".
-    *   `Save Button`: A button to save the new budget.
+- **Update `addBudget`**:
+  - When creating a weekly budget, use the updated `Budget.getDateRange` to ensure the correct Sunday-Saturday date range is assigned.
 
-## 3. Implementation Strategy
+- **Update `categoryBudgetData` Getter**:
+  - This getter needs to be completely reworked to filter budgets based on the `_selectedBudgetType` and the new selector states (`_selectedWeek`, `_selectedMonth`, `_selectedYear`).
+  - For `BudgetType.weekly`, it should filter budgets that fall within the selected week of the current month.
+  - For `BudgetType.monthly`, it should filter budgets for the `_selectedMonth`.
+  - For `BudgetType.yearly`, it should filter budgets for the `_selectedYear`.
 
-### `BudgetProvider` (`lib/viewmodels/budget_provider.dart`)
+- **Add State Management Methods**:
+  - `changeSelectedWeek(int week)`
+  - `changeSelectedMonth(DateTime month)`
+  - `changeSelectedYear(DateTime year)`
+  - These methods will update the state and call `notifyListeners()`.
 
-The `BudgetProvider` will be significantly refactored.
+## 3. UI Changes (`lib/screens/dashboard/navbar/budget/budget_screen.dart`)
 
-*   **Remove Automatic Budget Creation:** The logic that automatically creates budgets from transactions will be removed.
-*   **Filtering Logic:**
-    *   A new property `selectedBudgetType` will be added to the provider.
-    *   The `budgets` getter will be updated to filter budgets based on the `selectedBudgetType`.
-*   **Transaction Mapping:**
-    *   When a budget is created, the `BudgetProvider` will fetch all transactions for the selected category.
-    *   It will then filter the transactions that fall within the budget's `startDate` and `endDate`.
-    *   The `spentAmount` for the budget will be calculated by summing up the amounts of the mapped transactions. This will not be stored in Firestore but calculated on the fly.
-*   **Weekly Budget Calculation:**
-    *   A helper function will be created to calculate the start and end of the week (Monday to Sunday) for a given date.
-*   **New Methods:**
-    *   `addBudget(Budget budget)`: To add a new budget to Firestore.
-    *   `getTransactionsForBudget(Budget budget)`: To get the list of transactions for a specific budget.
+The `BudgetScreen` will be updated to include the new selectors and to display the filtered budget data.
 
-### `firestore_service.dart`
+- **Create New Selector Widgets**:
+  - `_buildWeekSelector()`: A widget with chips or a dropdown for "Week 1" to "Week 4".
+  - `_buildMonthSelector()`: A widget that allows the user to pick a month (e.g., using a `showDatePicker` dialog).
+  - `_buildYearSelector()`: A widget that allows the user to pick a year.
 
-*   **New Methods:**
-    *   `addBudget(Budget budget)`: To add a new budget document.
-    *   `getBudgets(BudgetType type)`: To fetch budgets of a specific type.
+- **Conditionally Render Selectors**:
+  - In the `build` method, after `_buildBudgetTypeSelector`, add logic to show the appropriate selector based on `provider.selectedBudgetType`.
 
-### Workflow Diagram
+- **Connect Selectors to Provider**:
+  - The `onTap` or `onChanged` callbacks of the new selectors will call the corresponding methods in the `BudgetProvider` (e.g., `provider.changeSelectedWeek(2)`).
+
+- **Update UI to Display Filtered Data**:
+  - The rest of the UI (`_buildPieChart`, `_buildCategoryList`) should automatically update because they use `provider.categoryBudgetData`, which will now return the correctly filtered data.
+
+## 4. Workflow Diagram
+
+This Mermaid diagram illustrates the new data flow for filtering and displaying budgets.
 
 ```mermaid
 graph TD
-    A[User opens Budget Screen] --> B{Budgets exist?};
-    B -->|Yes| C[Display budget list];
-    B -->|No| D[Show empty state];
-    C --> E{User selects filter};
-    E --> F[Filter budget list];
-    A --> G[User taps '+' button];
-    G --> H[Navigate to Add Budget Screen];
-    H --> I[User fills form and saves];
-    I --> J[Call BudgetProvider.addBudget];
-    J --> K[Save budget to Firestore];
-    K --> L[Map existing transactions];
-    L --> M[Update UI];
-    C --> N[User taps on a budget];
-    N --> O[Navigate to Budget Detail Screen];
-    O --> P[Show transactions for that budget];
+    A[User selects Budget Type] --> B{BudgetProvider};
+    B --> C{Conditionally render selector};
+    C --> D[User selects Week/Month/Year];
+    D --> E{BudgetProvider updates state};
+    E --> F[categoryBudgetData filters budgets];
+    F --> G[UI updates with filtered data];
+```
+
+This plan provides a clear path to implementing the requested features. The next step is to switch to `code` mode and start implementing these changes.
