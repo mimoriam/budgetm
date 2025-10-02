@@ -9,14 +9,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 class BudgetProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService.instance;
   
-  // Selected date
-  DateTime _selectedDate = DateTime.now();
+  // Selected budget type filter
+  BudgetType _selectedBudgetType = BudgetType.monthly;
   
   // Data
   List<Budget> _budgets = [];
   List<Category> _allCategories = [];
   List<Category> _expenseCategories = [];
-  List<FirestoreTransaction> _transactions = [];
+  List<FirestoreTransaction> _allTransactions = [];
   
   // Selected category for pie chart drill-down
   String? _selectedCategoryId;
@@ -28,19 +28,17 @@ class BudgetProvider with ChangeNotifier {
   StreamSubscription<List<FirestoreTransaction>>? _transactionsSubscription;
   
   // Getters
-  DateTime get selectedDate => _selectedDate;
-  int get selectedYear => _selectedDate.year;
-  int get selectedMonth => _selectedDate.month;
+  BudgetType get selectedBudgetType => _selectedBudgetType;
   List<Budget> get budgets => _budgets;
   List<Category> get allCategories => _allCategories;
   List<Category> get expenseCategories => _expenseCategories;
-  List<FirestoreTransaction> get transactions => _transactions;
+  List<FirestoreTransaction> get allTransactions => _allTransactions;
   String? get selectedCategoryId => _selectedCategoryId;
   bool get isLoading => _isLoading;
   
-  // Get combined budget data (categories with their budgets)
+  // Get combined budget data (categories with their budgets and calculated spent amounts)
   List<CategoryBudgetData> get categoryBudgetData {
-    // Sort categories by displayOrder (0 first) without mutating the original list
+    // Sort categories by displayOrder
     final sortedCategories = [..._expenseCategories]..sort((a, b) {
       final aOrder = a.displayOrder ?? 0;
       final bOrder = b.displayOrder ?? 0;
@@ -48,33 +46,67 @@ class BudgetProvider with ChangeNotifier {
     });
 
     return sortedCategories.map((category) {
+      // Find budget for this category with selected type
       final budget = _budgets.firstWhere(
-        (b) => b.categoryId == category.id,
+        (b) => b.categoryId == category.id && b.type == _selectedBudgetType,
         orElse: () => Budget(
           id: '',
           categoryId: category.id,
-          year: selectedYear,
-          month: selectedMonth,
-          spentAmount: 0.0,
+          limit: 0.0,
+          type: _selectedBudgetType,
+          year: DateTime.now().year,
+          period: 0,
+          startDate: DateTime.now(),
+          endDate: DateTime.now(),
           userId: '',
+          spentAmount: 0.0,
         ),
       );
+      
+      // Calculate spent amount from transactions
+      double spentAmount = 0.0;
+      if (budget.id.isNotEmpty) {
+        spentAmount = _calculateSpentAmount(budget);
+      }
+      
       return CategoryBudgetData(
         category: category,
-        budget: budget,
+        budget: budget.copyWith(spentAmount: spentAmount),
       );
     }).toList();
   }
   
-  // Get total spent amount
+  // Calculate spent amount for a budget
+  double _calculateSpentAmount(Budget budget) {
+    return _allTransactions
+        .where((t) => 
+            t.type == 'expense' &&
+            t.categoryId == budget.categoryId &&
+            t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
+            t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))))
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+  
+  // Get transactions for a specific budget
+  List<FirestoreTransaction> getTransactionsForBudget(Budget budget) {
+    return _allTransactions
+        .where((t) => 
+            t.type == 'expense' &&
+            t.categoryId == budget.categoryId &&
+            t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
+            t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))))
+        .toList();
+  }
+  
+  // Get total spent amount for selected budget type
   double get totalSpent {
-    return _budgets.fold(0.0, (sum, budget) => sum + budget.spentAmount);
+    return categoryBudgetData.fold(0.0, (sum, data) => sum + data.spentAmount);
   }
   
   // Get transactions for selected category
   List<FirestoreTransaction> get filteredTransactions {
-    if (_selectedCategoryId == null) return _transactions;
-    return _transactions.where((t) => t.categoryId == _selectedCategoryId).toList();
+    if (_selectedCategoryId == null) return _allTransactions;
+    return _allTransactions.where((t) => t.categoryId == _selectedCategoryId).toList();
   }
   
   // Initialize and load data
@@ -88,32 +120,36 @@ class BudgetProvider with ChangeNotifier {
     // Cancel existing subscription if any
     _transactionsSubscription?.cancel();
     
-    // Subscribe to all transactions stream and filter for current month
+    // Subscribe to all transactions stream
     _transactionsSubscription = _firestoreService
         .streamTransactions()
         .listen((transactions) {
-      // Filter for expenses in the selected month
-      final startDate = DateTime(selectedYear, selectedMonth, 1);
-      final endDate = DateTime(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-      
-      _transactions = transactions.where((t) {
-        return t.type == 'expense' &&
-            t.date.isAfter(startDate) &&
-            t.date.isBefore(endDate);
-      }).toList();
-      
-      // Reload budgets to recalculate spent amounts
-      _reloadBudgets();
+      _allTransactions = transactions.where((t) => t.type == 'expense').toList();
+      notifyListeners();
     });
   }
   
-  // Reload budgets without full data refresh
-  Future<void> _reloadBudgets() async {
+  // Load all data
+  Future<void> loadData() async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
-      _budgets = await _firestoreService.getBudgetsForMonth(selectedYear, selectedMonth);
-      notifyListeners();
+      // Fetch categories
+      await _fetchCategories();
+      
+      // Load all budgets
+      _budgets = await _firestoreService.getAllBudgets();
+      
+      // Load all expense transactions
+      final allTransactions = await _firestoreService.getAllTransactions();
+      _allTransactions = allTransactions.where((t) => t.type == 'expense').toList();
+      
     } catch (e) {
-      print('Error reloading budgets: $e');
+      print('Error loading budget data: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
@@ -133,49 +169,11 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
   }
   
-  // Load all data for the selected month
-  Future<void> loadData() async {
-    _isLoading = true;
+  // Change selected budget type
+  void changeBudgetType(BudgetType type) {
+    _selectedBudgetType = type;
+    _selectedCategoryId = null; // Reset selection when changing type
     notifyListeners();
-    
-    try {
-      await _fetchCategories();
-      
-      // Load budgets for selected month
-      _budgets = await _firestoreService.getBudgetsForMonth(selectedYear, selectedMonth);
-      
-      // Load transactions for selected month
-      final startDate = DateTime(selectedYear, selectedMonth, 1);
-      final endDate = DateTime(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
-      final allTransactions = await _firestoreService.getTransactionsForDateRange(startDate, endDate);
-      _transactions = allTransactions.where((t) => t.type == 'expense').toList();
-      
-    } catch (e) {
-      print('Error loading budget data: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-  
-  // Change selected month/year
-  void changeMonth(int year, int month) {
-    _selectedDate = DateTime(year, month);
-    _selectedCategoryId = null; // Reset selection when changing month
-    loadData();
-    _setupTransactionsListener(); // Re-setup listener for new month
-  }
-  
-  // Navigate to previous month
-  void previousMonth() {
-    final newDate = DateTime(selectedYear, selectedMonth - 1);
-    changeMonth(newDate.year, newDate.month);
-  }
-  
-  // Navigate to next month
-  void nextMonth() {
-    final newDate = DateTime(selectedYear, selectedMonth + 1);
-    changeMonth(newDate.year, newDate.month);
   }
   
   // Select category for pie chart drill-down
@@ -190,46 +188,110 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Set or update budget limit for a category (for selected month/year)
-  Future<void> setBudgetLimit(String categoryId, double limit) async {
+  // Add a new budget
+  Future<void> addBudget(String categoryId, double limit, BudgetType type) async {
     try {
-      // Try to find existing budget for the category
-      final existing = _budgets.firstWhere(
-        (b) => b.categoryId == categoryId,
+      final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (userId.isEmpty) {
+        print('BudgetProvider.addBudget: aborted - user not authenticated');
+        throw Exception('User not authenticated');
+      }
+      
+      print('BudgetProvider.addBudget called: category=$categoryId limit=$limit type=$type');
+      final now = DateTime.now();
+      int year;
+      int period;
+      Map<String, DateTime> dateRange;
+      
+      switch (type) {
+        case BudgetType.weekly:
+          year = now.year;
+          period = Budget.getWeekNumber(now);
+          dateRange = Budget.getDateRange(type, year, period);
+          break;
+        case BudgetType.monthly:
+          year = now.year;
+          period = now.month;
+          dateRange = Budget.getDateRange(type, year, period);
+          break;
+        case BudgetType.yearly:
+          year = now.year;
+          period = year;
+          dateRange = Budget.getDateRange(type, year, period);
+          break;
+      }
+      
+      final budgetId = Budget.generateId(userId, categoryId, type, year, period);
+      print('BudgetProvider.addBudget: generated budgetId=$budgetId');
+      
+      // Check for duplicate budget
+      final existingBudget = _budgets.firstWhere(
+        (b) => b.categoryId == categoryId &&
+               b.type == type &&
+               b.year == year &&
+               b.period == period,
         orElse: () => Budget(
           id: '',
-          categoryId: categoryId,
-          year: selectedYear,
-          month: selectedMonth,
-          spentAmount: 0.0,
+          categoryId: '',
+          limit: 0.0,
+          type: type,
+          year: 0,
+          period: 0,
+          startDate: DateTime.now(),
+          endDate: DateTime.now(),
           userId: '',
         ),
       );
-
-      if (existing.id.isNotEmpty) {
-        // Update existing budget
-        final updated = existing.copyWith(limit: limit);
-        await _firestoreService.updateBudget(updated.id, updated);
-      } else {
-        // Create new budget document using current user id for deterministic id
-        final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-        final budgetId = Budget.generateId(userId, categoryId, selectedYear, selectedMonth);
-        final newBudget = Budget(
-          id: budgetId,
-          categoryId: categoryId,
-          year: selectedYear,
-          month: selectedMonth,
-          spentAmount: 0.0,
-          limit: limit,
-          userId: userId,
-        );
-        await _firestoreService.addBudget(newBudget);
+      
+      if (existingBudget.id.isNotEmpty) {
+        print('BudgetProvider.addBudget: duplicate budget found for category=$categoryId, type=$type, year=$year, period=$period');
+        throw Exception('A budget for this category already exists for this period.');
       }
-
-      // Refresh local budgets
-      await _reloadBudgets();
+      
+      final newBudget = Budget(
+        id: budgetId,
+        categoryId: categoryId,
+        limit: limit,
+        type: type,
+        year: year,
+        period: period,
+        startDate: dateRange['startDate']!,
+        endDate: dateRange['endDate']!,
+        userId: userId,
+      );
+      
+      print('BudgetProvider.addBudget: calling FirestoreService.addBudget with ${newBudget.toString()}');
+      await _firestoreService.addBudget(newBudget);
+      print('BudgetProvider.addBudget: FirestoreService.addBudget completed for id=$budgetId');
+      await loadData();
+      print('BudgetProvider.addBudget: loadData completed, budgets count=${_budgets.length}');
     } catch (e) {
-      print('Error setting budget limit: $e');
+      print('Error adding budget: $e');
+      rethrow;
+    }
+  }
+  
+  // Update budget limit
+  Future<void> updateBudgetLimit(String budgetId, double limit) async {
+    try {
+      final budget = _budgets.firstWhere((b) => b.id == budgetId);
+      final updated = budget.copyWith(limit: limit);
+      await _firestoreService.updateBudget(budgetId, updated);
+      await loadData();
+    } catch (e) {
+      print('Error updating budget limit: $e');
+      rethrow;
+    }
+  }
+  
+  // Delete a budget
+  Future<void> deleteBudget(String budgetId) async {
+    try {
+      await _firestoreService.deleteBudget(budgetId);
+      await loadData();
+    } catch (e) {
+      print('Error deleting budget: $e');
+      rethrow;
     }
   }
   

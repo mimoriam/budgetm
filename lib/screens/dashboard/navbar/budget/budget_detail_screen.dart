@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/category.dart';
+import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
@@ -7,12 +8,12 @@ import 'package:intl/intl.dart';
 
 class BudgetDetailScreen extends StatefulWidget {
   final Category category;
-  final DateTime selectedDate;
+  final Budget budget;
 
   const BudgetDetailScreen({
     super.key,
     required this.category,
-    required this.selectedDate,
+    required this.budget,
   });
 
   @override
@@ -36,22 +37,8 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     });
 
     try {
-      final startDate = DateTime(
-        widget.selectedDate.year,
-        widget.selectedDate.month,
-        1,
-      );
-      final endDate = DateTime(
-        widget.selectedDate.year,
-        widget.selectedDate.month + 1,
-        0,
-        23,
-        59,
-        59,
-      );
-
       final allTransactions = await _firestoreService
-          .getTransactionsForDateRange(startDate, endDate);
+          .getTransactionsForDateRange(widget.budget.startDate, widget.budget.endDate);
 
       final categoryTransactions = allTransactions
           .where(
@@ -164,7 +151,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'No transactions found for this category in ${DateFormat.MMMM().format(widget.selectedDate)}',
+              'No transactions found for this category in the selected period',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
             ),

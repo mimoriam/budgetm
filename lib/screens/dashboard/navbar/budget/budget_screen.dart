@@ -1,13 +1,15 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/budget/add_budget_screen.dart';
 import 'dart:ui';
 import 'package:budgetm/screens/dashboard/main_screen.dart';
 
@@ -103,27 +105,26 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   void _onScroll() {
     if (!mounted) return;
+    if (!_scrollController.hasClients) return;
+    
     final provider = Provider.of<NavbarVisibilityProvider>(
       context,
       listen: false,
     );
+    final direction = _scrollController.position.userScrollDirection;
 
-    final offset = _scrollController.hasClients
-        ? _scrollController.position.pixels
-        : 0.0;
-    const threshold = 5.0;
-    if (offset > _lastScrollOffset + threshold) {
+    if (direction == ScrollDirection.reverse) {
       provider.setNavBarVisibility(false);
-    } else if (offset < _lastScrollOffset - threshold) {
+    } else if (direction == ScrollDirection.forward) {
       provider.setNavBarVisibility(true);
     }
-    _lastScrollOffset = offset;
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _vacationProvider?.removeListener(_vacationListener);
+    _navbarVisibilityProvider?.removeListener(_navbarListener);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -187,22 +188,23 @@ class _BudgetScreenState extends State<BudgetScreen>
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                return SingleChildScrollView(
+                // Use ListView instead of SingleChildScrollView to ensure proper scrolling behavior
+                return ListView(
                   controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20.0,
                     vertical: 12.0,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildMonthYearSelector(context, provider),
-                      const SizedBox(height: 20),
-                      _buildPieChart(context, provider),
-                      const SizedBox(height: 24),
-                      _buildCategoryList(context, provider),
-                    ],
-                  ),
+                  children: [
+                    _buildBudgetTypeSelector(context, provider),
+                    const SizedBox(height: 20),
+                    _buildPieChart(context, provider),
+                    const SizedBox(height: 24),
+                    _buildCategoryList(context, provider),
+                    // Add bottom spacing so last item is reachable above navbar
+                    const SizedBox(height: 24),
+                  ],
                 );
               },
             ),
@@ -241,6 +243,19 @@ class _BudgetScreenState extends State<BudgetScreen>
                   fontSize: 22,
                 ),
               ),
+              // Add button to create a new budget even when no budgets exist
+              IconButton(
+                icon: const Icon(Icons.add, color: Colors.white),
+                onPressed: () {
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: const AddBudgetScreen(),
+                    withNavBar: false,
+                    pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                  );
+                },
+                tooltip: 'Add Budget',
+              ),
             ],
           ),
         ),
@@ -248,13 +263,10 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
-  Widget _buildMonthYearSelector(
+  Widget _buildBudgetTypeSelector(
     BuildContext context,
     BudgetProvider provider,
   ) {
-    final monthName = DateFormat.MMMM().format(provider.selectedDate);
-    final year = provider.selectedYear;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -269,26 +281,57 @@ class _BudgetScreenState extends State<BudgetScreen>
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: provider.previousMonth,
-            color: AppColors.gradientEnd,
+          _buildTypeChip(
+            context,
+            'Weekly',
+            BudgetType.weekly,
+            provider.selectedBudgetType == BudgetType.weekly,
+            () => provider.changeBudgetType(BudgetType.weekly),
           ),
-          Text(
-            '$monthName $year',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+          _buildTypeChip(
+            context,
+            'Monthly',
+            BudgetType.monthly,
+            provider.selectedBudgetType == BudgetType.monthly,
+            () => provider.changeBudgetType(BudgetType.monthly),
           ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: provider.nextMonth,
-            color: AppColors.gradientEnd,
+          _buildTypeChip(
+            context,
+            'Yearly',
+            BudgetType.yearly,
+            provider.selectedBudgetType == BudgetType.yearly,
+            () => provider.changeBudgetType(BudgetType.yearly),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTypeChip(
+    BuildContext context,
+    String label,
+    BudgetType type,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gradientEnd : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+          ),
+        ),
       ),
     );
   }
@@ -301,14 +344,28 @@ class _BudgetScreenState extends State<BudgetScreen>
     final selectedCategory = provider.selectedCategoryId;
     final showingAll = selectedCategory == null;
 
-    // Filter data based on selection
+    // Filter data: show budgets with limit>0 OR spentAmount>0
+    // This ensures newly created budgets (with limit but no spending yet) are visible
+    final totalCount = provider.categoryBudgetData.length;
     final displayData = showingAll
         ? provider.categoryBudgetData
-              .where((data) => data.spentAmount > 0)
+              .where((data) => data.spentAmount > 0 || data.limit > 0)
               .toList()
         : provider.categoryBudgetData
               .where((data) => data.category.id == selectedCategory)
               .toList();
+    
+    // Diagnostic logs
+    try {
+      print('BudgetScreen: selectedCategory=$selectedCategory showingAll=$showingAll totalCategories=$totalCount displayCount=${displayData.length}');
+      final hiddenByFilter = provider.categoryBudgetData
+          .where((d) => d.spentAmount == 0 && d.limit == 0)
+          .map((d) => {'categoryId': d.category.id, 'name': d.categoryName})
+          .toList();
+      print('BudgetScreen: budgets hidden (no limit and no spending): $hiddenByFilter');
+    } catch (e) {
+      print('BudgetScreen: error while logging diagnostic info: $e');
+    }
 
     if (displayData.isEmpty) {
       return _buildEmptyState(context);
@@ -436,9 +493,10 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   Widget _buildCategoryList(BuildContext context, BudgetProvider provider) {
-    // Only show categories with spending > 0
+    // Show categories with spending > 0 OR limit > 0 (budgets exist)
+    // This ensures newly created budgets appear even with no spending yet
     final data = provider.categoryBudgetData
-        .where((d) => d.spentAmount > 0)
+        .where((d) => d.spentAmount > 0 || d.limit > 0)
         .toList();
 
     if (data.isEmpty) {
@@ -448,11 +506,28 @@ class _BudgetScreenState extends State<BudgetScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Categories',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Categories',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              color: AppColors.gradientEnd,
+              onPressed: () {
+                PersistentNavBarNavigator.pushNewScreen(
+                  context,
+                  screen: const AddBudgetScreen(),
+                  withNavBar: false,
+                  pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                );
+              },
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         ...data.map((item) => _buildCategoryCard(context, item, provider)),
@@ -479,7 +554,7 @@ class _BudgetScreenState extends State<BudgetScreen>
           context,
           screen: BudgetDetailScreen(
             category: data.category,
-            selectedDate: provider.selectedDate,
+            budget: data.budget,
           ),
           withNavBar: false,
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
@@ -542,16 +617,7 @@ class _BudgetScreenState extends State<BudgetScreen>
               ],
             ),
 
-            // const SizedBox(height: 8),
-
-            // // Row 2: description label (its own line)
-            // Text(
-            //   'Spent this month',
-            //   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            //   softWrap: true,
-            // ),
-
-            // const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
             // Row 3: amount, optional limit and edit button — amount and limit grouped on left, edit on right
             Row(
@@ -631,10 +697,41 @@ class _BudgetScreenState extends State<BudgetScreen>
                         );
                         return;
                       }
-                      await provider.setBudgetLimit(data.category.id, parsed);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Budget limit saved')),
-                      );
+                      
+                      // Update budget limit using the budget ID
+                      try {
+                        if (data.budget.id.isNotEmpty) {
+                          await provider.updateBudgetLimit(data.budget.id, parsed);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Budget limit saved')),
+                            );
+                          }
+                        } else {
+                          // If budget doesn't exist, create a new one
+                          await provider.addBudget(
+                            data.category.id,
+                            parsed,
+                            provider.selectedBudgetType,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Budget created')),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          // Extract clean error message from exception
+                          String errorMessage = e.toString();
+                          if (errorMessage.startsWith('Exception: ')) {
+                            errorMessage = errorMessage.substring('Exception: '.length);
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(errorMessage)),
+                          );
+                        }
+                      }
                     }
                   },
                 ),
@@ -651,7 +748,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     value: progress,
                     backgroundColor: Colors.grey.shade300,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      isOverBudget ? Colors.red : Colors.green,
+                      progress > 1.0 ? Colors.red : (isOverBudget ? Colors.red : Colors.green),
                     ),
                   ),
                   const SizedBox(height: 8),
