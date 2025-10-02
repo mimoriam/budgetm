@@ -4,6 +4,8 @@ import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:intl/intl.dart';
 
 class BudgetDetailScreen extends StatefulWidget {
@@ -119,6 +121,64 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                         fontSize: 22,
                       ),
                     ),
+                  ),
+                  // Delete button for the budget (destructive action)
+                  IconButton(
+                    icon: const Icon(Icons.delete_forever),
+                    color: Colors.red,
+                    onPressed: () async {
+                      // Diagnostic log: user initiated delete
+                      print('BudgetDetail: delete pressed for budgetId=${widget.budget.id}');
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Delete budget'),
+                          content: const Text('Are you sure you want to delete this budget? This action cannot be undone.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+      
+                      // Diagnostic log: result from confirmation dialog
+                      print('BudgetDetail: delete confirmed=$confirmed for budgetId=${widget.budget.id}');
+      
+                      if (confirmed == true) {
+                        try {
+                          // Attempt deletion and log outcome
+                          await Provider.of<BudgetProvider>(context, listen: false)
+                              .deleteBudget(widget.budget.id);
+                          print('BudgetDetail: delete succeeded for budgetId=${widget.budget.id}');
+      
+                          // Ensure budgets list is refreshed so UI shows deletion immediately
+                          await Provider.of<BudgetProvider>(context, listen: false).initialize();
+      
+                          if (mounted) {
+                            // Navigate back after deletion
+                            Navigator.of(context).pop();
+                          }
+                        } catch (e) {
+                          print('BudgetDetail: delete failed for budgetId=${widget.budget.id} error=$e');
+                          // Optionally show an error
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Failed to delete budget')),
+                            );
+                          }
+                        }
+                      }
+                    },
                   ),
                 ],
               ),

@@ -197,9 +197,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     vertical: 12.0,
                   ),
                   children: [
-                    _buildBudgetTypeSelector(context, provider),
-                    const SizedBox(height: 20),
-                    _buildPeriodSelector(context, provider),
+                    _buildBudgetSelectors(context, provider),
                     const SizedBox(height: 20),
                     _buildPieChart(context, provider),
                     const SizedBox(height: 24),
@@ -265,10 +263,33 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
-  Widget _buildBudgetTypeSelector(
+  Widget _buildBudgetSelectors(
     BuildContext context,
     BudgetProvider provider,
   ) {
+    // Determine period navigation callbacks based on selected budget type
+    VoidCallback onPrevious;
+    VoidCallback onNext;
+    VoidCallback onQuickJump;
+
+    switch (provider.selectedBudgetType) {
+      case BudgetType.weekly:
+        onPrevious = provider.goToPreviousWeek;
+        onNext = provider.goToNextWeek;
+        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
+        break;
+      case BudgetType.monthly:
+        onPrevious = provider.goToPreviousMonth;
+        onNext = provider.goToNextMonth;
+        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
+        break;
+      case BudgetType.yearly:
+        onPrevious = provider.goToPreviousYear;
+        onNext = provider.goToNextYear;
+        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.year);
+        break;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -282,29 +303,51 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildTypeChip(
-            context,
-            'Weekly',
-            BudgetType.weekly,
-            provider.selectedBudgetType == BudgetType.weekly,
-            () => provider.changeBudgetType(BudgetType.weekly),
+          Builder(
+            builder: (ctx) {
+              // Diagnostic: log selected type and displayed period to help debug UI updates
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                print('BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}');
+              });
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildTypeChip(
+                    context,
+                    'Weekly',
+                    BudgetType.weekly,
+                    provider.selectedBudgetType == BudgetType.weekly,
+                    () => provider.changeBudgetType(BudgetType.weekly),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildTypeChip(
+                    context,
+                    'Monthly',
+                    BudgetType.monthly,
+                    provider.selectedBudgetType == BudgetType.monthly,
+                    () => provider.changeBudgetType(BudgetType.monthly),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildTypeChip(
+                    context,
+                    'Yearly',
+                    BudgetType.yearly,
+                    provider.selectedBudgetType == BudgetType.yearly,
+                    () => provider.changeBudgetType(BudgetType.yearly),
+                  ),
+                ],
+              );
+            },
           ),
-          _buildTypeChip(
-            context,
-            'Monthly',
-            BudgetType.monthly,
-            provider.selectedBudgetType == BudgetType.monthly,
-            () => provider.changeBudgetType(BudgetType.monthly),
-          ),
-          _buildTypeChip(
-            context,
-            'Yearly',
-            BudgetType.yearly,
-            provider.selectedBudgetType == BudgetType.yearly,
-            () => provider.changeBudgetType(BudgetType.yearly),
+          const SizedBox(height: 12),
+          PeriodSelector(
+            periodText: provider.currentPeriodDisplay,
+            onPrevious: onPrevious,
+            onNext: onNext,
+            onQuickJump: onQuickJump,
           ),
         ],
       ),
@@ -335,39 +378,6 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPeriodSelector(BuildContext context, BudgetProvider provider) {
-    VoidCallback onPrevious;
-    VoidCallback onNext;
-    VoidCallback onQuickJump;
-    
-    switch (provider.selectedBudgetType) {
-      case BudgetType.weekly:
-        onPrevious = provider.goToPreviousWeek;
-        onNext = provider.goToNextWeek;
-        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
-        break;
-      case BudgetType.monthly:
-        onPrevious = provider.goToPreviousMonth;
-        onNext = provider.goToNextMonth;
-        // FIX: Use DatePickerMode.day for monthly (allows month selection)
-        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
-        print('DEBUG _buildPeriodSelector: Monthly quick-jump using DatePickerMode.day');
-        break;
-      case BudgetType.yearly:
-        onPrevious = provider.goToPreviousYear;
-        onNext = provider.goToNextYear;
-        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.year);
-        break;
-    }
-    
-    return PeriodSelector(
-      periodText: provider.currentPeriodDisplay,
-      onPrevious: onPrevious,
-      onNext: onNext,
-      onQuickJump: onQuickJump,
     );
   }
   
@@ -989,13 +999,6 @@ class PeriodSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1013,7 +1016,7 @@ class PeriodSelector extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: AppColors.gradientEnd,
+                color: AppColors.secondaryTextColorDark,
               ),
             ),
           ),
