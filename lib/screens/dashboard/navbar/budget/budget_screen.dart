@@ -329,7 +329,8 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   Widget _buildCategoryList(BuildContext context, BudgetProvider provider) {
-    final data = provider.categoryBudgetData;
+    // Only show categories with spending > 0
+    final data = provider.categoryBudgetData.where((d) => d.spentAmount > 0).toList();
 
     if (data.isEmpty) {
       return const SizedBox.shrink();
@@ -356,6 +357,12 @@ class _BudgetScreenState extends State<BudgetScreen>
     BudgetProvider provider,
   ) {
     final isSelected = provider.selectedCategoryId == data.category.id;
+    final hasLimit = data.limit > 0;
+    final spent = data.spentAmount;
+    final limit = data.limit;
+    final progress = hasLimit ? (spent / limit).clamp(0.0, 1.0) : 0.0;
+    final isOverBudget = hasLimit && spent > limit;
+    final remaining = limit - spent;
 
     return GestureDetector(
       onTap: () {
@@ -379,49 +386,164 @@ class _BudgetScreenState extends State<BudgetScreen>
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: _getColorFromString(data.categoryColor).withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _getIconFromString(data.categoryIcon),
-                color: _getColorFromString(data.categoryColor),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            // Row 1: icon + category name (category name gets its own line)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: _getColorFromString(data.categoryColor).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _getIconFromString(data.categoryIcon),
+                    color: _getColorFromString(data.categoryColor),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Category name occupies the remaining space on its own line and can wrap
+                Expanded(
+                  child: Text(
                     data.categoryName,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
+                    softWrap: true,
+                    maxLines: 3,
+                    overflow: TextOverflow.visible,
                   ),
-                  const SizedBox(height: 4),
+                ),
+              ],
+            ),
+
+            // const SizedBox(height: 8),
+
+            // // Row 2: description label (its own line)
+            // Text(
+            //   'Spent this month',
+            //   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            //   softWrap: true,
+            // ),
+
+            // const SizedBox(height: 8),
+
+            // Row 3: amount, optional limit and edit button — amount and limit grouped on left, edit on right
+            Row(
+              children: [
+                // Amount and limit aligned to start, allowed to scale down if very large
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '\$${data.spentAmount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _getColorFromString(data.categoryColor),
+                          ),
+                        ),
+                      ),
+                      if (hasLimit)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '/ \$${limit.toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Edit button stays at the end of the row
+                IconButton(
+                  icon: Icon(Icons.edit, color: Colors.grey.shade600),
+                  onPressed: () async {
+                    final controller = TextEditingController(
+                      text: hasLimit ? limit.toStringAsFixed(2) : '',
+                    );
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) {
+                        return AlertDialog(
+                          title: const Text('Set spending limit'),
+                          content: TextField(
+                            controller: controller,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              hintText: 'Enter limit amount',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Save'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (result == true) {
+                      final text = controller.text.trim();
+                      final parsed = double.tryParse(text);
+                      if (parsed == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Enter a valid number')),
+                        );
+                        return;
+                      }
+                      await provider.setBudgetLimit(data.category.id, parsed);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Budget limit saved')),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+
+            // Progress section remains on its own block below
+            if (hasLimit) ...[
+              const SizedBox(height: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isOverBudget ? Colors.red : Colors.green,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
-                    'Spent this month',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    isOverBudget
+                        ? '\$${(spent - limit).toStringAsFixed(2)} over budget'
+                        : '\$${remaining.toStringAsFixed(2)} remaining',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isOverBudget ? Colors.red : Colors.green,
+                    ),
                   ),
                 ],
               ),
-            ),
-            Text(
-              '\$${data.spentAmount.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: _getColorFromString(data.categoryColor), 
-              ),
-            ),
+            ],
           ],
         ),
       ),

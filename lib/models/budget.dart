@@ -6,6 +6,7 @@ class Budget {
   final int year;
   final int month;
   final double spentAmount;
+  final double limit; // New: optional spending limit for the category/month
   final String userId;
 
   Budget({
@@ -15,7 +16,8 @@ class Budget {
     required this.month,
     required this.spentAmount,
     required this.userId,
-  });
+    double? limit,
+  }) : limit = limit ?? 0.0;
 
   Map<String, dynamic> toJson() {
     return {
@@ -23,6 +25,7 @@ class Budget {
       'year': year,
       'month': month,
       'spentAmount': spentAmount,
+      'limit': limit,
       'userId': userId,
     };
   }
@@ -35,6 +38,7 @@ class Budget {
       year: data['year'] ?? DateTime.now().year,
       month: data['month'] ?? DateTime.now().month,
       spentAmount: (data['spentAmount'] as num?)?.toDouble() ?? 0.0,
+      limit: (data['limit'] as num?)?.toDouble() ?? 0.0,
       userId: data['userId'] ?? '',
     );
   }
@@ -46,6 +50,7 @@ class Budget {
       year: json['year'] ?? DateTime.now().year,
       month: json['month'] ?? DateTime.now().month,
       spentAmount: (json['spentAmount'] as num?)?.toDouble() ?? 0.0,
+      limit: (json['limit'] as num?)?.toDouble() ?? 0.0,
       userId: json['userId'] ?? '',
     );
   }
@@ -56,6 +61,7 @@ class Budget {
     int? year,
     int? month,
     double? spentAmount,
+    double? limit,
     String? userId,
   }) {
     return Budget(
@@ -64,13 +70,14 @@ class Budget {
       year: year ?? this.year,
       month: month ?? this.month,
       spentAmount: spentAmount ?? this.spentAmount,
+      limit: limit ?? this.limit,
       userId: userId ?? this.userId,
     );
   }
 
   @override
   String toString() {
-    return 'Budget(id: $id, categoryId: $categoryId, year: $year, month: $month, spentAmount: $spentAmount, userId: $userId)';
+    return 'Budget(id: $id, categoryId: $categoryId, year: $year, month: $month, spentAmount: $spentAmount, limit: $limit, userId: $userId)';
   }
 
   @override
@@ -82,12 +89,13 @@ class Budget {
         other.year == year &&
         other.month == month &&
         other.spentAmount == spentAmount &&
+        other.limit == limit &&
         other.userId == userId;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, categoryId, year, month, spentAmount, userId);
+    return Object.hash(id, categoryId, year, month, spentAmount, limit, userId);
   }
 
   // Helper method to generate budget ID

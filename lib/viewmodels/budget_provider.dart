@@ -4,6 +4,7 @@ import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BudgetProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService.instance;
@@ -188,6 +189,49 @@ class BudgetProvider with ChangeNotifier {
     _selectedCategoryId = null;
     notifyListeners();
   }
+
+  // Set or update budget limit for a category (for selected month/year)
+  Future<void> setBudgetLimit(String categoryId, double limit) async {
+    try {
+      // Try to find existing budget for the category
+      final existing = _budgets.firstWhere(
+        (b) => b.categoryId == categoryId,
+        orElse: () => Budget(
+          id: '',
+          categoryId: categoryId,
+          year: selectedYear,
+          month: selectedMonth,
+          spentAmount: 0.0,
+          userId: '',
+        ),
+      );
+
+      if (existing.id.isNotEmpty) {
+        // Update existing budget
+        final updated = existing.copyWith(limit: limit);
+        await _firestoreService.updateBudget(updated.id, updated);
+      } else {
+        // Create new budget document using current user id for deterministic id
+        final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        final budgetId = Budget.generateId(userId, categoryId, selectedYear, selectedMonth);
+        final newBudget = Budget(
+          id: budgetId,
+          categoryId: categoryId,
+          year: selectedYear,
+          month: selectedMonth,
+          spentAmount: 0.0,
+          limit: limit,
+          userId: userId,
+        );
+        await _firestoreService.addBudget(newBudget);
+      }
+
+      // Refresh local budgets
+      await _reloadBudgets();
+    } catch (e) {
+      print('Error setting budget limit: $e');
+    }
+  }
   
   @override
   void dispose() {
@@ -208,6 +252,7 @@ class CategoryBudgetData {
   
   String get categoryName => category.name ?? 'Unnamed';
   String get categoryIcon => category.icon ?? 'category';
-  String get categoryColor => category.name ?? 'grey';
+  String get categoryColor => category.color ?? 'grey';
   double get spentAmount => budget.spentAmount;
+  double get limit => budget.limit;
 }
