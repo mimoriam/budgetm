@@ -3,7 +3,6 @@ import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_screen.dart';
-import 'package:budgetm/screens/dashboard/navbar/budget/add_budget/add_budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/create_goal/create_goal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
@@ -15,6 +14,7 @@ import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
+import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -168,39 +168,40 @@ class _MainScreenState extends State<MainScreen> {
               behavior: HitTestBehavior.opaque,
               child: Container(color: Colors.black54.withOpacity(0.5)),
             ),
-          Positioned(
-            bottom: 100,
-            right: 20,
-            child: AnimatedSlide(
-              offset: navbarVisibility.isNavBarVisible
-                  ? Offset.zero
-                  : const Offset(0, 3),
-              duration: const Duration(milliseconds: 150),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (_isFabMenuOpen)
-                    ..._buildFabMenuItemsForCurrentScreen(vacationProvider),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: FloatingActionButton(
-                      onPressed: _toggleFabMenu,
-                      elevation: 1,
-                      backgroundColor: AppColors.gradientEnd,
-                      shape: const CircleBorder(),
-                      child: Icon(
-                        _isFabMenuOpen ? Icons.close : Icons.add,
-                        color: Colors.white,
+          if (_controller.index != 1) // Hide FAB when budget screen (index 1) is active
+            Positioned(
+              bottom: 100,
+              right: 20,
+              child: AnimatedSlide(
+                offset: navbarVisibility.isNavBarVisible
+                    ? Offset.zero
+                    : const Offset(0, 3),
+                duration: const Duration(milliseconds: 150),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (_isFabMenuOpen)
+                      ..._buildFabMenuItemsForCurrentScreen(vacationProvider),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: FloatingActionButton(
+                        onPressed: _toggleFabMenu,
+                        elevation: 1,
+                        backgroundColor: AppColors.gradientEnd,
+                        shape: const CircleBorder(),
+                        child: Icon(
+                          _isFabMenuOpen ? Icons.close : Icons.add,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -241,9 +242,12 @@ class _MainScreenState extends State<MainScreen> {
                 // If the transaction was successfully added, trigger a refresh of the home screen
                 if (result == true) {
                   if (mounted) {
-                    final homeScreenProvider = context
-                        .read<HomeScreenProvider>();
+                    final homeScreenProvider = context.read<HomeScreenProvider>();
                     homeScreenProvider.triggerRefresh();
+                    
+                    // Also refresh the budget provider
+                    final budgetProvider = context.read<BudgetProvider>();
+                    budgetProvider.initialize();
                   }
                 }
               },
@@ -271,6 +275,10 @@ class _MainScreenState extends State<MainScreen> {
                 if (mounted) {
                   final homeScreenProvider = context.read<HomeScreenProvider>();
                   homeScreenProvider.triggerRefresh();
+                  
+                  // Also refresh the budget provider
+                  final budgetProvider = context.read<BudgetProvider>();
+                  budgetProvider.initialize();
                 }
               }
             },
@@ -296,28 +304,17 @@ class _MainScreenState extends State<MainScreen> {
                 if (mounted) {
                   final homeScreenProvider = context.read<HomeScreenProvider>();
                   homeScreenProvider.triggerRefresh();
+                  
+                  // Also refresh the budget provider
+                  final budgetProvider = context.read<BudgetProvider>();
+                  budgetProvider.initialize();
                 }
               }
             },
           ),
         ];
       case 1: // Budget
-        return [
-          _buildFabMenuItem(
-            label: "Add Budget",
-            icon: HugeIcons.strokeRoundedAddCircle,
-            color: Colors.blue,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const AddBudgetScreen(),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
-        ];
+        return []; // Budget screen no longer needs FAB actions
       case 2: // Balance
         return [
           _buildFabMenuItem(

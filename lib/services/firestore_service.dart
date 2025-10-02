@@ -69,16 +69,44 @@ class FirestoreService {
     }
   }
 
-  // Stream budgets (real-time)
-  Stream<List<Budget>> streamBudgets({bool onlyActive = false}) {
+  // Create or set a budget with a specific ID (used when creating a budget tied to a category)
+  Future<void> addBudget(Budget budget) async {
     try {
+      await _budgetsCollection.doc(budget.id).set(budget);
+    } catch (e) {
+      print('Error adding budget with id: $e');
+      rethrow;
+    }
+  }
+
+  // Stream budgets (real-time) - for a specific month
+  Stream<List<Budget>> streamBudgets({int? year, int? month}) {
+    try {
+      final targetYear = year ?? DateTime.now().year;
+      final targetMonth = month ?? DateTime.now().month;
+      
       return _budgetsCollection
-          .orderBy('endDate', descending: false)
+          .where('year', isEqualTo: targetYear)
+          .where('month', isEqualTo: targetMonth)
           .snapshots()
           .map((snapshot) => snapshot.docs.map((d) => d.data()).toList());
     } catch (e) {
       print('Error streaming budgets: $e');
       return Stream.empty();
+    }
+  }
+
+  // Get budgets for a specific month
+  Future<List<Budget>> getBudgetsForMonth(int year, int month) async {
+    try {
+      final querySnapshot = await _budgetsCollection
+          .where('year', isEqualTo: year)
+          .where('month', isEqualTo: month)
+          .get();
+      return querySnapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('Error getting budgets for month: $e');
+      return [];
     }
   }
 
@@ -143,25 +171,31 @@ class FirestoreService {
       final toSave = transaction.copyWith(isVacation: isVacation);
       final docRef = await _transactionsCollection.add(toSave);
 
-      // If this is an expense tied to a budget, update the budget's currentAmount atomically
-      if (toSave.type == 'expense' && toSave.budgetId != null && toSave.budgetId!.isNotEmpty) {
-        final budgetDocRef = _budgetsCollection.doc(toSave.budgetId!);
+      // If this is an expense transaction with a category, automatically create/update the monthly budget
+      if (toSave.type == 'expense' && toSave.categoryId != null && toSave.categoryId!.isNotEmpty && _userId != null) {
+        final year = toSave.date.year;
+        final month = toSave.date.month;
+        final budgetId = Budget.generateId(_userId!, toSave.categoryId!, year, month);
+        final budgetDocRef = _budgetsCollection.doc(budgetId);
+
         await _firestore.runTransaction((t) async {
           final budgetSnapshot = await t.get(budgetDocRef);
           if (budgetSnapshot.exists) {
+            // Budget exists, update the spent amount
             final budget = budgetSnapshot.data()!;
-            final newCurrent = budget.currentAmount + toSave.amount;
-
-            // Check if the transaction exceeds the budget
-            if (newCurrent > budget.totalAmount) {
-              // Throw a specific error to be caught by the UI
-              throw FirebaseException(
-                plugin: 'Firestore',
-                code: 'aborted',
-                message: 'This transaction exceeds the budget limit.',
-              );
-            }
-            t.update(budgetDocRef, {'currentAmount': newCurrent});
+            final newSpent = budget.spentAmount + toSave.amount;
+            t.update(budgetDocRef, {'spentAmount': newSpent});
+          } else {
+            // Budget doesn't exist, create it
+            final newBudget = Budget(
+              id: budgetId,
+              categoryId: toSave.categoryId!,
+              year: year,
+              month: month,
+              spentAmount: toSave.amount,
+              userId: _userId!,
+            );
+            t.set(budgetDocRef, newBudget);
           }
         });
       }
@@ -244,7 +278,7 @@ class FirestoreService {
   Future<void> deleteTransaction(String id) async {
     try {
       final transactionDocRef = _transactionsCollection.doc(id);
- 
+
       await _firestore.runTransaction((transaction) async {
         // 1. Get the transaction document
         final transactionSnapshot = await transaction.get(transactionDocRef);
@@ -253,66 +287,59 @@ class FirestoreService {
         }
         final transactionData = transactionSnapshot.data()!;
         final accountId = transactionData.accountId;
-        
-        if (accountId == null || accountId.isEmpty) {
-          // If no account is linked, handle potential budget rollback then delete the transaction
-          if (transactionData.type == 'income' && transactionData.budgetId != null && transactionData.budgetId!.isNotEmpty) {
-            final budgetDocRefRollback = _budgetsCollection.doc(transactionData.budgetId!);
-            final budgetSnap = await transaction.get(budgetDocRefRollback);
-            if (budgetSnap.exists) {
-              final budget = budgetSnap.data()!;
-              final newCurrent = (budget.currentAmount - transactionData.amount).clamp(0.0, double.infinity);
-              transaction.update(budgetDocRefRollback, {'currentAmount': newCurrent});
-            }
-          }
 
+        // Prepare refs for reads
+        DocumentReference<Budget>? budgetDocRef;
+        DocumentSnapshot<Budget>? budgetSnap;
+        if (transactionData.type == 'expense' &&
+            transactionData.categoryId != null &&
+            transactionData.categoryId!.isNotEmpty &&
+            _userId != null) {
+          final year = transactionData.date.year;
+          final month = transactionData.date.month;
+          final budgetId = Budget.generateId(_userId!, transactionData.categoryId!, year, month);
+          budgetDocRef = _budgetsCollection.doc(budgetId);
+        }
+
+        DocumentReference<FirestoreAccount>? accountDocRef;
+        DocumentSnapshot<FirestoreAccount>? accountSnapshot;
+        if (accountId != null && accountId.isNotEmpty) {
+          accountDocRef = _accountsCollection.doc(accountId);
+        }
+
+        // 2. Perform all reads FIRST (budget + account)
+        if (budgetDocRef != null) {
+          budgetSnap = await transaction.get(budgetDocRef);
+        }
+        if (accountDocRef != null) {
+          accountSnapshot = await transaction.get(accountDocRef);
+        }
+
+        // 3. Perform writes after all reads are done.
+
+        // Handle budget rollback for expense transactions (if budget exists)
+        if (budgetSnap != null && budgetSnap.exists) {
+          final budget = budgetSnap.data()!;
+          final newSpent = (budget.spentAmount - transactionData.amount).clamp(0.0, double.infinity);
+          transaction.update(budgetDocRef!, {'spentAmount': newSpent});
+        }
+
+        // If no account is linked or account doesn't exist, delete the transaction (budget rollback already handled)
+        if (accountId == null || accountId.isEmpty || accountSnapshot == null || !accountSnapshot.exists) {
           transaction.delete(transactionDocRef);
           return;
         }
- 
-        // 2. Get the associated account document
-        final accountDocRef = _accountsCollection.doc(accountId);
-        final accountSnapshot = await transaction.get(accountDocRef);
-        if (!accountSnapshot.exists) {
-          // If account doesn't exist, handle potential budget rollback then delete the transaction
-          if (transactionData.type == 'income' && transactionData.budgetId != null && transactionData.budgetId!.isNotEmpty) {
-            final budgetDocRefRollback = _budgetsCollection.doc(transactionData.budgetId!);
-            final budgetSnap = await transaction.get(budgetDocRefRollback);
-            if (budgetSnap.exists) {
-              final budget = budgetSnap.data()!;
-              final newCurrent = (budget.currentAmount - transactionData.amount).clamp(0.0, double.infinity);
-              transaction.update(budgetDocRefRollback, {'currentAmount': newCurrent});
-            }
-          }
 
-          transaction.delete(transactionDocRef);
-          return;
-        }
- 
-        // 3. Calculate the new balance
+        // Update account balance
         final currentBalance = accountSnapshot.data()!.balance;
         final transactionAmount = transactionData.amount;
         final transactionType = transactionData.type;
- 
-        final newBalance = (transactionType == 'income')
-            ? currentBalance - transactionAmount
-            : currentBalance + transactionAmount;
- 
-        // 4. Update the account balance
-        transaction.update(accountDocRef, {'balance': newBalance});
 
-        // 4b. If this was an income tied to a budget, roll back the budget currentAmount
-        if (transactionType == 'income' && transactionData.budgetId != null && transactionData.budgetId!.isNotEmpty) {
-          final budgetDocRefRollback = _budgetsCollection.doc(transactionData.budgetId!);
-          final budgetSnap = await transaction.get(budgetDocRefRollback);
-          if (budgetSnap.exists) {
-            final budget = budgetSnap.data()!;
-            final newCurrent = (budget.currentAmount - transactionAmount).clamp(0.0, double.infinity);
-            transaction.update(budgetDocRefRollback, {'currentAmount': newCurrent});
-          }
-        }
- 
-        // 5. Delete the transaction
+        final newBalance = (transactionType == 'income') ? currentBalance - transactionAmount : currentBalance + transactionAmount;
+
+        transaction.update(accountDocRef!, {'balance': newBalance});
+
+        // Finally delete the transaction
         transaction.delete(transactionDocRef);
       });
     } catch (e) {
@@ -362,7 +389,29 @@ class FirestoreService {
   Future<String> createCategory(Category category) async {
     try {
       final docRef = await _categoriesCollection.add(category);
-      return docRef.id;
+      final categoryId = docRef.id;
+
+      // If this is an expense category, create a corresponding monthly budget with default values
+      if (category.type == 'expense' && _userId != null) {
+        final now = DateTime.now();
+        final budgetId = Budget.generateId(_userId!, categoryId, now.year, now.month);
+        final newBudget = Budget(
+          id: budgetId,
+          categoryId: categoryId,
+          year: now.year,
+          month: now.month,
+          spentAmount: 0.0,
+          userId: _userId!,
+        );
+        try {
+          await addBudget(newBudget);
+        } catch (e) {
+          // Don't fail category creation if budget creation fails; log for debugging
+          print('Error creating budget for new category $categoryId: $e');
+        }
+      }
+
+      return categoryId;
     } catch (e) {
       print('Error creating category: $e');
       rethrow;

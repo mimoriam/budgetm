@@ -1,6 +1,8 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/add_category/add_category_screen.dart';
+import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:budgetm/services/firestore_service.dart';
@@ -81,6 +83,24 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     category: category,
                   );
                 },
+                proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                  return Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: child,
+                    ),
+                  );
+                },
                 onReorder: (int oldIndex, int newIndex) {
                   _reorderCategories(oldIndex, newIndex, currentCategories);
                 },
@@ -103,6 +123,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
             // If a category was added successfully, refresh the list
             if (result == true) {
               _loadCategories();
+              Provider.of<BudgetProvider>(context, listen: false).refreshCategories();
             }
           },
           backgroundColor: AppColors.gradientEnd,
@@ -329,6 +350,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         final updatedCategory = category.copyWith(displayOrder: i);
         await _firestoreService.updateCategory(updatedCategory.id, updatedCategory);
       }
+      Provider.of<BudgetProvider>(context, listen: false).refreshCategories();
       // Success - nothing further to do since UI already updated optimistically
     } catch (e) {
       print('Error reordering categories: $e');
