@@ -24,6 +24,7 @@ class _BudgetScreenState extends State<BudgetScreen>
   double _lastScrollOffset = 0.0;
 
   VacationProvider? _vacationProvider;
+  NavbarVisibilityProvider? _navbarVisibilityProvider;
   bool _hasShownVacationDialog = false;
 
   @override
@@ -45,6 +46,8 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   void _showVacationModeDialog() {
+    // Diagnostic log to trace why/when this dialog is invoked
+    print('Budget: showing vacation dialog — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, isVacation=${_vacationProvider?.isVacationMode}');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -74,7 +77,7 @@ class _BudgetScreenState extends State<BudgetScreen>
   void _vacationListener() {
     if (!mounted) return;
     final isVacation = _vacationProvider?.isVacationMode ?? false;
-
+ 
     if (isVacation) {
       // Rebuild to show vacation UI and avoid loading data while in vacation mode
       setState(() {});
@@ -82,6 +85,19 @@ class _BudgetScreenState extends State<BudgetScreen>
       // When exiting vacation mode, initialize budget data and rebuild to show content
       Provider.of<BudgetProvider>(context, listen: false).initialize();
       setState(() {});
+    }
+  }
+ 
+  void _navbarListener() {
+    if (!mounted) return;
+    final currentIndex = _navbarVisibilityProvider?.currentIndex ?? 0;
+    // Show dialog only when Budget tab (index 1) becomes active and vacation mode is on
+    if (currentIndex == 1 && _vacationProvider?.isVacationMode == true && !_hasShownVacationDialog) {
+      print('Budget: navbar became active and vacation active — tabIndex=$currentIndex');
+      _hasShownVacationDialog = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showVacationModeDialog();
+      });
     }
   }
 
@@ -116,19 +132,31 @@ class _BudgetScreenState extends State<BudgetScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final newProvider = Provider.of<VacationProvider>(context);
-    if (_vacationProvider != newProvider) {
+    final newVacation = Provider.of<VacationProvider>(context);
+    if (_vacationProvider != newVacation) {
       _vacationProvider?.removeListener(_vacationListener);
-      _vacationProvider = newProvider;
+      _vacationProvider = newVacation;
       _vacationProvider?.addListener(_vacationListener);
     }
-
-    // If vacation mode is already active when dependencies change, show dialog once.
+ 
+    final newNavbar = Provider.of<NavbarVisibilityProvider>(context);
+    if (_navbarVisibilityProvider != newNavbar) {
+      _navbarVisibilityProvider?.removeListener(_navbarListener);
+      _navbarVisibilityProvider = newNavbar;
+      _navbarVisibilityProvider?.addListener(_navbarListener);
+    }
+ 
+    // If vacation mode is already active when dependencies change, show dialog once if Budget tab is active.
+    final tabIndex = _navbarVisibilityProvider?.currentIndex ?? Provider.of<NavbarVisibilityProvider>(context, listen: false).currentIndex;
     if (_vacationProvider?.isVacationMode == true && !_hasShownVacationDialog) {
-      _hasShownVacationDialog = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showVacationModeDialog();
-      });
+      // Diagnostic log to record when the budget screen schedules the vacation dialog
+      print('Budget: dependencies detected vacation active — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, tabIndex=$tabIndex');
+      if (tabIndex == 1) {
+        _hasShownVacationDialog = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showVacationModeDialog();
+        });
+      }
     } else if (_vacationProvider?.isVacationMode == false) {
       _hasShownVacationDialog = false;
     }

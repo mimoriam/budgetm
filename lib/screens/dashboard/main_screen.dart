@@ -137,6 +137,13 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
     final navbarVisibility = context.watch<NavbarVisibilityProvider>();
+    // Ensure the NavbarVisibilityProvider always has the current tab index from the controller.
+    // Use a post-frame callback to avoid mutating providers synchronously during build.
+    if (navbarVisibility.currentIndex != _controller.index) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navbarVisibility.setCurrentIndex(_controller.index);
+      });
+    }
     return Scaffold(
       body: Stack(
         children: [

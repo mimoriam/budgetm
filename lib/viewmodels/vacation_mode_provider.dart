@@ -24,6 +24,8 @@ class VacationProvider with ChangeNotifier {
     _isVacationMode = !_isVacationMode;
     _isAiMode = _isVacationMode; // Keep AI mode in sync with vacation mode
     await prefs.setBool('vacationMode', _isVacationMode);
+    // Diagnostic log to observe when vacation mode toggles
+    print('Vacation toggled -> $_isVacationMode (isAiMode=$_isAiMode)');
     notifyListeners();
   }
 
