@@ -1,10 +1,12 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -330,7 +332,9 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   Widget _buildCategoryList(BuildContext context, BudgetProvider provider) {
     // Only show categories with spending > 0
-    final data = provider.categoryBudgetData.where((d) => d.spentAmount > 0).toList();
+    final data = provider.categoryBudgetData
+        .where((d) => d.spentAmount > 0)
+        .toList();
 
     if (data.isEmpty) {
       return const SizedBox.shrink();
@@ -366,7 +370,15 @@ class _BudgetScreenState extends State<BudgetScreen>
 
     return GestureDetector(
       onTap: () {
-        // TODO: Navigate to Budget detail screen
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: BudgetDetailScreen(
+            category: data.category,
+            selectedDate: provider.selectedDate,
+          ),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -397,7 +409,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: _getColorFromString(data.categoryColor).withOpacity(0.2),
+                    color: _getColorFromString(
+                      data.categoryColor,
+                    ).withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -459,7 +473,10 @@ class _BudgetScreenState extends State<BudgetScreen>
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             '/ \$${limit.toStringAsFixed(2)}',
-                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ),
                     ],
@@ -480,7 +497,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                           title: const Text('Set spending limit'),
                           content: TextField(
                             controller: controller,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             decoration: const InputDecoration(
                               hintText: 'Enter limit amount',
                             ),
