@@ -389,6 +389,20 @@ class FirestoreService {
     return totalAmount;
   }
 
+  // Get all transactions for a specific account
+  Future<List<FirestoreTransaction>> getTransactionsForAccount(String accountId) async {
+    try {
+      final querySnapshot = await _transactionsCollection
+          .where('accountId', isEqualTo: accountId)
+          .orderBy('date', descending: true)
+          .get();
+      return querySnapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('Error getting transactions for account: $e');
+      return [];
+    }
+  }
+
   // ================ CATEGORY OPERATIONS ================
 
   // Create a new category

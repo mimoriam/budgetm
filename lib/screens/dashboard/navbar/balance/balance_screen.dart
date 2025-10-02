@@ -4,9 +4,11 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
+import 'package:budgetm/screens/dashboard/navbar/balance/balance_detail_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
@@ -45,7 +47,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   Stream<List<Map<String, dynamic>>>? _accountsWithTransactionsStream;
 
   StreamController<List<Map<String, dynamic>>>?
-      _accountsWithTransactionsController;
+  _accountsWithTransactionsController;
   StreamSubscription<List<FirestoreAccount>>? _accountsSub;
   StreamSubscription<List<FirestoreTransaction>>? _transactionsSub;
   List<FirestoreAccount>? _latestAccounts;
@@ -57,8 +59,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     _scrollController = ScrollController();
     _scrollController.addListener(() {
       if (!_scrollController.hasClients) return;
-      final provider =
-          Provider.of<NavbarVisibilityProvider>(context, listen: false);
+      final provider = Provider.of<NavbarVisibilityProvider>(
+        context,
+        listen: false,
+      );
       final direction = _scrollController.position.userScrollDirection;
 
       if (direction == ScrollDirection.reverse) {
@@ -73,15 +77,19 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   void _initStreams() {
     _firestoreService = FirestoreService.instance;
 
-    _accountsWithTransactionsController = StreamController<List<Map<String, dynamic>>>.broadcast();
-    _accountsWithTransactionsStream = _accountsWithTransactionsController!.stream;
+    _accountsWithTransactionsController =
+        StreamController<List<Map<String, dynamic>>>.broadcast();
+    _accountsWithTransactionsStream =
+        _accountsWithTransactionsController!.stream;
 
     _accountsSub = _firestoreService.streamAccounts().listen((accounts) {
       _latestAccounts = accounts;
       _tryEmitCombined();
     });
 
-    _transactionsSub = _firestoreService.streamTransactions().listen((transactions) {
+    _transactionsSub = _firestoreService.streamTransactions().listen((
+      transactions,
+    ) {
       _latestTransactions = transactions;
       _tryEmitCombined();
     });
@@ -95,7 +103,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     for (var transaction in transactions) {
       final accId = transaction.accountId;
       if (accId == null) continue;
-      final isIncome = transaction.type != null &&
+      final isIncome =
+          transaction.type != null &&
           transaction.type.toString().toLowerCase().contains('income');
       final txnAmount = isIncome ? transaction.amount : -transaction.amount;
       transactionAmounts.update(
@@ -160,18 +169,27 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                         children: [
                           _buildPieChart(accountsWithData),
                           const SizedBox(height: 16),
-                          _buildLegend(accountsWithData, currencyProvider.currencySymbol),
+                          _buildLegend(
+                            accountsWithData,
+                            currencyProvider.currencySymbol,
+                          ),
                           const SizedBox(height: 24),
                           _buildSectionHeader('MY ACCOUNTS'),
                           const SizedBox(height: 12),
-                          ...accountsWithData.asMap().entries.map((entry) => Column(
-                                children: [
-                                  Builder(builder: (context) {
+                          ...accountsWithData.asMap().entries.map(
+                            (entry) => Column(
+                              children: [
+                                Builder(
+                                  builder: (context) {
                                     final index = entry.key;
                                     final accountData = entry.value;
-                                    final account = accountData['account'] as FirestoreAccount;
+                                    final account =
+                                        accountData['account']
+                                            as FirestoreAccount;
                                     final isHighlighted = index == touchedIndex;
-                                    return _buildAccountItem(
+                                    return _buildAccountCard(
+                                      context: context,
+                                      account: account,
                                       icon: Icons.account_balance,
                                       iconColor: Colors.black,
                                       iconBackgroundColor: Colors.grey.shade200,
@@ -180,13 +198,16 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                       accountType: account.accountType,
                                       creditLimit: account.creditLimit,
                                       balanceLimit: account.balanceLimit,
-                                      currencySymbol: currencyProvider.currencySymbol,
+                                      currencySymbol:
+                                          currencyProvider.currencySymbol,
                                       isHighlighted: isHighlighted,
                                     );
-                                  }),
-                                  const SizedBox(height: 12),
-                                ],
-                              )),
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -262,7 +283,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     if (accountsWithData.isEmpty) {
       return const SizedBox(height: 250);
     }
-  
+
     // If there's only one account, show the app logo instead of the pie chart
     if (accountsWithData.length == 1) {
       return SizedBox(
@@ -271,15 +292,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           child: SizedBox(
             width: 150,
             height: 150,
-            child: Image.asset(
-              'images/launcher/logo.png',
-              fit: BoxFit.contain,
-            ),
+            child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
           ),
         ),
       );
     }
-  
+
     // For two or more accounts, show the pie chart as before
     return SizedBox(
       height: 250,
@@ -308,12 +326,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     );
   }
 
-  List<PieChartSectionData> showingSections(List<Map<String, dynamic>> accountsWithData) {
+  List<PieChartSectionData> showingSections(
+    List<Map<String, dynamic>> accountsWithData,
+  ) {
     if (accountsWithData.isEmpty) {
       return [];
     }
 
-    
     // Define a list of colors for the pie chart sections
     final colors = [
       const Color(0xFF2563EB),
@@ -323,14 +342,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       const Color(0xFF8B5CF6),
       const Color(0xFFEC4899),
     ];
-  
+
     return List.generate(accountsWithData.length, (i) {
       final isTouched = i == touchedIndex;
       final radius = isTouched ? 120.0 : 100.0;
       final accountData = accountsWithData[i];
       final account = accountData['account'] as FirestoreAccount;
       final value = account.balance;
-      
+
       return PieChartSectionData(
         color: colors[i % colors.length],
         value: value,
@@ -340,11 +359,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     });
   }
 
-  Widget _buildLegend(List<Map<String, dynamic>> accountsWithData, String currencySymbol) {
+  Widget _buildLegend(
+    List<Map<String, dynamic>> accountsWithData,
+    String currencySymbol,
+  ) {
     if (accountsWithData.isEmpty) {
       return const SizedBox.shrink();
     }
-  
+
     // Define a list of colors for the legend items
     final colors = [
       const Color(0xFF2563EB),
@@ -354,7 +376,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       const Color(0xFF8B5CF6),
       const Color(0xFFEC4899),
     ];
-  
+
     return Column(
       children: [
         ...accountsWithData.asMap().entries.map((entry) {
@@ -369,7 +391,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 account.balance,
                 currencySymbol,
               ),
-              if (index < accountsWithData.length - 1) const SizedBox(height: 12),
+              if (index < accountsWithData.length - 1)
+                const SizedBox(height: 12),
             ],
           );
         }),
@@ -377,7 +400,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     );
   }
 
-  Widget _buildLegendItem(Color color, String label, double amount, String currencySymbol) {
+  Widget _buildLegendItem(
+    Color color,
+    String label,
+    double amount,
+    String currencySymbol,
+  ) {
     return Row(
       children: [
         Container(
@@ -411,7 +439,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     );
   }
 
-  Widget _buildAccountItem({
+  Widget _buildAccountCard({
+    required BuildContext context,
+    required FirestoreAccount account,
     required IconData icon,
     required Color iconColor,
     required Color iconBackgroundColor,
@@ -423,74 +453,88 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     required String currencySymbol,
     required bool isHighlighted,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      decoration: BoxDecoration(
-        color: isHighlighted ? AppColors.gradientStart.withOpacity(0.08) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isHighlighted ? AppColors.gradientStart : Colors.grey.shade200,
-          width: isHighlighted ? 2.0 : 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(isHighlighted ? 0.12 : 0.08),
-            spreadRadius: 1,
-            blurRadius: isHighlighted ? 12 : 10,
+    return GestureDetector(
+      onTap: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: BalanceDetailScreen(account: account),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isHighlighted
+              ? AppColors.gradientStart.withOpacity(0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isHighlighted
+                ? AppColors.gradientStart
+                : Colors.grey.shade200,
+            width: isHighlighted ? 2.0 : 1.0,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconBackgroundColor,
-              borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(isHighlighted ? 0.12 : 0.08),
+              spreadRadius: 1,
+              blurRadius: isHighlighted ? 12 : 10,
             ),
-            child: Icon(icon, size: 24, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  accountName,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  accountType,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconBackgroundColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, size: 24, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    accountName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    accountType,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.secondaryTextColorLight,
+                    ),
+                  ),
+                  if (creditLimit != null)
+                    Text(
+                      'Credit Limit: $currencySymbol${creditLimit.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.secondaryTextColorLight,
                       ),
-                ),
-                if (creditLimit != null)
-                  Text(
-                    'Credit Limit: $currencySymbol${creditLimit.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                        ),
-                  )
-                else if (balanceLimit != null)
-                  Text(
-                    'Balance Limit: $currencySymbol${balanceLimit.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                        ),
-                  ),
-              ],
+                    )
+                  else if (balanceLimit != null)
+                    Text(
+                      'Balance Limit: $currencySymbol${balanceLimit.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.secondaryTextColorLight,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          Text(
-            '$currencySymbol${amount.toStringAsFixed(2)}',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-        ],
+            Text(
+              '$currencySymbol${amount.toStringAsFixed(2)}',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
   }

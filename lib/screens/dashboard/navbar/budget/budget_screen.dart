@@ -34,14 +34,12 @@ class _BudgetScreenState extends State<BudgetScreen>
     _scrollController.addListener(_onScroll);
     _lastScrollOffset = 0.0;
 
-    // Initialize budget provider
+    // Initialize budget provider only if not in vacation mode
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<BudgetProvider>(context, listen: false).initialize();
-      
-      // Check vacation mode and show dialog if active
-      final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
-      if (vacationProvider.isVacationMode) {
-        _showVacationModeDialog();
+      final vacationProvider =
+          Provider.of<VacationProvider>(context, listen: false);
+      if (!vacationProvider.isVacationMode) {
+        Provider.of<BudgetProvider>(context, listen: false).initialize();
       }
     });
   }
@@ -76,14 +74,14 @@ class _BudgetScreenState extends State<BudgetScreen>
   void _vacationListener() {
     if (!mounted) return;
     final isVacation = _vacationProvider?.isVacationMode ?? false;
-    if (isVacation && !_hasShownVacationDialog) {
-      _hasShownVacationDialog = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showVacationModeDialog();
-      });
-    } else if (!isVacation) {
-      // Reset flag so dialog can be shown again if vacation mode is re-enabled later
-      _hasShownVacationDialog = false;
+
+    if (isVacation) {
+      // Rebuild to show vacation UI and avoid loading data while in vacation mode
+      setState(() {});
+    } else {
+      // When exiting vacation mode, initialize budget data and rebuild to show content
+      Provider.of<BudgetProvider>(context, listen: false).initialize();
+      setState(() {});
     }
   }
 
@@ -139,7 +137,11 @@ class _BudgetScreenState extends State<BudgetScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      Provider.of<BudgetProvider>(context, listen: false).initialize();
+      final isVacation =
+          Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+      if (!isVacation) {
+        Provider.of<BudgetProvider>(context, listen: false).initialize();
+      }
     }
   }
 

@@ -138,7 +138,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         Provider.of<VacationProvider>(context, listen: false).isVacationMode;
     // If we have a previous value and it differs from current, vacation mode was toggled
     if (_previousVacationMode != null && currentVacationMode != _previousVacationMode) {
-      _refreshData();
+      // Only refresh if this screen is currently visible
+      if (ModalRoute.of(context)?.isCurrent == true) {
+        _refreshData();
+      }
     }
     // Update previous state for future comparisons
     _previousVacationMode = currentVacationMode;
