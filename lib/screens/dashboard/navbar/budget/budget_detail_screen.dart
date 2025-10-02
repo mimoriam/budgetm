@@ -36,31 +36,52 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     });
 
     try {
-      final startDate = DateTime(widget.selectedDate.year, widget.selectedDate.month, 1);
-      final endDate = DateTime(widget.selectedDate.year, widget.selectedDate.month + 1, 0, 23, 59, 59);
+      final startDate = DateTime(
+        widget.selectedDate.year,
+        widget.selectedDate.month,
+        1,
+      );
+      final endDate = DateTime(
+        widget.selectedDate.year,
+        widget.selectedDate.month + 1,
+        0,
+        23,
+        59,
+        59,
+      );
 
-      final allTransactions = await _firestoreService.getTransactionsForDateRange(startDate, endDate);
+      final allTransactions = await _firestoreService
+          .getTransactionsForDateRange(startDate, endDate);
 
       final categoryTransactions = allTransactions
-          .where((t) => t.type == 'expense' && t.categoryId == widget.category.id)
+          .where(
+            (t) => t.type == 'expense' && t.categoryId == widget.category.id,
+          )
           .toList();
 
-      // Create a list of futures to fetch account names
+      // Create a list of futures to fetch account names and types
       final detailedTransactionsFutures = categoryTransactions.map((t) async {
         String accountName = 'Unknown';
+        String accountType = '';
         if (t.accountId != null && t.accountId!.isNotEmpty) {
           final account = await _firestoreService.getAccountById(t.accountId!);
           accountName = account?.name ?? 'Unknown';
+          accountType = account?.accountType ?? '';
         }
-        return _TransactionWithAccount(transaction: t, accountName: accountName);
+        return _TransactionWithAccount(
+          transaction: t,
+          accountName: accountName,
+          accountType: accountType,
+        );
       }).toList();
 
       // Wait for all futures to complete
       _detailedTransactions = await Future.wait(detailedTransactionsFutures);
 
       // Sort by date descending
-      _detailedTransactions.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
-
+      _detailedTransactions.sort(
+        (a, b) => b.transaction.date.compareTo(a.transaction.date),
+      );
     } catch (e) {
       print('Error loading transactions: $e');
       // Optionally show an error message to the user
@@ -85,8 +106,8 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _detailedTransactions.isEmpty
-              ? _buildEmptyState()
-              : _buildTransactionsList(),
+          ? _buildEmptyState()
+          : _buildTransactionsList(),
     );
   }
 
@@ -97,26 +118,19 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.receipt_long,
-              size: 80,
-              color: Colors.grey.shade300,
-            ),
+            Icon(Icons.receipt_long, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
               'No transactions yet',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               'No transactions found for this category in ${DateFormat.MMMM().format(widget.selectedDate)}',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
             ),
           ],
         ),
@@ -138,7 +152,8 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   Widget _buildTransactionCard(_TransactionWithAccount detailedTransaction) {
     final transaction = detailedTransaction.transaction;
     final accountName = detailedTransaction.accountName;
-
+    final accountType = detailedTransaction.accountType;
+  
     final dateFormatter = DateFormat('MMM dd, yyyy');
     final timeFormatter = DateFormat('hh:mm a');
 
@@ -216,10 +231,14 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                 // Account name
                 Row(
                   children: [
-                    Icon(Icons.account_balance_wallet_outlined, size: 16, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 6),
                     Text(
-                      accountName,
+                      "$accountName (${accountType.isNotEmpty ? accountType : 'Unknown'})",
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade700,
@@ -251,7 +270,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
 
   Color _getCategoryColor() {
     if (widget.category.color == null) return Colors.grey;
-    
+
     switch (widget.category.color!.toLowerCase()) {
       case 'red':
         return Colors.red;
@@ -319,13 +338,15 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   }
 }
 
-// Helper class to hold transaction and its account name
-class _TransactionWithAccount {
-  final FirestoreTransaction transaction;
-  final String accountName;
-
-  _TransactionWithAccount({
-    required this.transaction,
-    required this.accountName,
-  });
-}
+ // Helper class to hold transaction and its account name and type
+ class _TransactionWithAccount {
+   final FirestoreTransaction transaction;
+   final String accountName;
+   final String accountType;
+ 
+   _TransactionWithAccount({
+     required this.transaction,
+     required this.accountName,
+     required this.accountType,
+   });
+ }

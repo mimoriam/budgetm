@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dart';
+import 'dart:ui';
+import 'package:budgetm/screens/dashboard/main_screen.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -20,6 +23,9 @@ class _BudgetScreenState extends State<BudgetScreen>
   late ScrollController _scrollController;
   double _lastScrollOffset = 0.0;
 
+  VacationProvider? _vacationProvider;
+  bool _hasShownVacationDialog = false;
+
   @override
   void initState() {
     super.initState();
@@ -31,7 +37,54 @@ class _BudgetScreenState extends State<BudgetScreen>
     // Initialize budget provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<BudgetProvider>(context, listen: false).initialize();
+      
+      // Check vacation mode and show dialog if active
+      final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+      if (vacationProvider.isVacationMode) {
+        _showVacationModeDialog();
+      }
     });
+  }
+
+  void _showVacationModeDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+          child: AlertDialog(
+            title: const Text('Vacation Mode Active'),
+            content: const Text('This screen is only for normal mode'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const MainScreen()),
+                    (Route<dynamic> route) => false,
+                  );
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _vacationListener() {
+    if (!mounted) return;
+    final isVacation = _vacationProvider?.isVacationMode ?? false;
+    if (isVacation && !_hasShownVacationDialog) {
+      _hasShownVacationDialog = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showVacationModeDialog();
+      });
+    } else if (!isVacation) {
+      // Reset flag so dialog can be shown again if vacation mode is re-enabled later
+      _hasShownVacationDialog = false;
+    }
   }
 
   void _onScroll() {
@@ -56,9 +109,31 @@ class _BudgetScreenState extends State<BudgetScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _vacationProvider?.removeListener(_vacationListener);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newProvider = Provider.of<VacationProvider>(context);
+    if (_vacationProvider != newProvider) {
+      _vacationProvider?.removeListener(_vacationListener);
+      _vacationProvider = newProvider;
+      _vacationProvider?.addListener(_vacationListener);
+    }
+
+    // If vacation mode is already active when dependencies change, show dialog once.
+    if (_vacationProvider?.isVacationMode == true && !_hasShownVacationDialog) {
+      _hasShownVacationDialog = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showVacationModeDialog();
+      });
+    } else if (_vacationProvider?.isVacationMode == false) {
+      _hasShownVacationDialog = false;
+    }
   }
 
   @override

@@ -73,7 +73,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<TransactionWithAccount> _transactionsWithAccounts = [];
   List<FirestoreTask> _upcomingTasks = [];
   bool? _previousVacationMode;
-
+  bool _isTogglingVacationMode = false;
+  
   double _lastContentOffset = 0.0;
 
   @override
@@ -146,15 +147,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _refreshData() async {
     final isVacationMode =
         Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-    await _loadIncomeAndExpensesForMonth(
-      _months[_selectedMonthIndex],
-      isVacation: isVacationMode,
-    );
-    await _loadTransactionsForMonth(
-      _months[_selectedMonthIndex],
-      isVacation: isVacationMode,
-    );
-    await _loadUpcomingTasksForMonth(_months[_selectedMonthIndex]);
+    await Future.wait([
+      _loadIncomeAndExpensesForMonth(
+        _months[_selectedMonthIndex],
+        isVacation: isVacationMode,
+      ),
+      _loadTransactionsForMonth(
+        _months[_selectedMonthIndex],
+        isVacation: isVacationMode,
+      ),
+    ]);
   }
 
   Future<void> _refreshAccountData() async {
@@ -277,16 +279,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final now = DateTime.now();
       final endOfMonth = DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1));
-
+  
       // Get upcoming tasks using Firestore helper method
       final tasks = await _firestoreService.getUpcomingTasksForDateRange(now, endOfMonth);
-
+  
       setState(() {
         _upcomingTasks = tasks;
       });
     } catch (e) {
       print('Error loading upcoming tasks: $e');
     }
+  }
+  
+  void _toggleVacationModeWithDebounce() {
+    setState(() {
+      _isTogglingVacationMode = true;
+    });
+  
+    Provider.of<VacationProvider>(context, listen: false).toggleVacationMode();
+  
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() {
+          _isTogglingVacationMode = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadIncomeAndExpensesForMonth(
@@ -552,10 +570,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 _buildAppBarButton(
                   HugeIcons.strokeRoundedAirplaneMode,
-                  onPressed: Provider.of<VacationProvider>(
-                    context,
-                    listen: false,
-                  ).toggleAiMode,
+                  onPressed: _isTogglingVacationMode ? null : _toggleVacationModeWithDebounce,
                   isActive: vacationProvider.isVacationMode,
                 ),
                 _buildAppBarButton(
@@ -609,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       child: IconButton(
         padding: EdgeInsets.zero,
-        onPressed: onPressed ?? () {},
+        onPressed: onPressed,
         icon: HugeIcon(icon: icon, color: Colors.black87, size: 22),
       ),
     );
@@ -672,20 +687,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildBalanceCards() {
     final currencyProvider = context.watch<CurrencyProvider>();
+    final vacationProvider = context.watch<VacationProvider>();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
         children: [
-          Expanded(
-            child: _buildInfoCard(
-              'Income',
-              '+ ${currencyProvider.currencySymbol}${(_totalIncome * currencyProvider.conversionRate).toStringAsFixed(2)}',
-              Colors.green,
-              HugeIcons.strokeRoundedChartUp,
-              AppColors.incomeBackground,
+          if (!vacationProvider.isVacationMode)
+            Expanded(
+              child: _buildInfoCard(
+                'Income',
+                '+ ${currencyProvider.currencySymbol}${(_totalIncome * currencyProvider.conversionRate).toStringAsFixed(2)}',
+                Colors.green,
+                HugeIcons.strokeRoundedChartUp,
+                AppColors.incomeBackground,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
+          if (!vacationProvider.isVacationMode)
+            const SizedBox(width: 12),
           Expanded(
             child: _buildInfoCard(
               'Expense',

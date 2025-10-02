@@ -172,7 +172,12 @@ class FirestoreService {
       final docRef = await _transactionsCollection.add(toSave);
 
       // If this is an expense transaction with a category, automatically create/update the monthly budget
-      if (toSave.type == 'expense' && toSave.categoryId != null && toSave.categoryId!.isNotEmpty && _userId != null) {
+      // BUT only if it's not a vacation transaction
+      if (toSave.type == 'expense' &&
+          toSave.categoryId != null &&
+          toSave.categoryId!.isNotEmpty &&
+          _userId != null &&
+          !toSave.isVacation) {
         final year = toSave.date.year;
         final month = toSave.date.month;
         final budgetId = Budget.generateId(_userId!, toSave.categoryId!, year, month);
@@ -318,7 +323,8 @@ class FirestoreService {
         // 3. Perform writes after all reads are done.
 
         // Handle budget rollback for expense transactions (if budget exists)
-        if (budgetSnap != null && budgetSnap.exists) {
+        // BUT only if it's not a vacation transaction
+        if (budgetSnap != null && budgetSnap.exists && !transactionData.isVacation) {
           final budget = budgetSnap.data()!;
           final newSpent = (budget.spentAmount - transactionData.amount).clamp(0.0, double.infinity);
           transaction.update(budgetDocRef!, {'spentAmount': newSpent});
