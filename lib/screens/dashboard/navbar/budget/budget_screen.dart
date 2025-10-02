@@ -339,191 +339,78 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   Widget _buildPeriodSelector(BuildContext context, BudgetProvider provider) {
+    VoidCallback onPrevious;
+    VoidCallback onNext;
+    VoidCallback onQuickJump;
+    
     switch (provider.selectedBudgetType) {
       case BudgetType.weekly:
-        return _buildWeeklySelector(context, provider);
+        onPrevious = provider.goToPreviousWeek;
+        onNext = provider.goToNextWeek;
+        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
+        break;
       case BudgetType.monthly:
-        return _buildMonthlySelector(context, provider);
+        onPrevious = provider.goToPreviousMonth;
+        onNext = provider.goToNextMonth;
+        // FIX: Use DatePickerMode.day for monthly (allows month selection)
+        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
+        print('DEBUG _buildPeriodSelector: Monthly quick-jump using DatePickerMode.day');
+        break;
       case BudgetType.yearly:
-        return _buildYearlySelector(context, provider);
+        onPrevious = provider.goToPreviousYear;
+        onNext = provider.goToNextYear;
+        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.year);
+        break;
     }
-  }
-
-  Widget _buildWeeklySelector(BuildContext context, BudgetProvider provider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Selected Week',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          DropdownButton<int>(
-            value: provider.selectedWeek,
-            items: List<DropdownMenuItem<int>>.generate(
-              5,
-              (index) => DropdownMenuItem<int>(
-                value: index + 1,
-                child: Text('Week ${index + 1}'),
-              ),
-            ),
-            onChanged: (value) {
-              if (value != null) provider.changeSelectedWeek(value);
-            },
-            underline: const SizedBox.shrink(),
-            iconEnabledColor: AppColors.gradientEnd,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.gradientEnd,
-            ),
-          ),
-        ],
-      ),
+    
+    return PeriodSelector(
+      periodText: provider.currentPeriodDisplay,
+      onPrevious: onPrevious,
+      onNext: onNext,
+      onQuickJump: onQuickJump,
     );
   }
-
-
-  Widget _buildMonthlySelector(BuildContext context, BudgetProvider provider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () async {
-          final pickedDate = await showDatePicker(
-            context: context,
-            initialDate: provider.selectedMonth,
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2100),
-            initialDatePickerMode: DatePickerMode.year,
-            helpText: 'Select Month',
-          );
-          if (pickedDate != null) {
-            provider.changeSelectedMonth(pickedDate);
-          }
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Selected Month',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            Row(
-              children: [
-                Text(
-                  _formatMonth(provider.selectedMonth),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.gradientEnd,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.calendar_month, color: AppColors.gradientEnd, size: 20),
-              ],
-            ),
-          ],
-        ),
-      ),
+  
+  Future<void> _showQuickJumpPicker(
+    BuildContext context,
+    BudgetProvider provider,
+    DatePickerMode mode,
+  ) async {
+    DateTime initialDate;
+    String helpText;
+    
+    switch (provider.selectedBudgetType) {
+      case BudgetType.weekly:
+        initialDate = DateTime.now();
+        helpText = 'Select Date';
+        break;
+      case BudgetType.monthly:
+        initialDate = provider.selectedMonth;
+        helpText = 'Select Month';
+        break;
+      case BudgetType.yearly:
+        initialDate = provider.selectedYear;
+        helpText = 'Select Year';
+        break;
+    }
+    
+    print('DEBUG _showQuickJumpPicker: type=${provider.selectedBudgetType}, mode=$mode, initialDate=$initialDate, helpText=$helpText');
+    
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      initialDatePickerMode: mode,
+      helpText: helpText,
     );
-  }
-
-  Widget _buildYearlySelector(BuildContext context, BudgetProvider provider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () async {
-          final pickedDate = await showDatePicker(
-            context: context,
-            initialDate: provider.selectedYear,
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2100),
-            initialDatePickerMode: DatePickerMode.year,
-            helpText: 'Select Year',
-          );
-          if (pickedDate != null) {
-            provider.changeSelectedYear(pickedDate);
-          }
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Selected Year',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            Row(
-              children: [
-                Text(
-                  '${provider.selectedYear.year}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.gradientEnd,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.calendar_today, color: AppColors.gradientEnd, size: 20),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatMonth(DateTime date) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return '${months[date.month - 1]} ${date.year}';
+    
+    print('DEBUG _showQuickJumpPicker: pickedDate=$pickedDate');
+    
+    if (pickedDate != null) {
+      provider.setSelectedDate(pickedDate);
+      print('DEBUG _showQuickJumpPicker: called setSelectedDate with $pickedDate');
+    }
   }
 
   Widget _buildPieChart(BuildContext context, BudgetProvider provider) {
@@ -1077,5 +964,73 @@ class _BudgetScreenState extends State<BudgetScreen>
       default:
         return Icons.category;
     }
+  }
+}
+
+// Reusable Period Selector Widget
+class PeriodSelector extends StatelessWidget {
+  final String periodText;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onQuickJump;
+
+  const PeriodSelector({
+    super.key,
+    required this.periodText,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onQuickJump,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: onPrevious,
+            color: AppColors.gradientEnd,
+            tooltip: 'Previous',
+          ),
+          Expanded(
+            child: Text(
+              periodText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.gradientEnd,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: onNext,
+            color: AppColors.gradientEnd,
+            tooltip: 'Next',
+          ),
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: onQuickJump,
+            color: AppColors.gradientEnd,
+            tooltip: 'Jump to date',
+          ),
+        ],
+      ),
+    );
   }
 }

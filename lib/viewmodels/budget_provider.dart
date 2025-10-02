@@ -13,7 +13,8 @@ class BudgetProvider with ChangeNotifier {
   BudgetType _selectedBudgetType = BudgetType.monthly;
   
   // Selected time period filters
-  int _selectedWeek = 1; // Week 1-4 of current month
+  int _selectedWeek = 1; // Week 1-5 of selected weekly month
+  DateTime _selectedWeeklyMonth = DateTime.now(); // Track which month for weekly view
   DateTime _selectedMonth = DateTime.now();
   DateTime _selectedYear = DateTime.now();
   
@@ -35,6 +36,7 @@ class BudgetProvider with ChangeNotifier {
   // Getters
   BudgetType get selectedBudgetType => _selectedBudgetType;
   int get selectedWeek => _selectedWeek;
+  DateTime get selectedWeeklyMonth => _selectedWeeklyMonth;
   DateTime get selectedMonth => _selectedMonth;
   DateTime get selectedYear => _selectedYear;
   List<Budget> get budgets => _budgets;
@@ -138,14 +140,14 @@ class BudgetProvider with ChangeNotifier {
   
   // Helper method to check if a weekly budget falls within the selected week period
   bool _isWeekInSelectedPeriod(Budget budget) {
-    // Get the current month and year
-    final now = DateTime.now();
-    final currentYear = now.year;
-    final currentMonth = now.month;
+    // Use provider's selectedWeeklyMonth instead of DateTime.now()
+    final currentYear = _selectedWeeklyMonth.year;
+    final currentMonth = _selectedWeeklyMonth.month;
     
-    // Calculate the date range for the selected week of the current month
+    print('DEBUG _isWeekInSelectedPeriod: budget.id=${budget.id}, budget.period=${budget.period}, _selectedWeek=$_selectedWeek, selectedWeeklyMonth=$_selectedWeeklyMonth');
+    
+    // Calculate the date range for the selected week of the selected month
     final firstDayOfMonth = DateTime(currentYear, currentMonth, 1);
-    final lastDayOfMonth = DateTime(currentYear, currentMonth + 1, 0);
     
     // Find the first Sunday of the month
     final firstSunday = Budget.getStartOfWeek(firstDayOfMonth);
@@ -154,8 +156,12 @@ class BudgetProvider with ChangeNotifier {
     final weekStartDate = firstSunday.add(Duration(days: (_selectedWeek - 1) * 7));
     final weekEndDate = weekStartDate.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
     
+    print('DEBUG _isWeekInSelectedPeriod: weekStartDate=$weekStartDate, weekEndDate=$weekEndDate, budget.startDate=${budget.startDate}, budget.endDate=${budget.endDate}');
+    
     // Check if the budget's date range overlaps with the selected week
-    return !(budget.endDate.isBefore(weekStartDate) || budget.startDate.isAfter(weekEndDate));
+    final overlaps = !(budget.endDate.isBefore(weekStartDate) || budget.startDate.isAfter(weekEndDate));
+    print('DEBUG _isWeekInSelectedPeriod: overlaps=$overlaps');
+    return overlaps;
   }
   
   // Calculate spent amount for a budget
@@ -183,6 +189,29 @@ class BudgetProvider with ChangeNotifier {
   // Get total spent amount for selected budget type
   double get totalSpent {
     return categoryBudgetData.fold(0.0, (sum, data) => sum + data.spentAmount);
+  }
+  
+  // Get formatted display text for current period
+  String get currentPeriodDisplay {
+    switch (_selectedBudgetType) {
+      case BudgetType.weekly:
+        // Use provider's selectedWeeklyMonth for display
+        final displayText = 'Week $_selectedWeek, ${_formatMonth(_selectedWeeklyMonth)}';
+        print('DEBUG currentPeriodDisplay (weekly): selectedWeek=$_selectedWeek, selectedWeeklyMonth=$_selectedWeeklyMonth, displayText=$displayText');
+        return displayText;
+      case BudgetType.monthly:
+        return _formatMonth(_selectedMonth);
+      case BudgetType.yearly:
+        return '${_selectedYear.year}';
+    }
+  }
+  
+  String _formatMonth(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
   }
   
   // Get transactions for selected category
@@ -260,6 +289,7 @@ class BudgetProvider with ChangeNotifier {
     if (type == BudgetType.weekly) {
       // Calculate current week of the month
       final now = DateTime.now();
+      _selectedWeeklyMonth = DateTime(now.year, now.month);
       final firstDayOfMonth = DateTime(now.year, now.month, 1);
       final firstSunday = Budget.getStartOfWeek(firstDayOfMonth);
       final currentWeekStart = Budget.getStartOfWeek(now);
@@ -295,6 +325,98 @@ class BudgetProvider with ChangeNotifier {
     _selectedYear = year;
     _selectedCategoryId = null;
     notifyListeners();
+  }
+  
+  // Navigation methods for weekly budget
+  void goToNextWeek() {
+    // Use provider's selectedWeeklyMonth instead of DateTime.now()
+    final weeksInMonth = _getWeeksInMonth(_selectedWeeklyMonth);
+    
+    print('DEBUG goToNextWeek: before - selectedWeek=$_selectedWeek, weeksInMonth=$weeksInMonth, selectedWeeklyMonth=$_selectedWeeklyMonth');
+    
+    if (_selectedWeek < weeksInMonth) {
+      _selectedWeek++;
+    } else {
+      // Move to next month
+      _selectedWeeklyMonth = DateTime(_selectedWeeklyMonth.year, _selectedWeeklyMonth.month + 1);
+      _selectedWeek = 1;
+      print('DEBUG goToNextWeek: moving to next month=$_selectedWeeklyMonth, resetting to week 1');
+    }
+    print('DEBUG goToNextWeek: after - selectedWeek=$_selectedWeek, selectedWeeklyMonth=$_selectedWeeklyMonth');
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  void goToPreviousWeek() {
+    print('DEBUG goToPreviousWeek: before - selectedWeek=$_selectedWeek, selectedWeeklyMonth=$_selectedWeeklyMonth');
+    
+    if (_selectedWeek > 1) {
+      _selectedWeek--;
+    } else {
+      // Move to previous month
+      _selectedWeeklyMonth = DateTime(_selectedWeeklyMonth.year, _selectedWeeklyMonth.month - 1);
+      _selectedWeek = _getWeeksInMonth(_selectedWeeklyMonth);
+      print('DEBUG goToPreviousWeek: moving to previous month=$_selectedWeeklyMonth, week=$_selectedWeek');
+    }
+    print('DEBUG goToPreviousWeek: after - selectedWeek=$_selectedWeek, selectedWeeklyMonth=$_selectedWeeklyMonth');
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  // Navigation methods for monthly budget
+  void goToNextMonth() {
+    _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  void goToPreviousMonth() {
+    _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  // Navigation methods for yearly budget
+  void goToNextYear() {
+    _selectedYear = DateTime(_selectedYear.year + 1);
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  void goToPreviousYear() {
+    _selectedYear = DateTime(_selectedYear.year - 1);
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  // Set selected date (for quick jump functionality)
+  void setSelectedDate(DateTime date) {
+    switch (_selectedBudgetType) {
+      case BudgetType.weekly:
+        // Calculate week of month for the selected date and update the month
+        _selectedWeeklyMonth = DateTime(date.year, date.month);
+        _selectedWeek = Budget.getWeekOfMonth(date);
+        print('DEBUG setSelectedDate (weekly): date=$date, selectedWeeklyMonth=$_selectedWeeklyMonth, selectedWeek=$_selectedWeek');
+        break;
+      case BudgetType.monthly:
+        _selectedMonth = date;
+        break;
+      case BudgetType.yearly:
+        _selectedYear = date;
+        break;
+    }
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  // Helper method to calculate number of weeks in a month
+  int _getWeeksInMonth(DateTime month) {
+    final firstDayOfMonth = DateTime(month.year, month.month, 1);
+    final lastDayOfMonth = DateTime(month.year, month.month + 1, 0);
+    final firstSunday = Budget.getStartOfWeek(firstDayOfMonth);
+    final lastSunday = Budget.getStartOfWeek(lastDayOfMonth);
+    final weeksDiff = lastSunday.difference(firstSunday).inDays ~/ 7;
+    return (weeksDiff + 1).clamp(1, 5);
   }
   
   // Select category for pie chart drill-down
