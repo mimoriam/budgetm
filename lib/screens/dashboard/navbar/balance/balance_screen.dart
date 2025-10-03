@@ -154,7 +154,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            // If the stream provided an empty list, show the empty state UI
+            if (snapshot.hasData && snapshot.data!.isEmpty) {
+              return _buildEmptyState();
+            }
+            // If there's no data at all, fall back to a simple message
+            if (!snapshot.hasData) {
               return const Center(child: Text('No accounts found.'));
             }
 
@@ -540,6 +545,30 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No accounts found. Add one to get started.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),

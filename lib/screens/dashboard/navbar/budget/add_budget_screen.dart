@@ -23,34 +23,11 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<BudgetProvider>(context, listen: false);
-      if (provider.expenseCategories.isEmpty) return;
-
-      final selectedCategory = provider.expenseCategories.firstWhere(
-        (cat) => cat.id == _selectedCategoryId,
-        orElse: () => provider.expenseCategories.first,
-      );
-
-      final result = await _showSelectionBottomSheet(
-        title: 'Select Category',
-        items: provider.expenseCategories,
-        selectedItem: selectedCategory,
-        getDisplayName: (category) => category.name ?? 'Unnamed Category',
-        onSelect: (category) {
-          setState(() {
-            _selectedCategoryId = category.id;
-          });
-        },
-      );
-
-      if (result == null) {
+      if (provider.expenseCategories.isNotEmpty && _selectedCategoryId == null) {
         setState(() {
           _selectedCategoryId = provider.expenseCategories.first.id;
-        });
-      } else {
-        setState(() {
-          _selectedCategoryId = result.id;
         });
       }
     });

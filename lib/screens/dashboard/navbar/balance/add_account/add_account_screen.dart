@@ -110,24 +110,24 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Transform.scale(
-                        scale: 0.9,
-                        alignment: Alignment.centerLeft,
-                        child: FormBuilderSwitch(
-                          name: 'include_in_total',
-                          title: const Text('Include in Total Balance'),
-                          initialValue: true,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          controlAffinity: ListTileControlAffinity.trailing,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                          ),
-                        ),
-                      ),
+                      // const SizedBox(height: 10),
+                      // Transform.scale(
+                      //   scale: 0.9,
+                      //   alignment: Alignment.centerLeft,
+                      //   child: FormBuilderSwitch(
+                      //     name: 'include_in_total',
+                      //     title: const Text('Include in Total Balance'),
+                      //     initialValue: true,
+                      //     decoration: const InputDecoration(
+                      //       border: InputBorder.none,
+                      //       contentPadding: EdgeInsets.zero,
+                      //     ),
+                      //     controlAffinity: ListTileControlAffinity.trailing,
+                      //     contentPadding: const EdgeInsets.symmetric(
+                      //       horizontal: 4,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
@@ -505,8 +505,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                               .createAccount(newAccount);
 
                           // Check if 'include_in_total' is enabled and create initial balance transaction
+                          // final includeInTotal =
+                          //     values['include_in_total'] as bool? ?? true;
+                          // TODO: Uncomment the Include in Total balance option 
                           final includeInTotal =
-                              values['include_in_total'] as bool? ?? true;
+                              values['include_in_total'] as bool? ?? false;
                           if (includeInTotal && inputAmount > 0) {
                             // Determine transaction type based on account type and amount
                             String transactionType = 'income';

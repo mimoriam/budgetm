@@ -74,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<FirestoreTask> _upcomingTasks = [];
   bool? _previousVacationMode;
   bool _isTogglingVacationMode = false;
+  bool _isLoading = false;
   
   double _lastContentOffset = 0.0;
 
@@ -471,38 +472,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     return Scaffold(
-      body: TweenAnimationBuilder<Color?>(
-        tween: ColorTween(
-          end: vacationProvider.isAiMode
-              ? AppColors.aiGradientStart
-              : AppColors.gradientStart,
-        ),
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOut,
-        builder: (context, color, child) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  color ?? AppColors.gradientStart,
-                  AppColors.gradientEnd2,
+      body: Stack(
+        children: [
+          TweenAnimationBuilder<Color?>(
+            tween: ColorTween(
+              end: vacationProvider.isAiMode
+                  ? AppColors.aiGradientStart
+                  : AppColors.gradientStart,
+            ),
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+            builder: (context, color, child) {
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      color ?? AppColors.gradientStart,
+                      AppColors.gradientEnd2,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.3, 1.0],
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _buildAppBar(context),
+                    _buildMonthSelector(),
+                    _buildBalanceCards(),
+                    const SizedBox(height: 16),
+                    Expanded(child: _buildTransactionSectionContent()),
+                  ],
+                ),
+              );
+            },
+          ),
+          if (_isLoading)
+            Positioned.fill(
+              child: Stack(
+                children: const [
+                  ModalBarrier(dismissible: false, color: Colors.black45),
+                  Center(child: CircularProgressIndicator()),
                 ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: const [0.3, 1.0],
               ),
             ),
-            child: Column(
-              children: [
-                _buildAppBar(context),
-                _buildMonthSelector(),
-                _buildBalanceCards(),
-                const SizedBox(height: 16),
-                Expanded(child: _buildTransactionSectionContent()),
-              ],
-            ),
-          );
-        },
+        ],
       ),
     );
   }
@@ -645,22 +659,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           final month = _months[index];
           final isSelected = index == _selectedMonthIndex;
           return GestureDetector(
-            onTap: () {
+            onTap: () async {
               setState(() {
                 _selectedMonthIndex = index;
+                _isLoading = true;
               });
               final isVacationMode =
                   Provider.of<VacationProvider>(context, listen: false)
                       .isVacationMode;
-              _loadIncomeAndExpensesForMonth(
-                _months[index],
-                isVacation: isVacationMode,
-              );
-              _loadTransactionsForMonth(
-                _months[index],
-                isVacation: isVacationMode,
-              );
-              _loadUpcomingTasksForMonth(_months[index]);
+              try {
+                await Future.wait([
+                  _loadIncomeAndExpensesForMonth(
+                    _months[index],
+                    isVacation: isVacationMode,
+                  ),
+                  _loadTransactionsForMonth(
+                    _months[index],
+                    isVacation: isVacationMode,
+                  ),
+                  _loadUpcomingTasksForMonth(_months[index]),
+                ]);
+              } finally {
+                if (mounted) {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+              }
             },
             child: Container(
               width: 85,
@@ -772,6 +797,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildTransactionSectionContent() {
     final currencyProvider = context.watch<CurrencyProvider>();
+
+    // If there are no transactions for the selected period, show an empty state.
+    if (_transactionsWithAccounts.isEmpty) {
+      return Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+        ),
+        child: SizedBox(
+          // Ensure the empty state fills available vertical space so it's centered nicely
+          height: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 80.0),
+            child: _buildEmptyState(),
+          ),
+        ),
+      );
+    }
+
     Map<String, List<TransactionWithAccount>> groupedTransactions = {};
     for (var tx in _transactionsWithAccounts) {
       String dateKey = DateFormat('MMM d, yyyy').format(tx.transaction.date);
@@ -837,6 +884,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // Empty state shown when there are no transactions for the selected period.
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            'images/launcher/logo.png',
+            width: 80,
+            height: 80,
+            color: Colors.grey.shade300,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No transactions recorded for this period.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          ),
+        ],
       ),
     );
   }

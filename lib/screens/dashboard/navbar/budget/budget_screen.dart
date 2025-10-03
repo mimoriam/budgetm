@@ -194,16 +194,16 @@ class _BudgetScreenState extends State<BudgetScreen>
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20.0,
-                    vertical: 12.0,
+                    vertical: 8.0,
                   ),
                   children: [
                     _buildBudgetSelectors(context, provider),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     _buildPieChart(context, provider),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     _buildCategoryList(context, provider),
                     // Add bottom spacing so last item is reachable above navbar
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                   ],
                 );
               },
@@ -216,7 +216,7 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.gradientStart, AppColors.gradientEnd2],
@@ -232,7 +232,7 @@ class _BudgetScreenState extends State<BudgetScreen>
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20.0, 6.0, 20.0, 0),
+          padding: const EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -240,7 +240,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 'Budget',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 22,
+                  fontSize: 20,
                 ),
               ),
               // Add button to create a new budget even when no budgets exist
@@ -294,7 +294,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -367,11 +367,11 @@ class _BudgetScreenState extends State<BudgetScreen>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.gradientEnd : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? AppColors.gradientEnd : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(20),
+      ),
         child: Text(
           label,
           style: TextStyle(
@@ -462,7 +462,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -494,7 +494,7 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
           const SizedBox(height: 20),
           SizedBox(
-            height: 200,
+            height: 180,
             child: PieChart(
               PieChartData(
                 sections: _buildPieChartSections(displayData),
@@ -517,7 +517,7 @@ class _BudgetScreenState extends State<BudgetScreen>
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildPieChartLegend(displayData),
         ],
       ),
@@ -556,7 +556,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     return Column(
       children: data.map((item) {
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(
             children: [
               Container(
@@ -628,7 +628,7 @@ class _BudgetScreenState extends State<BudgetScreen>
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         ...data.map((item) => _buildCategoryCard(context, item, provider)),
       ],
     );
@@ -660,9 +660,9 @@ class _BudgetScreenState extends State<BudgetScreen>
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -699,7 +699,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 // Category name occupies the remaining space on its own line and can wrap
                 Expanded(
                   child: Text(
@@ -716,7 +716,7 @@ class _BudgetScreenState extends State<BudgetScreen>
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             // Row 3: amount, optional limit and edit button — amount and limit grouped on left, edit on right
             Row(
@@ -839,7 +839,7 @@ class _BudgetScreenState extends State<BudgetScreen>
 
             // Progress section remains on its own block below
             if (hasLimit) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -850,7 +850,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                       progress > 1.0 ? Colors.red : (isOverBudget ? Colors.red : Colors.green),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
                     isOverBudget
                         ? '\$${(spent - limit).toStringAsFixed(2)} over budget'
@@ -872,7 +872,7 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   Widget _buildEmptyState(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -894,14 +894,14 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            'No expenses yet',
+            'No budget created',
             style: Theme.of(
               context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
-            'Start adding expenses to see your budget breakdown',
+            'Start by creating a budget to see your spending breakdown here.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),
@@ -1001,7 +1001,7 @@ class PeriodSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1020,7 +1020,7 @@ class PeriodSelector extends StatelessWidget {
               periodText,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: AppColors.secondaryTextColorDark,
               ),

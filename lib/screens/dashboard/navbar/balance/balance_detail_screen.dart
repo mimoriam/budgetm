@@ -114,9 +114,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'No transactions found',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                   Text(
