@@ -19,11 +19,13 @@ class ExpenseDetailScreen extends StatefulWidget {
 class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   late FirestoreService _firestoreService;
   bool _isDeleting = false;
+  late bool _isPaid;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
+    _isPaid = widget.transaction.paid ?? true;
   }
 
   Future<void> _deleteTransaction() async {
@@ -40,6 +42,23 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       setState(() {
         _isDeleting = false;
       });
+    }
+  }
+
+  Future<void> _togglePaidStatus() async {
+    try {
+      // Use the new service method to atomically update
+      await _firestoreService.toggleTransactionPaidStatus(
+        widget.transaction.id,
+        !_isPaid,
+      );
+
+      // Update the local state
+      setState(() {
+        _isPaid = !_isPaid;
+      });
+    } catch (e) {
+      print('Error toggling paid status: $e');
     }
   }
 
@@ -136,6 +155,28 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
+                        'STATUS',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.secondaryTextColorLight,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        _isPaid ? 'PAID' : 'UNPAID',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: _isPaid ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
                         'DATE',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.secondaryTextColorLight,
@@ -157,27 +198,27 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   const SizedBox(height: 40),
                   Row(
                     children: [
-                      // Expanded(
-                      //   child: OutlinedButton(
-                      //     onPressed: () {},
-                      //     style: OutlinedButton.styleFrom(
-                      //       padding: const EdgeInsets.symmetric(vertical: 14),
-                      //       shape: RoundedRectangleBorder(
-                      //         borderRadius: BorderRadius.circular(30.0),
-                      //       ),
-                      //       side: const BorderSide(
-                      //         color: Colors.black,
-                      //         width: 1.5,
-                      //       ),
-                      //     ),
-                      //     child: Text(
-                      //       'Move to Calendar',
-                      //       style: Theme.of(context).textTheme.labelLarge
-                      //           ?.copyWith(color: Colors.black, fontSize: 14),
-                      //     ),
-                      //   ),
-                      // ),
-                      // const SizedBox(width: 16),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _togglePaidStatus,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                            ),
+                            side: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(color: Colors.black, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: _isDeleting

@@ -246,6 +246,15 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                     DateFormat('MMM d, yyyy').format(transaction.date),
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    (transaction.paid ?? true) ? 'Paid' : 'Unpaid',
+                    style: TextStyle(
+                      color: (transaction.paid ?? true) ? Colors.green : Colors.red,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -333,6 +342,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
       iconBackgroundColor: (isIncome ? Colors.green : Colors.red).withOpacity(0.1),
       accountId: firestoreTransaction.accountId,
       categoryId: firestoreTransaction.categoryId,
+      paid: firestoreTransaction.paid,
     );
   }
 }

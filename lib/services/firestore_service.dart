@@ -248,9 +248,9 @@ class FirestoreService {
   }
 
   // Update transaction
-  Future<void> updateTransaction(String id, FirestoreTransaction transaction) async {
+  Future<void> updateTransaction(String transactionId, Map<String, dynamic> data) async {
     try {
-      await _transactionsCollection.doc(id).update(transaction.toJson());
+      await _transactionsCollection.doc(transactionId).update(data);
     } catch (e) {
       print('Error updating transaction: $e');
       rethrow;
@@ -544,6 +544,41 @@ class FirestoreService {
       print('Error streaming accounts: $e');
       return Stream.empty();
     }
+  }
+
+  // Toggle transaction paid status and update account balance
+  Future<void> toggleTransactionPaidStatus(String transactionId, bool isPaid) async {
+    final transactionRef = _transactionsCollection.doc(transactionId);
+
+    await _firestore.runTransaction((transaction) async {
+      final transactionSnapshot = await transaction.get(transactionRef);
+      if (!transactionSnapshot.exists) {
+        throw Exception('Transaction not found');
+      }
+
+      final transactionData = transactionSnapshot.data()!;
+      final accountId = transactionData.accountId;
+      final amount = transactionData.amount;
+
+      if (accountId == null || accountId.isEmpty) {
+        // No account linked, just update the transaction
+        transaction.update(transactionRef, {'paid': isPaid});
+        return;
+      }
+
+      final accountRef = _accountsCollection.doc(accountId);
+      final accountSnapshot = await transaction.get(accountRef);
+      if (!accountSnapshot.exists) {
+        throw Exception('Account not found');
+      }
+
+      final currentBalance = accountSnapshot.data()!.balance;
+      // If marking as paid, subtract amount. If marking as unpaid, add amount.
+      final newBalance = isPaid ? currentBalance - amount : currentBalance + amount;
+
+      transaction.update(accountRef, {'balance': newBalance});
+      transaction.update(transactionRef, {'paid': isPaid});
+    });
   }
 
   // ================ TASK OPERATIONS ================

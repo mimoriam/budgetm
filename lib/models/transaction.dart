@@ -12,6 +12,7 @@ class Transaction {
   final Color iconBackgroundColor;
   final String? accountId;
   final String? categoryId;
+  final bool? paid;
 
   Transaction({
     required this.id,
@@ -24,6 +25,7 @@ class Transaction {
     required this.iconBackgroundColor,
     this.accountId,
     this.categoryId,
+    this.paid,
   });
 
   // Create a copy of Transaction with updated values
@@ -38,6 +40,7 @@ class Transaction {
     Color? iconBackgroundColor,
     String? accountId,
     String? categoryId,
+    bool? paid,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -50,12 +53,13 @@ class Transaction {
       iconBackgroundColor: iconBackgroundColor ?? this.iconBackgroundColor,
       accountId: accountId ?? this.accountId,
       categoryId: categoryId ?? this.categoryId,
+      paid: paid ?? this.paid,
     );
   }
 
   @override
   String toString() {
-    return 'Transaction(id: $id, title: $title, description: $description, amount: $amount, type: $type, date: $date, accountId: $accountId, categoryId: $categoryId)';
+    return 'Transaction(id: $id, title: $title, description: $description, amount: $amount, type: $type, date: $date, accountId: $accountId, categoryId: $categoryId, paid: $paid)';
   }
 
   @override
@@ -69,13 +73,14 @@ class Transaction {
         other.type == type &&
         other.date == date &&
         other.accountId == accountId &&
-        other.categoryId == categoryId;
+        other.categoryId == categoryId &&
+        other.paid == paid;
   }
 
   @override
   int get hashCode {
     return Object.hash(
-      id, title, description, amount, type, date, accountId, categoryId,
+      id, title, description, amount, type, date, accountId, categoryId, paid,
     );
   }
 }

@@ -819,7 +819,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // Ensure the empty state fills available vertical space so it's centered nicely
           height: double.infinity,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 80.0),
+            padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 130.0),
             child: _buildEmptyState(),
           ),
         ),
@@ -898,7 +898,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Empty state shown when there are no transactions for the selected period.
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
       ),

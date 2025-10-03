@@ -5,6 +5,7 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/category.dart';
+import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -116,7 +117,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             orElse: () => _categories.first,
           );
 
-          final result = await _showSelectionBottomSheet<Category>(
+          final result = await _showPrettySelectionBottomSheet<Category>(
             title: 'Select Category',
             items: _categories,
             selectedItem: selectedCategory,
@@ -143,7 +144,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
-  Future<T?> _showSelectionBottomSheet<T>({
+  Future<T?> _showPrettySelectionBottomSheet<T>({
     required String title,
     required List<T> items,
     required T? selectedItem,
@@ -151,54 +152,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }) async {
     return await showModalBottomSheet<T>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final isSelected = item == selectedItem;
-                  return ListTile(
-                    title: Text(
-                      getDisplayName(item),
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? Theme.of(context).primaryColor : null,
-                      ),
-                    ),
-                    trailing: isSelected
-                        ? Icon(
-                            Icons.check,
-                            color: Theme.of(context).primaryColor,
-                          )
-                        : null,
-                    onTap: () => Navigator.of(context).pop(item),
-                  );
-                },
-              ),
-            ),
-          ],
+        return PrettyBottomSheet<T>(
+          title: title,
+          items: items,
+          selectedItem: selectedItem!,
+          getDisplayName: getDisplayName,
         );
       },
-    ) ?? items.first;
+    );
   }
 
   @override
@@ -289,7 +252,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                         orElse: () => _categories.first,
                                       );
                                       
-                                      final result = await _showSelectionBottomSheet<Category>(
+                                      final result = await _showPrettySelectionBottomSheet<Category>(
                                         title: 'Select Category',
                                         items: _categories,
                                         selectedItem: selectedCategory,
@@ -371,7 +334,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                             orElse: () => _accounts.first,
                                           );
                                           
-                                          final result = await _showSelectionBottomSheet<FirestoreAccount>(
+                                          final result = await _showPrettySelectionBottomSheet<FirestoreAccount>(
                                             title: 'Select Account',
                                             items: _accounts,
                                             selectedItem: selectedAccount,
@@ -529,6 +492,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ),
         if (widget.transactionType == TransactionType.expense) ...[
+          const SizedBox(height: 8),
+          _buildFormSection(
+            context,
+            'Paid',
+            FormBuilderSwitch(
+              name: 'paid',
+              title: const Text(
+                'Paid',
+                style: TextStyle(fontSize: 13),
+              ),
+              initialValue: true,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
           _buildFormSection(
             context,

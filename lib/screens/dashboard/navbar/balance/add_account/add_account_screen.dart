@@ -3,6 +3,7 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -42,63 +43,21 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     super.dispose();
   }
 
-  Future<dynamic?> _showSelectionBottomSheet({
+  Future<dynamic?> _showPrettySelectionBottomSheet({
     required String title,
     required List<dynamic> items,
-    required Function(dynamic) onSelect,
-    required String Function(dynamic) getDisplayName,
     required dynamic selectedItem,
+    required String Function(dynamic) getDisplayName,
   }) async {
     final result = await showModalBottomSheet<dynamic>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final isSelected = item == selectedItem;
-                  return ListTile(
-                    title: Text(
-                      getDisplayName(item),
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? Theme.of(context).primaryColor : null,
-                      ),
-                    ),
-                    trailing: isSelected
-                        ? Icon(
-                            Icons.check,
-                            color: Theme.of(context).primaryColor,
-                          )
-                        : null,
-                    onTap: () {
-                      onSelect(item);
-                      Navigator.of(context).pop(item);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+        return PrettyBottomSheet<dynamic>(
+          title: title,
+          items: items,
+          selectedItem: selectedItem,
+          getDisplayName: getDisplayName,
         );
       },
     );
@@ -121,30 +80,24 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
     final selected = _selectedAccountType ?? types.first;
 
-    final result = await _showSelectionBottomSheet(
+    final result = await _showPrettySelectionBottomSheet(
       title: 'Select Account Type',
       items: types,
       selectedItem: selected,
       getDisplayName: (t) => t.toString(),
-      onSelect: (t) {
-        setState(() {
-          _selectedAccountType = t as String;
-        });
-        _formKey.currentState?.patchValue({'account_type': _selectedAccountType});
-      },
     );
 
     if (result == null) {
       // If user dismissed without selecting, default to 'Cash'
       setState(() {
         _selectedAccountType = types.first;
+        _formKey.currentState?.patchValue({'account_type': types.first});
       });
-      _formKey.currentState?.patchValue({'account_type': types.first});
     } else {
       setState(() {
         _selectedAccountType = result as String;
+        _formKey.currentState?.patchValue({'account_type': _selectedAccountType});
       });
-      _formKey.currentState?.patchValue({'account_type': _selectedAccountType});
     }
   }
   
@@ -192,33 +145,58 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       _buildFormSection(
                         context,
                         'Account Type',
-                        FormBuilderDropdown<String>(
-                          name: 'account_type',
-                          decoration: _inputDecoration(
-                            hintText: 'Select Account Type',
-                          ),
-                          items:
-                              [
-                                    'Cash',
-                                    'Master Card',
-                                    'Wallet',
-                                    'Cryptocurrency',
-                                    'Saving',
-                                    'Gold',
-                                    'Safe',
-                                    'Bank',
-                                    'Investment',
-                                  ]
-                                  .map(
-                                    (type) => DropdownMenuItem(
-                                      value: type,
-                                      child: Text(type),
+                        Column(
+                          children: [
+                            GestureDetector(
+                              onTap: _showAccountTypeSelection,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10.0,
+                                  horizontal: 16.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(30.0),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _selectedAccountType ?? 'Select Account Type',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: _selectedAccountType != null
+                                            ? AppColors.primaryTextColorLight
+                                            : AppColors.lightGreyBackground,
+                                      ),
                                     ),
-                                  )
-                                  .toList(),
-                          validator: FormBuilderValidators.required(
-                            errorText: 'Please select an account type',
-                          ),
+                                    const Icon(
+                                      Icons.arrow_drop_down,
+                                      color: AppColors.secondaryTextColorLight,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Hidden field to store and validate the account_type
+                            Opacity(
+                              opacity: 0,
+                              child: AbsorbPointer(
+                                child: FormBuilderTextField(
+                                  name: 'account_type',
+                                  initialValue: _selectedAccountType,
+                                  validator: FormBuilderValidators.required(
+                                    errorText: 'Account type is required',
+                                  ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       // const SizedBox(height: 10),
@@ -619,7 +597,6 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           // final includeInTotal =
                           //     values['include_in_total'] as bool? ?? true;
                           // TODO: Uncomment the Include in Total balance option
-                           
                           final includeInTotal =
                               values['include_in_total'] as bool? ?? false;
                           if (includeInTotal && inputAmount > 0) {

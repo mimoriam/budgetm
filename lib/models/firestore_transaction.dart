@@ -76,9 +76,30 @@ class FirestoreTransaction {
       icon: data['icon'],
       color: data['color'],
       notes: data['notes'],
-      paid: data['paid'],
+      paid: data['paid'] ?? true,
       isVacation: data['isVacation'] ?? false,
     );
+  }
+
+  // Convert FirestoreTransaction to Firestore document
+  Map<String, dynamic> toFirestore() {
+    return {
+      'description': description,
+      'amount': amount,
+      'type': type,
+      'date': Timestamp.fromDate(date),
+      'categoryId': categoryId,
+      'budgetId': budgetId,
+      'accountId': accountId,
+      'time': time,
+      'repeat': repeat,
+      'remind': remind,
+      'icon': icon,
+      'color': color,
+      'notes': notes,
+      'paid': paid,
+      'isVacation': isVacation,
+    };
   }
 
   // Create FirestoreTransaction from JSON

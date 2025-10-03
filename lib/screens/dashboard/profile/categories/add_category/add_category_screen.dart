@@ -5,6 +5,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/category.dart';
+import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   final String? initialCategoryType;
@@ -18,11 +19,32 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   late FirestoreService _firestoreService;
   bool _isSaving = false;
+  String? _selectedType;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
+    _selectedType = widget.initialCategoryType;
+  }
+
+  Future<String?> _showPrettySelectionBottomSheet({
+    required String title,
+    required List<String> items,
+    required String? selectedItem,
+  }) async {
+    return await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return PrettyBottomSheet<String>(
+          title: title,
+          items: items,
+          selectedItem: selectedItem ?? items.first,
+          getDisplayName: (item) => item,
+        );
+      },
+    );
   }
 
   Future<void> _saveCategory() async {
@@ -112,23 +134,69 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                       _buildFormSection(
                         context,
                         'Type',
-                        FormBuilderDropdown<String>(
+                        FormBuilderField<String>(
                           name: 'type',
-                          initialValue: widget.initialCategoryType,
-                          decoration: _inputDecoration(
-                            hintText: 'Select type',
+                          initialValue: _selectedType,
+                          validator: FormBuilderValidators.required(
+                            errorText: 'Please select a type',
                           ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'income',
-                              child: Text('Income'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'expense',
-                              child: Text('Expense'),
-                            ),
-                          ],
-                          validator: FormBuilderValidators.required(),
+                          builder: (FormFieldState<String?> field) {
+                            return GestureDetector(
+                              onTap: () async {
+                                final result = await _showPrettySelectionBottomSheet(
+                                  title: 'Select Type',
+                                  items: const ['Income', 'Expense'],
+                                  selectedItem: _selectedType != null
+                                      ? (_selectedType == 'income' ? 'Income' : 'Expense')
+                                      : null,
+                                );
+
+                                if (result != null) {
+                                  final typeValue = result == 'Income' ? 'income' : 'expense';
+                                  setState(() {
+                                    _selectedType = typeValue;
+                                  });
+                                  field.didChange(typeValue);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14.0,
+                                  horizontal: 16.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16.0),
+                                  border: Border.all(
+                                    color: field.hasError
+                                        ? AppColors.errorColor
+                                        : Colors.grey.shade300,
+                                    width: field.hasError ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _selectedType != null
+                                          ? (_selectedType == 'income' ? 'Income' : 'Expense')
+                                          : 'Select type',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: _selectedType != null
+                                            ? AppColors.primaryTextColorLight
+                                            : AppColors.lightGreyBackground,
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 16),

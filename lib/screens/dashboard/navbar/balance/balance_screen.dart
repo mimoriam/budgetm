@@ -111,15 +111,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final accId = transaction.accountId;
       if (accId == null || defaultAccountIds.contains(accId)) continue; // Skip if no account or if it's a default account
       
-      final isIncome =
-          transaction.type != null &&
-          transaction.type.toString().toLowerCase().contains('income');
-      final txnAmount = isIncome ? transaction.amount : -transaction.amount;
-      transactionAmounts.update(
-        accId,
-        (value) => value + txnAmount,
-        ifAbsent: () => txnAmount,
-      );
+      if (transaction.paid ?? true) {
+        final isIncome =
+            transaction.type != null &&
+            transaction.type.toString().toLowerCase().contains('income');
+        final txnAmount = isIncome ? transaction.amount : -transaction.amount;
+        transactionAmounts.update(
+          accId,
+          (value) => value + txnAmount,
+          ifAbsent: () => txnAmount,
+        );
+      }
     }
 
     final accountsWithData = _latestAccounts!
@@ -147,31 +149,34 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   Widget build(BuildContext context) {
     return Consumer<CurrencyProvider>(
       builder: (context, currencyProvider, child) {
-        return StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _accountsWithTransactionsStream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            // If the stream provided an empty list, show the empty state UI
-            if (snapshot.hasData && snapshot.data!.isEmpty) {
-              return _buildEmptyState();
-            }
-            // If there's no data at all, fall back to a simple message
-            if (!snapshot.hasData) {
-              return const Center(child: Text('No accounts found.'));
-            }
+        return Scaffold(
+          backgroundColor: AppColors.scaffoldBackground,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(80),
+            child: _buildCustomAppBar(context),
+          ),
+          body: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _accountsWithTransactionsStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              // If the stream provided an empty list, show the empty state UI
+              if (snapshot.hasData && snapshot.data!.isEmpty) {
+                return _buildEmptyState();
+              }
+              // If there's no data at all, fall back to a simple message
+              if (!snapshot.hasData) {
+                return const Center(child: Text('No accounts found.'));
+              }
 
-            final accountsWithData = snapshot.data!;
+              final accountsWithData = snapshot.data!;
 
-            return Scaffold(
-              backgroundColor: AppColors.scaffoldBackground,
-              body: Column(
+              return Column(
                 children: [
-                  _buildCustomAppBar(context),
                   Expanded(
                     child: SingleChildScrollView(
                       controller: _scrollController,
@@ -228,9 +233,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                     ),
                   ),
                 ],
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
@@ -560,25 +565,23 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 80,
-              height: 80,
-              child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No accounts found. Add one to get started.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 80,
+            height: 80,
+            child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No accounts found. Add one to get started.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          ),
+        ],
       ),
     );
   }
