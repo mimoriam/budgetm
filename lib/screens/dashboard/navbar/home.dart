@@ -470,6 +470,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         homeScreenProvider.completeRefresh();
       });
     }
+    // Check for transaction-specific refresh
+    else if (homeScreenProvider.shouldRefreshTransactions) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _refreshData();
+        homeScreenProvider.completeRefresh();
+      });
+    }
 
     return Scaffold(
       body: Stack(

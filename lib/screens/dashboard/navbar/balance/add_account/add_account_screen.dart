@@ -21,6 +21,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isCreditSelected = false; // Balance is selected by default
   bool _isSaving = false;
+  String? _selectedAccountType;
   late FirestoreService _firestoreService;
   late FocusNode _amountFocusNode;
 
@@ -29,12 +30,122 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     super.initState();
     _firestoreService = FirestoreService.instance;
     _amountFocusNode = FocusNode();
+    // Show account type selection bottom sheet immediately after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showAccountTypeSelection();
+    });
   }
   
   @override
   void dispose() {
     _amountFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<dynamic?> _showSelectionBottomSheet({
+    required String title,
+    required List<dynamic> items,
+    required Function(dynamic) onSelect,
+    required String Function(dynamic) getDisplayName,
+    required dynamic selectedItem,
+  }) async {
+    final result = await showModalBottomSheet<dynamic>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final isSelected = item == selectedItem;
+                  return ListTile(
+                    title: Text(
+                      getDisplayName(item),
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Theme.of(context).primaryColor : null,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? Icon(
+                            Icons.check,
+                            color: Theme.of(context).primaryColor,
+                          )
+                        : null,
+                    onTap: () {
+                      onSelect(item);
+                      Navigator.of(context).pop(item);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result;
+  }
+
+  Future<void> _showAccountTypeSelection() async {
+    final types = [
+      'Cash',
+      'Master Card',
+      'Wallet',
+      'Cryptocurrency',
+      'Saving',
+      'Gold',
+      'Safe',
+      'Bank',
+      'Investment',
+    ];
+
+    final selected = _selectedAccountType ?? types.first;
+
+    final result = await _showSelectionBottomSheet(
+      title: 'Select Account Type',
+      items: types,
+      selectedItem: selected,
+      getDisplayName: (t) => t.toString(),
+      onSelect: (t) {
+        setState(() {
+          _selectedAccountType = t as String;
+        });
+        _formKey.currentState?.patchValue({'account_type': _selectedAccountType});
+      },
+    );
+
+    if (result == null) {
+      // If user dismissed without selecting, default to 'Cash'
+      setState(() {
+        _selectedAccountType = types.first;
+      });
+      _formKey.currentState?.patchValue({'account_type': types.first});
+    } else {
+      setState(() {
+        _selectedAccountType = result as String;
+      });
+      _formKey.currentState?.patchValue({'account_type': _selectedAccountType});
+    }
   }
   
   @override
@@ -56,7 +167,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 ),
                 child: FormBuilder(
                   key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  // autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -507,7 +618,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           // Check if 'include_in_total' is enabled and create initial balance transaction
                           // final includeInTotal =
                           //     values['include_in_total'] as bool? ?? true;
-                          // TODO: Uncomment the Include in Total balance option 
+                          // TODO: Uncomment the Include in Total balance option
+                           
                           final includeInTotal =
                               values['include_in_total'] as bool? ?? false;
                           if (includeInTotal && inputAmount > 0) {

@@ -175,7 +175,7 @@ class _MainScreenState extends State<MainScreen> {
               behavior: HitTestBehavior.opaque,
               child: Container(color: Colors.black54.withOpacity(0.5)),
             ),
-          if (_controller.index != 1) // Hide FAB when budget screen (index 1) is active
+          if (_controller.index != 1 && _controller.index != 2) // Hide FAB when budget screen (index 1) or balance screen (index 2) is active
             Positioned(
               bottom: 100,
               right: 20,
@@ -323,22 +323,7 @@ class _MainScreenState extends State<MainScreen> {
       case 1: // Budget
         return []; // Budget screen no longer needs FAB actions
       case 2: // Balance
-        return [
-          _buildFabMenuItem(
-            label: "Add Account",
-            icon: HugeIcons.strokeRoundedAddCircle,
-            color: Colors.blue,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const AddAccountScreen(),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
-        ];
+        return []; // Balance screen no longer needs FAB actions
       case 3: // Goals
         return [
           _buildFabMenuItem(

@@ -39,8 +39,10 @@ class _BudgetScreenState extends State<BudgetScreen>
 
     // Initialize budget provider only if not in vacation mode
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final vacationProvider =
-          Provider.of<VacationProvider>(context, listen: false);
+      final vacationProvider = Provider.of<VacationProvider>(
+        context,
+        listen: false,
+      );
       if (!vacationProvider.isVacationMode) {
         Provider.of<BudgetProvider>(context, listen: false).initialize();
       }
@@ -49,7 +51,9 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   void _showVacationModeDialog() {
     // Diagnostic log to trace why/when this dialog is invoked
-    print('Budget: showing vacation dialog — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, isVacation=${_vacationProvider?.isVacationMode}');
+    print(
+      'Budget: showing vacation dialog — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, isVacation=${_vacationProvider?.isVacationMode}',
+    );
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -79,7 +83,7 @@ class _BudgetScreenState extends State<BudgetScreen>
   void _vacationListener() {
     if (!mounted) return;
     final isVacation = _vacationProvider?.isVacationMode ?? false;
- 
+
     if (isVacation) {
       // Rebuild to show vacation UI and avoid loading data while in vacation mode
       setState(() {});
@@ -89,13 +93,17 @@ class _BudgetScreenState extends State<BudgetScreen>
       setState(() {});
     }
   }
- 
+
   void _navbarListener() {
     if (!mounted) return;
     final currentIndex = _navbarVisibilityProvider?.currentIndex ?? 0;
     // Show dialog only when Budget tab (index 1) becomes active and vacation mode is on
-    if (currentIndex == 1 && _vacationProvider?.isVacationMode == true && !_hasShownVacationDialog) {
-      print('Budget: navbar became active and vacation active — tabIndex=$currentIndex');
+    if (currentIndex == 1 &&
+        _vacationProvider?.isVacationMode == true &&
+        !_hasShownVacationDialog) {
+      print(
+        'Budget: navbar became active and vacation active — tabIndex=$currentIndex',
+      );
       _hasShownVacationDialog = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showVacationModeDialog();
@@ -106,7 +114,7 @@ class _BudgetScreenState extends State<BudgetScreen>
   void _onScroll() {
     if (!mounted) return;
     if (!_scrollController.hasClients) return;
-    
+
     final provider = Provider.of<NavbarVisibilityProvider>(
       context,
       listen: false,
@@ -139,19 +147,26 @@ class _BudgetScreenState extends State<BudgetScreen>
       _vacationProvider = newVacation;
       _vacationProvider?.addListener(_vacationListener);
     }
- 
+
     final newNavbar = Provider.of<NavbarVisibilityProvider>(context);
     if (_navbarVisibilityProvider != newNavbar) {
       _navbarVisibilityProvider?.removeListener(_navbarListener);
       _navbarVisibilityProvider = newNavbar;
       _navbarVisibilityProvider?.addListener(_navbarListener);
     }
- 
+
     // If vacation mode is already active when dependencies change, show dialog once if Budget tab is active.
-    final tabIndex = _navbarVisibilityProvider?.currentIndex ?? Provider.of<NavbarVisibilityProvider>(context, listen: false).currentIndex;
+    final tabIndex =
+        _navbarVisibilityProvider?.currentIndex ??
+        Provider.of<NavbarVisibilityProvider>(
+          context,
+          listen: false,
+        ).currentIndex;
     if (_vacationProvider?.isVacationMode == true && !_hasShownVacationDialog) {
       // Diagnostic log to record when the budget screen schedules the vacation dialog
-      print('Budget: dependencies detected vacation active — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, tabIndex=$tabIndex');
+      print(
+        'Budget: dependencies detected vacation active — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, tabIndex=$tabIndex',
+      );
       if (tabIndex == 1) {
         _hasShownVacationDialog = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -166,8 +181,10 @@ class _BudgetScreenState extends State<BudgetScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      final isVacation =
-          Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+      final isVacation = Provider.of<VacationProvider>(
+        context,
+        listen: false,
+      ).isVacationMode;
       if (!isVacation) {
         Provider.of<BudgetProvider>(context, listen: false).initialize();
       }
@@ -200,7 +217,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     _buildBudgetSelectors(context, provider),
                     const SizedBox(height: 12),
                     _buildPieChart(context, provider),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     _buildCategoryList(context, provider),
                     // Add bottom spacing so last item is reachable above navbar
                     const SizedBox(height: 16),
@@ -244,20 +261,39 @@ class _BudgetScreenState extends State<BudgetScreen>
                 ),
               ),
               // Add button to create a new budget even when no budgets exist
-              IconButton(
-                icon: const Icon(Icons.add, color: Colors.black),
-                onPressed: () async {
-                  final result = await PersistentNavBarNavigator.pushNewScreen(
-                    context,
-                    screen: const AddBudgetScreen(),
-                    withNavBar: false,
-                    pageTransitionAnimation: PageTransitionAnimation.cupertino,
-                  );
-                  if (result == true) {
-                    Provider.of<BudgetProvider>(context, listen: false).initialize();
-                  }
-                },
-                tooltip: 'Add Budget',
+              Container(
+                // height: 20,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.rectangle,
+                  gradient: LinearGradient(
+                    colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  // color: AppColors.gradientEnd,
+                ),
+                child: TextButton(
+                  child: Text("Add Budget", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12)),
+                  onPressed: () async {
+                    final result =
+                        await PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: const AddBudgetScreen(),
+                          withNavBar: false,
+                          pageTransitionAnimation:
+                              PageTransitionAnimation.cupertino,
+                        );
+                    if (result == true) {
+                      if (context.mounted) {
+                        Provider.of<BudgetProvider>(
+                          context,
+                          listen: false,
+                        ).initialize();
+                      }
+                    }
+                  },
+                ),
               ),
             ],
           ),
@@ -266,10 +302,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
-  Widget _buildBudgetSelectors(
-    BuildContext context,
-    BudgetProvider provider,
-  ) {
+  Widget _buildBudgetSelectors(BuildContext context, BudgetProvider provider) {
     // Determine period navigation callbacks based on selected budget type
     VoidCallback onPrevious;
     VoidCallback onNext;
@@ -279,22 +312,25 @@ class _BudgetScreenState extends State<BudgetScreen>
       case BudgetType.weekly:
         onPrevious = provider.goToPreviousWeek;
         onNext = provider.goToNextWeek;
-        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
+        onQuickJump = () =>
+            _showQuickJumpPicker(context, provider, DatePickerMode.day);
         break;
       case BudgetType.monthly:
         onPrevious = provider.goToPreviousMonth;
         onNext = provider.goToNextMonth;
-        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.day);
+        onQuickJump = () =>
+            _showQuickJumpPicker(context, provider, DatePickerMode.day);
         break;
       case BudgetType.yearly:
         onPrevious = provider.goToPreviousYear;
         onNext = provider.goToNextYear;
-        onQuickJump = () => _showQuickJumpPicker(context, provider, DatePickerMode.year);
+        onQuickJump = () =>
+            _showQuickJumpPicker(context, provider, DatePickerMode.year);
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -313,7 +349,9 @@ class _BudgetScreenState extends State<BudgetScreen>
             builder: (ctx) {
               // Diagnostic: log selected type and displayed period to help debug UI updates
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                print('BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}');
+                print(
+                  'BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}',
+                );
               });
               return Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -345,7 +383,7 @@ class _BudgetScreenState extends State<BudgetScreen>
               );
             },
           ),
-          const SizedBox(height: 12),
+          // const SizedBox(height: 12),
           PeriodSelector(
             periodText: provider.currentPeriodDisplay,
             onPrevious: onPrevious,
@@ -367,11 +405,11 @@ class _BudgetScreenState extends State<BudgetScreen>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.gradientEnd : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(20),
-      ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gradientEnd : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Text(
           label,
           style: TextStyle(
@@ -383,7 +421,7 @@ class _BudgetScreenState extends State<BudgetScreen>
       ),
     );
   }
-  
+
   Future<void> _showQuickJumpPicker(
     BuildContext context,
     BudgetProvider provider,
@@ -391,7 +429,7 @@ class _BudgetScreenState extends State<BudgetScreen>
   ) async {
     DateTime initialDate;
     String helpText;
-    
+
     switch (provider.selectedBudgetType) {
       case BudgetType.weekly:
         initialDate = DateTime.now();
@@ -406,9 +444,11 @@ class _BudgetScreenState extends State<BudgetScreen>
         helpText = 'Select Year';
         break;
     }
-    
-    print('DEBUG _showQuickJumpPicker: type=${provider.selectedBudgetType}, mode=$mode, initialDate=$initialDate, helpText=$helpText');
-    
+
+    print(
+      'DEBUG _showQuickJumpPicker: type=${provider.selectedBudgetType}, mode=$mode, initialDate=$initialDate, helpText=$helpText',
+    );
+
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -417,12 +457,14 @@ class _BudgetScreenState extends State<BudgetScreen>
       initialDatePickerMode: mode,
       helpText: helpText,
     );
-    
+
     print('DEBUG _showQuickJumpPicker: pickedDate=$pickedDate');
-    
+
     if (pickedDate != null) {
       provider.setSelectedDate(pickedDate);
-      print('DEBUG _showQuickJumpPicker: called setSelectedDate with $pickedDate');
+      print(
+        'DEBUG _showQuickJumpPicker: called setSelectedDate with $pickedDate',
+      );
     }
   }
 
@@ -444,15 +486,19 @@ class _BudgetScreenState extends State<BudgetScreen>
         : provider.categoryBudgetData
               .where((data) => data.category.id == selectedCategory)
               .toList();
-    
+
     // Diagnostic logs
     try {
-      print('BudgetScreen: selectedCategory=$selectedCategory showingAll=$showingAll totalCategories=$totalCount displayCount=${displayData.length}');
+      print(
+        'BudgetScreen: selectedCategory=$selectedCategory showingAll=$showingAll totalCategories=$totalCount displayCount=${displayData.length}',
+      );
       final hiddenByFilter = provider.categoryBudgetData
           .where((d) => d.spentAmount == 0 && d.limit == 0)
           .map((d) => {'categoryId': d.category.id, 'name': d.categoryName})
           .toList();
-      print('BudgetScreen: budgets hidden (no limit and no spending): $hiddenByFilter');
+      print(
+        'BudgetScreen: budgets hidden (no limit and no spending): $hiddenByFilter',
+      );
     } catch (e) {
       print('BudgetScreen: error while logging diagnostic info: $e');
     }
@@ -494,11 +540,11 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
           const SizedBox(height: 20),
           SizedBox(
-            height: 180,
+            height: 120,
             child: PieChart(
               PieChartData(
                 sections: _buildPieChartSections(displayData),
-                centerSpaceRadius: 60,
+                centerSpaceRadius: 30,
                 sectionsSpace: 2,
                 // pieTouchData: PieTouchData(
                 //   touchCallback: (FlTouchEvent event, pieTouchResponse) {
@@ -531,12 +577,16 @@ class _BudgetScreenState extends State<BudgetScreen>
     final useEqualSlices = total <= 0;
     if (useEqualSlices) {
       // Diagnostic: total is zero (no spending yet). Render equal slices and avoid division by zero.
-      print('BudgetScreen: totalSpent==0 - rendering equal slices for ${data.length} categories');
+      print(
+        'BudgetScreen: totalSpent==0 - rendering equal slices for ${data.length} categories',
+      );
     }
- 
+
     return data.map((item) {
       final value = useEqualSlices ? 1.0 : item.spentAmount;
-      final percentage = useEqualSlices ? 0.0 : (item.spentAmount / total * 100);
+      final percentage = useEqualSlices
+          ? 0.0
+          : (item.spentAmount / total * 100);
       final categoryColor = _getColorFromString(item.categoryColor);
       return PieChartSectionData(
         value: value,
@@ -606,7 +656,7 @@ class _BudgetScreenState extends State<BudgetScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Categories',
+              'Budgets',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -622,16 +672,26 @@ class _BudgetScreenState extends State<BudgetScreen>
                   pageTransitionAnimation: PageTransitionAnimation.cupertino,
                 );
                 if (result == true) {
-                  Provider.of<BudgetProvider>(context, listen: false).initialize();
+                  Provider.of<BudgetProvider>(
+                    context,
+                    listen: false,
+                  ).initialize();
                 }
               },
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         ...data.map((item) => _buildCategoryCard(context, item, provider)),
       ],
     );
+  }
+
+  String _formatAmountForCard(double amount) {
+    if (amount.abs() >= 1000) {
+      return '\$${(amount / 1000).floor()}k';
+    }
+    return '\$${amount.toStringAsFixed(2)}';
   }
 
   Widget _buildCategoryCard(
@@ -660,9 +720,9 @@ class _BudgetScreenState extends State<BudgetScreen>
         );
       },
       child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -682,11 +742,11 @@ class _BudgetScreenState extends State<BudgetScreen>
           children: [
             // Row 1: icon + category name (category name gets its own line)
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: _getColorFromString(
                       data.categoryColor,
@@ -696,7 +756,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                   child: Icon(
                     _getIconFromString(data.categoryIcon),
                     color: _getColorFromString(data.categoryColor),
-                    size: 24,
+                    size: 18,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -709,47 +769,44 @@ class _BudgetScreenState extends State<BudgetScreen>
                       fontWeight: FontWeight.bold,
                     ),
                     softWrap: true,
-                    maxLines: 3,
+                    maxLines: 2,
                     overflow: TextOverflow.visible,
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
 
             // Row 3: amount, optional limit and edit button — amount and limit grouped on left, edit on right
             Row(
               children: [
                 // Amount and limit aligned to start, allowed to scale down if very large
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '\$${data.spentAmount.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _getColorFromString(data.categoryColor),
-                          ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: RichText(
+                      text: TextSpan(
+                        text: _formatAmountForCard(spent),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _getColorFromString(data.categoryColor),
                         ),
-                      ),
-                      if (hasLimit)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            '/ \$${limit.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
+                        children: [
+                          if (hasLimit)
+                            TextSpan(
+                              text: ' / ${_formatAmountForCard(limit)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.normal,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
-                          ),
-                        ),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
 
@@ -796,14 +853,19 @@ class _BudgetScreenState extends State<BudgetScreen>
                         );
                         return;
                       }
-                      
+
                       // Update budget limit using the budget ID
                       try {
                         if (data.budget.id.isNotEmpty) {
-                          await provider.updateBudgetLimit(data.budget.id, parsed);
+                          await provider.updateBudgetLimit(
+                            data.budget.id,
+                            parsed,
+                          );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Budget limit saved')),
+                              const SnackBar(
+                                content: Text('Budget limit saved'),
+                              ),
                             );
                           }
                         } else {
@@ -824,11 +886,13 @@ class _BudgetScreenState extends State<BudgetScreen>
                           // Extract clean error message from exception
                           String errorMessage = e.toString();
                           if (errorMessage.startsWith('Exception: ')) {
-                            errorMessage = errorMessage.substring('Exception: '.length);
+                            errorMessage = errorMessage.substring(
+                              'Exception: '.length,
+                            );
                           }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(errorMessage)),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(errorMessage)));
                         }
                       }
                     }
@@ -839,7 +903,7 @@ class _BudgetScreenState extends State<BudgetScreen>
 
             // Progress section remains on its own block below
             if (hasLimit) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -847,7 +911,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                     value: progress,
                     backgroundColor: Colors.grey.shade300,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      progress > 1.0 ? Colors.red : (isOverBudget ? Colors.red : Colors.green),
+                      progress > 1.0
+                          ? Colors.red
+                          : (isOverBudget ? Colors.red : Colors.green),
                     ),
                   ),
                   const SizedBox(height: 4),

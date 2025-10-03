@@ -2,11 +2,34 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
+import 'package:budgetm/models/transaction.dart' as model;
+import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:intl/intl.dart';
+
+// Helper function to convert Firestore transaction to UI transaction
+model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction) {
+  return model.Transaction(
+    id: firestoreTransaction.id,
+    title: firestoreTransaction.description,
+    description: firestoreTransaction.description,
+    amount: firestoreTransaction.amount,
+    type: firestoreTransaction.type == 'income'
+        ? TransactionType.income
+        : TransactionType.expense,
+    date: firestoreTransaction.date,
+    icon: const Icon(Icons.account_balance),
+    iconBackgroundColor: Colors.grey.shade100,
+    accountId: firestoreTransaction.accountId,
+    categoryId: firestoreTransaction.categoryId,
+  );
+}
 
 class BudgetDetailScreen extends StatefulWidget {
   final Category category;
@@ -90,7 +113,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight),
         child: Container(
-          padding: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [AppColors.gradientStart, AppColors.gradientEnd2],
@@ -106,19 +129,37 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10.0, 0.0, 10, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.of(context).pop(),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: const HugeIcon(
+                      icon: HugeIcons.strokeRoundedArrowLeft01,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                   ),
-                  Expanded(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                     child: Text(
                       widget.category.name ?? 'Category Details',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 22,
+                        fontSize: 18,
                       ),
                     ),
                   ),
@@ -150,20 +191,20 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                           ],
                         ),
                       );
-      
+                        
                       // Diagnostic log: result from confirmation dialog
                       print('BudgetDetail: delete confirmed=$confirmed for budgetId=${widget.budget.id}');
-      
+                        
                       if (confirmed == true) {
                         try {
                           // Attempt deletion and log outcome
                           await Provider.of<BudgetProvider>(context, listen: false)
                               .deleteBudget(widget.budget.id);
                           print('BudgetDetail: delete succeeded for budgetId=${widget.budget.id}');
-      
+                        
                           // Ensure budgets list is refreshed so UI shows deletion immediately
                           await Provider.of<BudgetProvider>(context, listen: false).initialize();
-      
+                        
                           if (mounted) {
                             // Navigate back after deletion
                             Navigator.of(context).pop();
@@ -237,22 +278,31 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final accountName = detailedTransaction.accountName;
     final accountType = detailedTransaction.accountType;
 
-    return InkWell(
-      onTap: () {},
+    return GestureDetector(
+      onTap: () async {
+        // Convert FirestoreTransaction to Transaction for navigation
+        final uiTransaction = _convertToUiTransaction(transaction);
+        
+        // Navigate to ExpenseDetailScreen
+        final result = await PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: ExpenseDetailScreen(transaction: uiTransaction),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
+
+        // Refresh data if transaction was deleted
+        if (result == true && mounted) {
+          _loadTransactions();
+        }
+      },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: Colors.grey.shade200, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              spreadRadius: 1,
-              blurRadius: 8,
-            ),
-          ],
         ),
         child: Row(
           children: [

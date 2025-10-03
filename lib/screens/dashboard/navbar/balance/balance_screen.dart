@@ -12,6 +12,8 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
+import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
+
 class BalanceScreen extends StatefulWidget {
   const BalanceScreen({super.key});
 
@@ -236,7 +238,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.gradientStart, AppColors.gradientEnd2],
@@ -252,7 +254,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20.0, 6.0, 20.0, 0),
+          padding: const EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -260,31 +262,36 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 'Balance',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 22,
+                  fontSize: 20,
                 ),
               ),
-              // ElevatedButton.icon(
-              //   onPressed: () {
-              //     // TODO: Navigate to Add Account screen
-              //   },
-              //   icon: const Icon(Icons.add, color: Colors.white, size: 18),
-              //   label: const Text('Add Account'),
-              //   style: ElevatedButton.styleFrom(
-              //     backgroundColor: AppColors.gradientEnd,
-              //     foregroundColor: Colors.white,
-              //     shape: RoundedRectangleBorder(
-              //       borderRadius: BorderRadius.circular(20),
-              //     ),
-              //     padding: const EdgeInsets.symmetric(
-              //       horizontal: 14,
-              //       vertical: 10,
-              //     ),
-              //     textStyle: const TextStyle(
-              //       fontWeight: FontWeight.bold,
-              //       fontSize: 12,
-              //     ),
-              //   ),
-              // ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.rectangle,
+                  gradient: LinearGradient(
+                    colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: TextButton(
+                  child: Text("Add Account", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12)),
+                  onPressed: () async {
+                    final result =
+                        await PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: const AddAccountScreen(),
+                          withNavBar: false,
+                          pageTransitionAnimation:
+                              PageTransitionAnimation.cupertino,
+                        );
+                    if (result == true) {
+                      if (mounted) setState(() {});
+                    }
+                  },
+                ),
+              ),
             ],
           ),
         ),

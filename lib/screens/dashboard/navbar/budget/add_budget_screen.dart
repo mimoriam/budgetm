@@ -30,6 +30,8 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
           _selectedCategoryId = provider.expenseCategories.first.id;
         });
       }
+      // Show category selection bottom sheet right after first frame
+      _showCategorySelection();
     });
   }
 
@@ -152,7 +154,39 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
 
     return result;
   }
+  
+  Future<void> _showCategorySelection() async {
+    final provider = Provider.of<BudgetProvider>(context, listen: false);
+    if (provider.expenseCategories.isEmpty) return;
 
+    final selectedCategory = provider.expenseCategories.firstWhere(
+      (cat) => cat.id == _selectedCategoryId,
+      orElse: () => provider.expenseCategories.first,
+    );
+
+    final result = await _showSelectionBottomSheet(
+      title: 'Select Category',
+      items: provider.expenseCategories,
+      selectedItem: selectedCategory,
+      getDisplayName: (category) => category.name ?? 'Unnamed Category',
+      onSelect: (category) {
+        setState(() {
+          _selectedCategoryId = category.id;
+        });
+      },
+    );
+
+    if (result == null) {
+      setState(() {
+        _selectedCategoryId = provider.expenseCategories.first.id;
+      });
+    } else {
+      setState(() {
+        _selectedCategoryId = result.id;
+      });
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -231,36 +265,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                               Consumer<BudgetProvider>(
                                 builder: (context, provider, child) {
                                   return GestureDetector(
-                                    onTap: () async {
-                                      if (provider.expenseCategories.isEmpty) return;
-                                      
-                                      final selectedCategory = provider.expenseCategories.firstWhere(
-                                        (cat) => cat.id == _selectedCategoryId,
-                                        orElse: () => provider.expenseCategories.first,
-                                      );
-                                      
-                                      final result = await _showSelectionBottomSheet(
-                                        title: 'Select Category',
-                                        items: provider.expenseCategories,
-                                        selectedItem: selectedCategory,
-                                        getDisplayName: (category) => category.name ?? 'Unnamed Category',
-                                        onSelect: (category) {
-                                          setState(() {
-                                            _selectedCategoryId = category.id;
-                                          });
-                                        },
-                                      );
-                                      
-                                      if (result == null) {
-                                        setState(() {
-                                          _selectedCategoryId = provider.expenseCategories.first.id;
-                                        });
-                                      } else {
-                                        setState(() {
-                                          _selectedCategoryId = result.id;
-                                        });
-                                      }
-                                    },
+                                    onTap: () => _showCategorySelection(),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 10.0,

@@ -506,7 +506,27 @@ class FirestoreService {
   // Delete account
   Future<void> deleteAccount(String id) async {
     try {
+      // First, query all transactions associated with this account
+      final transactionsQuery = await _transactionsCollection
+          .where('accountId', isEqualTo: id)
+          .get();
+      
+      // If there are transactions, delete them using a batch write for efficiency
+      if (transactionsQuery.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        
+        for (final doc in transactionsQuery.docs) {
+          batch.delete(doc.reference);
+        }
+        
+        // Commit the batch delete for all associated transactions
+        await batch.commit();
+        print('Deleted ${transactionsQuery.docs.length} transactions associated with account $id');
+      }
+      
+      // After deleting all associated transactions, delete the account document
       await _accountsCollection.doc(id).delete();
+      print('Account $id deleted successfully');
     } catch (e) {
       print('Error deleting account: $e');
       rethrow;

@@ -54,9 +54,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       
       setState(() {
         if (nonDefaultAccounts.isNotEmpty) {
-          // If user has created accounts, only show those.
-          _accounts = nonDefaultAccounts;
-          _selectedAccountId = nonDefaultAccounts.first.id;
+          // If user has created accounts, show all accounts including the default one.
+          _accounts = allAccounts;
+          if (defaultAccount != null) {
+            _selectedAccountId = defaultAccount.id; // Auto-select the default account
+          } else if (allAccounts.isNotEmpty) {
+            _selectedAccountId = allAccounts.first.id;
+          }
         } else if (defaultAccount != null) {
           // If only the default account exists, use it but don't show it in the dropdown.
           _accounts = []; // Empty list to hide dropdown
