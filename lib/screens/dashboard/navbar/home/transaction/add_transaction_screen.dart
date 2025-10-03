@@ -44,19 +44,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _loadAccounts() async {
     try {
       // Get all accounts
-      final accounts = await _firestoreService.getAllAccounts();
-      
-      // Find the default account or select the first one
-      final defaultAccount = accounts.firstWhere(
-        (account) => account.isDefault == true,
-        orElse: () => accounts.first,
+      final allAccounts = await _firestoreService.getAllAccounts();
+      final nonDefaultAccounts = allAccounts.where((account) => !(account.isDefault ?? false)).toList();
+      final defaultAccount = allAccounts.cast<FirestoreAccount?>().firstWhere(
+        (account) => account?.isDefault ?? false,
+        orElse: () => null,
       );
       
       setState(() {
-        _accounts = accounts;
-        _selectedAccountId = defaultAccount.id;
+        if (nonDefaultAccounts.isNotEmpty) {
+          // If user has created accounts, only show those.
+          _accounts = nonDefaultAccounts;
+          _selectedAccountId = nonDefaultAccounts.first.id;
+        } else if (defaultAccount != null) {
+          // If only the default account exists, use it but don't show it in the dropdown.
+          _accounts = []; // Empty list to hide dropdown
+          _selectedAccountId = defaultAccount.id;
+        } else {
+          // No accounts exist at all.
+          _accounts = [];
+          _selectedAccountId = null;
+        }
       });
-      _formKey.currentState?.patchValue({'account': defaultAccount.id});
+      
+      if (_selectedAccountId != null) {
+        _formKey.currentState?.patchValue({'account': _selectedAccountId});
+      }
     } catch (e) {
       // Handle error
       debugPrint('Error loading accounts: $e');
@@ -315,69 +328,77 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   errorText: 'Please select an account',
                                 ),
                                 builder: (FormFieldState<String?> field) {
-                                  return GestureDetector(
-                                    onTap: () async {
-                                      final selectedAccount = _accounts.firstWhere(
-                                        (acc) => acc.id == _selectedAccountId,
-                                        orElse: () => _accounts.first,
-                                      );
-                                      
-                                      final result = await _showSelectionBottomSheet<FirestoreAccount>(
-                                        title: 'Select Account',
-                                        items: _accounts,
-                                        selectedItem: selectedAccount,
-                                        getDisplayName: (account) => account.name,
-                                      );
-                                      
-                                      if (result != null) {
-                                        setState(() {
-                                          _selectedAccountId = result.id;
-                                        });
-                                        field.didChange(result.id);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 16.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30.0),
-                                        border: Border.all(
-                                          color: field.hasError
-                                              ? AppColors.errorColor
-                                              : Colors.grey.shade300,
-                                          width: field.hasError ? 1.5 : 1.0,
+                                  // Only show dropdown if there are user-created accounts
+                                  if (_accounts.isNotEmpty) {
+                                    return GestureDetector(
+                                      onTap: () async {
+                                        final selectedAccount = _accounts.firstWhere(
+                                          (acc) => acc.id == _selectedAccountId,
+                                          orElse: () => _accounts.first,
+                                        );
+                                        
+                                        final result = await _showSelectionBottomSheet<FirestoreAccount>(
+                                          title: 'Select Account',
+                                          items: _accounts,
+                                          selectedItem: selectedAccount,
+                                          getDisplayName: (account) => account.name,
+                                        );
+                                        
+                                        if (result != null) {
+                                          setState(() {
+                                            _selectedAccountId = result.id;
+                                          });
+                                          field.didChange(result.id);
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10.0,
+                                          horizontal: 16.0,
                                         ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              _selectedAccountId != null
-                                                  ? (_accounts.firstWhere(
-                                                      (acc) => acc.id == _selectedAccountId,
-                                                      orElse: () => _accounts.first,
-                                                    ).name)
-                                                  : 'Select',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: _selectedAccountId != null
-                                                    ? AppColors.primaryTextColorLight
-                                                    : AppColors.lightGreyBackground,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(30.0),
+                                          border: Border.all(
+                                            color: field.hasError
+                                                ? AppColors.errorColor
+                                                : Colors.grey.shade300,
+                                            width: field.hasError ? 1.5 : 1.0,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                _selectedAccountId != null
+                                                    ? (_accounts.firstWhere(
+                                                        (acc) => acc.id == _selectedAccountId,
+                                                        orElse: () => _accounts.first,
+                                                      ).name)
+                                                    : 'Select',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: _selectedAccountId != null
+                                                      ? AppColors.primaryTextColorLight
+                                                      : AppColors.lightGreyBackground,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ],
+                                            Icon(
+                                              Icons.arrow_drop_down,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  } else {
+                                    // If _accounts is empty, it means either only the default account exists or no accounts exist.
+                                    // In either case, we don't show a dropdown.
+                                    // The _selectedAccountId is already set to the default account if it exists.
+                                    return const SizedBox.shrink();
+                                  }
                                 },
                               ),
                             ),
@@ -806,10 +827,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       final formData = _formKey.currentState!.value;
       
-      // Get the selected account
-      final selectedAccount = _accounts.firstWhere(
-        (account) => account.id == _selectedAccountId,
-      );
+      // Get the selected account - need to fetch all accounts if _accounts is empty (default account case)
+      FirestoreAccount selectedAccount;
+      if (_accounts.isNotEmpty) {
+        selectedAccount = _accounts.firstWhere(
+          (account) => account.id == _selectedAccountId,
+        );
+      } else {
+        // Fetch the account from Firestore if not in the list (default account case)
+        final fetchedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
+        if (fetchedAccount == null) {
+          throw Exception('Selected account not found');
+        }
+        selectedAccount = fetchedAccount;
+      }
       
       // Calculate the transaction date with time
       // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)

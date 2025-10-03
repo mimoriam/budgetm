@@ -98,7 +98,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               return const Text('Loading...');
                             } else if (snapshot.hasError) {
                               return Text('Error: ${snapshot.error}');
-                            } else if (snapshot.hasData && snapshot.data != null) {
+                            } else if (snapshot.hasData && snapshot.data != null && !(snapshot.data!.isDefault ?? false)) {
                               return Text(
                                 "${snapshot.data!.name} - ${snapshot.data!.accountType}",
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -106,12 +106,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     ),
                               );
                             } else {
-                              return const Text(
-                                'Account not found',
-                                style: TextStyle(
-                                  color: AppColors.secondaryTextColorLight,
-                                ),
-                              );
+                              return const SizedBox.shrink();
                             }
                           },
                         ),

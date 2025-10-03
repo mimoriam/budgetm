@@ -100,9 +100,15 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
     final transactions = _latestTransactions!;
     final transactionAmounts = <String, double>{};
+    
+    // First, get all accounts to identify the default one
+    final allAccounts = _latestAccounts!;
+    final defaultAccountIds = allAccounts.where((acc) => acc.isDefault ?? false).map((acc) => acc.id).toSet();
+    
     for (var transaction in transactions) {
       final accId = transaction.accountId;
-      if (accId == null) continue;
+      if (accId == null || defaultAccountIds.contains(accId)) continue; // Skip if no account or if it's a default account
+      
       final isIncome =
           transaction.type != null &&
           transaction.type.toString().toLowerCase().contains('income');
@@ -114,7 +120,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       );
     }
 
-    final accountsWithData = _latestAccounts!.map((account) {
+    final accountsWithData = _latestAccounts!
+        .where((account) => !(account.isDefault ?? false)) // Filter out default accounts
+        .map((account) {
       return {
         'account': account,
         'transactionsAmount': transactionAmounts[account.id] ?? 0.0,
