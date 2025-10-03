@@ -21,6 +21,42 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = Provider.of<BudgetProvider>(context, listen: false);
+      if (provider.expenseCategories.isEmpty) return;
+
+      final selectedCategory = provider.expenseCategories.firstWhere(
+        (cat) => cat.id == _selectedCategoryId,
+        orElse: () => provider.expenseCategories.first,
+      );
+
+      final result = await _showSelectionBottomSheet(
+        title: 'Select Category',
+        items: provider.expenseCategories,
+        selectedItem: selectedCategory,
+        getDisplayName: (category) => category.name ?? 'Unnamed Category',
+        onSelect: (category) {
+          setState(() {
+            _selectedCategoryId = category.id;
+          });
+        },
+      );
+
+      if (result == null) {
+        setState(() {
+          _selectedCategoryId = provider.expenseCategories.first.id;
+        });
+      } else {
+        setState(() {
+          _selectedCategoryId = result.id;
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     super.dispose();
   }
@@ -76,14 +112,14 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
     }
   }
 
-  Future<void> _showSelectionBottomSheet({
+  Future<dynamic?> _showSelectionBottomSheet({
     required String title,
     required List<dynamic> items,
     required Function(dynamic) onSelect,
     required String Function(dynamic) getDisplayName,
     required dynamic selectedItem,
   }) async {
-    await showModalBottomSheet(
+    final result = await showModalBottomSheet<dynamic>(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -126,7 +162,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                         : null,
                     onTap: () {
                       onSelect(item);
-                      Navigator.of(context).pop();
+                      Navigator.of(context).pop(item);
                     },
                   );
                 },
@@ -136,11 +172,14 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
         );
       },
     );
+
+    return result;
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.translucent,
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: false,
@@ -223,7 +262,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                         orElse: () => provider.expenseCategories.first,
                                       );
                                       
-                                      await _showSelectionBottomSheet(
+                                      final result = await _showSelectionBottomSheet(
                                         title: 'Select Category',
                                         items: provider.expenseCategories,
                                         selectedItem: selectedCategory,
@@ -234,6 +273,16 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                           });
                                         },
                                       );
+                                      
+                                      if (result == null) {
+                                        setState(() {
+                                          _selectedCategoryId = provider.expenseCategories.first.id;
+                                        });
+                                      } else {
+                                        setState(() {
+                                          _selectedCategoryId = result.id;
+                                        });
+                                      }
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(

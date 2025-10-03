@@ -22,17 +22,26 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   bool _isCreditSelected = false; // Balance is selected by default
   bool _isSaving = false;
   late FirestoreService _firestoreService;
+  late FocusNode _amountFocusNode;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
+    _amountFocusNode = FocusNode();
   }
-
+  
+  @override
+  void dispose() {
+    _amountFocusNode.dispose();
+    super.dispose();
+  }
+  
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _amountFocusNode.unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         backgroundColor: AppColors.scaffoldBackground,
@@ -286,6 +295,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         const SizedBox(height: 4),
         FormBuilderTextField(
           name: 'amount',
+          focusNode: _amountFocusNode,
           style: const TextStyle(
             color: AppColors.primaryTextColorLight,
             fontSize: 26,
