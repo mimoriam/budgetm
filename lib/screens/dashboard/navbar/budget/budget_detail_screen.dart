@@ -236,114 +236,71 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final transaction = detailedTransaction.transaction;
     final accountName = detailedTransaction.accountName;
     final accountType = detailedTransaction.accountType;
-  
-    final dateFormatter = DateFormat('MMM dd, yyyy');
-    final timeFormatter = DateFormat('hh:mm a');
 
-    String formattedTime = '';
-    if (transaction.time != null && transaction.time!.isNotEmpty) {
-      try {
-        final timeParts = transaction.time!.split(':');
-        final hour = int.parse(timeParts[0]);
-        final minute = int.parse(timeParts[1]);
-        final time = TimeOfDay(hour: hour, minute: minute);
-        formattedTime = time.format(context);
-      } catch (e) {
-        formattedTime = transaction.time!;
-      }
-    }
-
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: _getCategoryColor().withOpacity(0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _getCategoryIcon(),
-                        color: _getCategoryColor(),
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.4,
-                      child: Text(
-                        transaction.description,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  '- \$${transaction.amount.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red[700],
-                  ),
-                ),
-              ],
+    return InkWell(
+      onTap: () {},
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 1,
+              blurRadius: 8,
             ),
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: AppColors.scaffoldBackground),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Account name
-                Row(
-                  children: [
-                    Icon(
-                      Icons.account_balance_wallet_outlined,
-                      size: 16,
-                      color: Colors.grey.shade600,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.account_balance),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    // Use budget category name as the main title (fallback to transaction.description)
+                    widget.category.name ?? transaction.description,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      "$accountName (${accountType.isNotEmpty ? accountType : 'Unknown'})",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                // Date and time
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      dateFormatter.format(transaction.date),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    // "Account Name - Account Type" formatted, skipping empty parts
+                    [accountName, accountType].where((s) => s.isNotEmpty).join(' - '),
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    DateFormat('MMM d, yyyy').format(transaction.date),
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              // Match home.dart amount formatting and style (sign + space + currency)
+              '${transaction.type == 'income' ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: transaction.type == 'income' ? Colors.green : Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
             ),
           ],
         ),

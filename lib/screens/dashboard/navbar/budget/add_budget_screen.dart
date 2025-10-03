@@ -52,7 +52,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
             .addBudget(_selectedCategoryId!, limit, _selectedType);
         
         if (mounted) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Budget added successfully')),
           );

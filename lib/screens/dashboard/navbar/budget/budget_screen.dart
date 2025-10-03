@@ -245,14 +245,17 @@ class _BudgetScreenState extends State<BudgetScreen>
               ),
               // Add button to create a new budget even when no budgets exist
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () {
-                  PersistentNavBarNavigator.pushNewScreen(
+                icon: const Icon(Icons.add, color: Colors.black),
+                onPressed: () async {
+                  final result = await PersistentNavBarNavigator.pushNewScreen(
                     context,
                     screen: const AddBudgetScreen(),
                     withNavBar: false,
                     pageTransitionAnimation: PageTransitionAnimation.cupertino,
                   );
+                  if (result == true) {
+                    Provider.of<BudgetProvider>(context, listen: false).initialize();
+                  }
                 },
                 tooltip: 'Add Budget',
               ),
@@ -497,20 +500,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                 sections: _buildPieChartSections(displayData),
                 centerSpaceRadius: 60,
                 sectionsSpace: 2,
-                pieTouchData: PieTouchData(
-                  touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                    if (event is FlTapUpEvent &&
-                        pieTouchResponse?.touchedSection != null) {
-                      final index =
-                          pieTouchResponse!.touchedSection!.touchedSectionIndex;
-                      if (index >= 0 &&
-                          index < displayData.length &&
-                          showingAll) {
-                        provider.selectCategory(displayData[index].category.id);
-                      }
-                    }
-                  },
-                ),
+                // pieTouchData: PieTouchData(
+                //   touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                //     if (event is FlTapUpEvent &&
+                //         pieTouchResponse?.touchedSection != null) {
+                //       final index =
+                //           pieTouchResponse!.touchedSection!.touchedSectionIndex;
+                //       if (index >= 0 &&
+                //           index < displayData.length &&
+                //           showingAll) {
+                //         provider.selectCategory(displayData[index].category.id);
+                //       }
+                //     }
+                //   },
+                // ),
               ),
             ),
           ),
@@ -611,13 +614,16 @@ class _BudgetScreenState extends State<BudgetScreen>
             IconButton(
               icon: const Icon(Icons.add_circle_outline),
               color: AppColors.gradientEnd,
-              onPressed: () {
-                PersistentNavBarNavigator.pushNewScreen(
+              onPressed: () async {
+                final result = await PersistentNavBarNavigator.pushNewScreen(
                   context,
                   screen: const AddBudgetScreen(),
                   withNavBar: false,
                   pageTransitionAnimation: PageTransitionAnimation.cupertino,
                 );
+                if (result == true) {
+                  Provider.of<BudgetProvider>(context, listen: false).initialize();
+                }
               },
             ),
           ],

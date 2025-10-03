@@ -195,10 +195,27 @@ class BudgetProvider with ChangeNotifier {
   String get currentPeriodDisplay {
     switch (_selectedBudgetType) {
       case BudgetType.weekly:
-        // Use provider's selectedWeeklyMonth for display
-        final displayText = 'Week $_selectedWeek, ${_formatMonth(_selectedWeeklyMonth)}';
-        print('DEBUG currentPeriodDisplay (weekly): selectedWeek=$_selectedWeek, selectedWeeklyMonth=$_selectedWeeklyMonth, displayText=$displayText');
-        return displayText;
+        // Calculate start and end dates for the selected week of the selected weekly month
+        final currentYear = _selectedWeeklyMonth.year;
+        final currentMonth = _selectedWeeklyMonth.month;
+        final firstDayOfMonth = DateTime(currentYear, currentMonth, 1);
+        final firstSunday = Budget.getStartOfWeek(firstDayOfMonth);
+        final weekStartDate = firstSunday.add(Duration(days: (_selectedWeek - 1) * 7));
+        final weekEndDate = weekStartDate.add(const Duration(days: 6));
+        // Short month names for compact display
+        const shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        String display;
+        if (weekStartDate.month == weekEndDate.month && weekStartDate.year == weekEndDate.year) {
+          display = '${shortMonths[weekStartDate.month - 1]} ${weekStartDate.day}-${weekEndDate.day}, ${weekEndDate.year}';
+        } else if (weekStartDate.year == weekEndDate.year) {
+          // Different months but same year: "Sep 29-Oct 5, 2025"
+          display = '${shortMonths[weekStartDate.month - 1]} ${weekStartDate.day}-${shortMonths[weekEndDate.month - 1]} ${weekEndDate.day}, ${weekEndDate.year}';
+        } else {
+          // Different years: "Dec 29, 2024-Jan 4, 2025"
+          display = '${shortMonths[weekStartDate.month - 1]} ${weekStartDate.day}, ${weekStartDate.year}-${shortMonths[weekEndDate.month - 1]} ${weekEndDate.day}, ${weekEndDate.year}';
+        }
+        print('DEBUG currentPeriodDisplay (weekly): selectedWeek=$_selectedWeek, selectedWeeklyMonth=$_selectedWeeklyMonth, weekStartDate=$weekStartDate, weekEndDate=$weekEndDate, display=$display');
+        return display;
       case BudgetType.monthly:
         return _formatMonth(_selectedMonth);
       case BudgetType.yearly:
