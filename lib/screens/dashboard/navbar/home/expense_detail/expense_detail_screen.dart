@@ -19,6 +19,7 @@ class ExpenseDetailScreen extends StatefulWidget {
 class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   late FirestoreService _firestoreService;
   bool _isDeleting = false;
+  bool _isUpdating = false;
   late bool _isPaid;
 
   @override
@@ -46,19 +47,29 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   }
 
   Future<void> _togglePaidStatus() async {
+    if (_isUpdating) return;
+
+    setState(() {
+      _isUpdating = true;
+    });
+
     try {
-      // Use the new service method to atomically update
       await _firestoreService.toggleTransactionPaidStatus(
         widget.transaction.id,
         !_isPaid,
       );
 
-      // Update the local state
       setState(() {
         _isPaid = !_isPaid;
       });
     } catch (e) {
       print('Error toggling paid status: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
     }
   }
 
@@ -211,11 +222,23 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               width: 1.5,
                             ),
                           ),
-                          child: Text(
-                            _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.black, fontSize: 14),
-                          ),
+                          child: _isUpdating
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.black,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelLarge
+                                      ?.copyWith(
+                                          color: Colors.black, fontSize: 14),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 16),

@@ -127,9 +127,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     final accountsWithData = _latestAccounts!
         .where((account) => !(account.isDefault ?? false)) // Filter out default accounts
         .map((account) {
+      final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
+      final finalBalance = account.balance + transactionsAmount;
+
       return {
         'account': account,
-        'transactionsAmount': transactionAmounts[account.id] ?? 0.0,
+        'transactionsAmount': transactionsAmount,
+        'finalBalance': finalBalance,
       };
     }).toList();
 
@@ -206,6 +210,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                     final account =
                                         accountData['account']
                                             as FirestoreAccount;
+                                    final finalBalance =
+                                        accountData['finalBalance'] as double;
                                     final isHighlighted = index == touchedIndex;
                                     return _buildAccountCard(
                                       context: context,
@@ -214,7 +220,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                       iconColor: Colors.black,
                                       iconBackgroundColor: Colors.grey.shade200,
                                       accountName: account.name,
-                                      amount: account.balance,
+                                      amount: finalBalance,
                                       accountType: account.accountType,
                                       creditLimit: account.creditLimit,
                                       balanceLimit: account.balanceLimit,
@@ -372,8 +378,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final isTouched = i == touchedIndex;
       final radius = isTouched ? 120.0 : 100.0;
       final accountData = accountsWithData[i];
-      final account = accountData['account'] as FirestoreAccount;
-      final value = account.balance;
+      final value = accountData['finalBalance'] as double;
 
       return PieChartSectionData(
         color: colors[i % colors.length],
@@ -408,12 +413,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           final index = entry.key;
           final accountData = entry.value;
           final account = accountData['account'] as FirestoreAccount;
+          final finalBalance = accountData['finalBalance'] as double;
           return Column(
             children: [
               _buildLegendItem(
                 colors[index % colors.length],
                 account.name,
-                account.balance,
+                finalBalance,
                 currencySymbol,
               ),
               if (index < accountsWithData.length - 1)

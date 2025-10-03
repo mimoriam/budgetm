@@ -21,6 +21,7 @@ import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:budgetm/utils/icon_utils.dart';
 
 // Data structure to hold a transaction with its associated account and category
 class TransactionWithAccount {
@@ -36,7 +37,7 @@ class TransactionWithAccount {
 }
 
 // Helper function to convert Firestore transaction to UI transaction
-model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction) {
+model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, [Category? category]) {
   return model.Transaction(
     id: firestoreTransaction.id, // ID is already String in Firestore
     title: firestoreTransaction.description,
@@ -46,7 +47,8 @@ model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransact
         ? TransactionType.income
         : TransactionType.expense,
     date: firestoreTransaction.date,
-    icon: const Icon(Icons.account_balance), // Default icon
+    // Use category (when available) to resolve the correct icon via getIcon.
+    icon: HugeIcon(icon: getIcon(category?.icon), color: Colors.black87, size: 20),
     iconBackgroundColor: Colors.grey.shade100, // Default color
     accountId: firestoreTransaction.accountId, // Pass accountId from Firestore transaction
     categoryId: firestoreTransaction.categoryId, // Already String in Firestore
@@ -925,7 +927,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildTransactionItem(TransactionWithAccount transactionWithAccount, CurrencyProvider currencyProvider) {
     final transaction = transactionWithAccount.transaction;
     final account = transactionWithAccount.account;
-    final uiTransaction = _convertToUiTransaction(transaction);
+    final uiTransaction = _convertToUiTransaction(transaction, transactionWithAccount.category);
 
     return InkWell(
       onTap: () async {
@@ -970,7 +972,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 color: Colors.grey.shade100, // Default color
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.account_balance), // Default icon
+              child: HugeIcon(icon: getIcon(transactionWithAccount.category?.icon), color: Colors.black87, size: 20),
             ),
             const SizedBox(width: 8),
             Expanded(

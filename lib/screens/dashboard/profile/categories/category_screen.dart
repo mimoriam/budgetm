@@ -4,6 +4,7 @@ import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:budgetm/utils/icon_utils.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/category.dart';
@@ -289,8 +290,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
             color: Colors.lime.shade50,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const HugeIcon(
-            icon: HugeIcons.strokeRoundedShoppingBag01,
+          child: HugeIcon(
+            icon: getIcon(category.icon),
             size: 22,
             color: Colors.black87,
           ),

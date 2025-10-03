@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:budgetm/utils/icon_utils.dart';
 import 'package:intl/intl.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -245,20 +246,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   errorText: 'Please select a category',
                                 ),
                                 builder: (FormFieldState<String?> field) {
+                                  Category? selectedCategory;
+                                  if (_categories.isNotEmpty) {
+                                    selectedCategory = _categories.firstWhere(
+                                      (cat) => cat.id == _selectedCategoryId,
+                                      orElse: () => _categories.first,
+                                    );
+                                  }
+
                                   return GestureDetector(
                                     onTap: () async {
-                                      final selectedCategory = _categories.firstWhere(
-                                        (cat) => cat.id == _selectedCategoryId,
-                                        orElse: () => _categories.first,
-                                      );
-                                      
-                                      final result = await _showPrettySelectionBottomSheet<Category>(
+                                      if (_categories.isEmpty) {
+                                        return;
+                                      }
+                                      final result =
+                                          await _showPrettySelectionBottomSheet<
+                                              Category>(
                                         title: 'Select Category',
                                         items: _categories,
-                                        selectedItem: selectedCategory,
-                                        getDisplayName: (category) => category.name ?? 'Unnamed Category',
+                                        selectedItem:
+                                            selectedCategory ?? _categories.first,
+                                        getDisplayName: (category) =>
+                                            category.name ?? 'Unnamed Category',
                                       );
-                                      
+
                                       if (result != null) {
                                         setState(() {
                                           _selectedCategoryId = result.id;
@@ -282,22 +293,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                         ),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Expanded(
-                                            child: Text(
-                                              _selectedCategoryId != null
-                                                  ? (_categories.firstWhere(
-                                                      (cat) => cat.id == _selectedCategoryId,
-                                                      orElse: () => _categories.first,
-                                                    ).name ?? 'Unnamed Category')
-                                                  : 'Select',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: _selectedCategoryId != null
-                                                    ? AppColors.primaryTextColorLight
-                                                    : AppColors.lightGreyBackground,
-                                              ),
+                                            child: Row(
+                                              children: [
+                                                HugeIcon(
+                                                  icon: getIcon(
+                                                      selectedCategory?.icon),
+                                                  size: 18,
+                                                  color: selectedCategory != null
+                                                      ? AppColors
+                                                          .primaryTextColorLight
+                                                      : AppColors
+                                                          .lightGreyBackground,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    selectedCategory?.name ??
+                                                        'Select',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: selectedCategory !=
+                                                              null
+                                                          ? AppColors
+                                                              .primaryTextColorLight
+                                                          : AppColors
+                                                              .lightGreyBackground,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           Icon(
@@ -539,28 +567,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: _buildFormSection(
-                  context,
-                  'Choose an Icon',
-                  FormBuilderDropdown(
-                    name: 'icon',
-                    decoration: _inputDecoration(hintText: 'Select Icon'),
-                    items: ['Shopping', 'Food', 'Transport']
-                        .map(
-                          (icon) => DropdownMenuItem(
-                            value: icon,
-                            child: Text(
-                              icon,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: _buildFormSection(
                   context,
