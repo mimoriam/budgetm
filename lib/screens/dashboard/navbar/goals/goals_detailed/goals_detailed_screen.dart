@@ -102,7 +102,7 @@ class GoalDetailScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  // const SizedBox(height: 8),
                   Expanded(
                     child: StreamBuilder<List<FirestoreTransaction>>(
                       stream: FirestoreService.instance.getTransactionsForGoal(goal.id),
@@ -121,9 +121,9 @@ class GoalDetailScreen extends StatelessWidget {
                             ),
                           );
                         }
-                        return ListView.separated(
+                        return ListView.builder(
                           itemCount: transactions.length,
-                          separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200),
+                          // separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200),
                           itemBuilder: (context, index) => _buildTransactionItem(context, transactions[index]),
                         );
                       },

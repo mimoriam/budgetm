@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/models/subscription.dart';
+import 'package:budgetm/models/personal/borrowed.dart';
+import 'package:budgetm/models/personal/lent.dart';
+import 'package:budgetm/models/personal/subscription.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -13,48 +15,16 @@ class PersonalScreen extends StatefulWidget {
   State<PersonalScreen> createState() => _PersonalScreenState();
 }
 
-class _PersonalScreenState extends State<PersonalScreen > {
+class _PersonalScreenState extends State<PersonalScreen> {
   bool _isSubscriptionsSelected = true;
   bool _isBorrowedSelected = false;
   bool _isLentSelected = false;
 
-  final List<Subscription> _subscriptions = [
-    Subscription(
-      title: 'Netflix',
-      amount: 15.99,
-      nextBillingDate: DateTime(2025, 10, 15),
-      icon: HugeIcons.strokeRoundedHome01, // Placeholder icon
-    ),
-    Subscription(
-      title: 'Spotify',
-      description: 'Music streaming service',
-      amount: 9.99,
-      nextBillingDate: DateTime(2025, 10, 5),
-      icon: HugeIcons.strokeRoundedHome01, // Placeholder icon
-    ),
-  ];
+  final List<Subscription> _subscriptions = [];
 
-  final List<Subscription> _borrowedItems = [
-    Subscription(
-      title: 'Book',
-      description: 'The Great Gatsby',
-      amount: 0.0, // Assuming no monetary value for borrowed items
-      nextBillingDate: DateTime(2025, 9, 20),
-      icon: HugeIcons.strokeRoundedHome01, // Placeholder icon
-      isActive: false,
-    ),
-  ];
+  final List<Borrowed> _borrowedItems = [];
 
-  final List<Subscription> _lentItems = [
-    Subscription(
-      title: 'Camera',
-      description: 'DSLR Camera',
-      amount: 0.00, // Assuming no monetary value for lent items
-      nextBillingDate: DateTime(2025, 9, 25),
-      icon: HugeIcons.strokeRoundedHome01, // Placeholder icon
-      isActive: false,
-    ),
-  ];
+  final List<Lent> _lentItems = [];
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +54,7 @@ class _PersonalScreenState extends State<PersonalScreen > {
     );
   }
 
+
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(bottom: 14),
@@ -112,9 +83,9 @@ class _PersonalScreenState extends State<PersonalScreen > {
                 child: Text(
                   'Personal',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                      ),
                 ),
               ),
             ),
@@ -239,20 +210,20 @@ class _PersonalScreenState extends State<PersonalScreen > {
             context,
             'Total',
             _isSubscriptionsSelected
-                ? '\$25.98'
+                ? '\$${_subscriptions.fold(0.0, (sum, item) => sum + item.price).toStringAsFixed(2)}'
                 : _isBorrowedSelected
-                    ? '1 Item'
-                    : '1 Item',
+                    ? '${_borrowedItems.length} Item(s)'
+                    : '${_lentItems.length} Item(s)',
           ),
           const SizedBox(width: 16),
           _buildInfoCard(
             context,
-            'Active Membership',
+            'Active',
             _isSubscriptionsSelected
-                ? '2/2'
+                ? '${_subscriptions.where((s) => s.isActive).length}/${_subscriptions.length}'
                 : _isBorrowedSelected
-                    ? '0/1'
-                    : '0/1',
+                    ? '${_borrowedItems.where((b) => !b.returned).length}/${_borrowedItems.length}'
+                    : '${_lentItems.where((l) => !l.returned).length}/${_lentItems.length}',
           ),
         ],
       ),
@@ -281,17 +252,17 @@ class _PersonalScreenState extends State<PersonalScreen > {
             Text(
               title,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.secondaryTextColorLight,
-              ),
+                    color: AppColors.secondaryTextColorLight,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: AppColors.primaryTextColorLight,
-              ),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppColors.primaryTextColorLight,
+                  ),
             ),
           ],
         ),
@@ -339,7 +310,7 @@ class _PersonalScreenState extends State<PersonalScreen > {
               ),
             ),
           ),
-          ..._borrowedItems.map((subscription) => _buildSubscriptionItem(subscription)),
+          ..._borrowedItems.map((item) => _buildBorrowedItem(item)),
         ],
       ),
     );
@@ -362,35 +333,22 @@ class _PersonalScreenState extends State<PersonalScreen > {
               ),
             ),
           ),
-          ..._lentItems.map((subscription) => _buildSubscriptionItem(subscription)),
+          ..._lentItems.map((item) => _buildLentItem(item)),
         ],
       ),
     );
   }
 
   Widget _buildSubscriptionItem(Subscription subscription) {
-    final currencyFormat = NumberFormat.currency(
-      symbol: '\$',
-      decimalDigits: 2,
-    );
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy');
-    final progressColor = subscription.isActive
-        ? AppColors.gradientEnd
-        : Colors.grey;
-
-    // Determine the item type based on the current selection
-    String itemType = 'subscription';
-    if (_isBorrowedSelected) {
-      itemType = 'borrowed';
-    } else if (_isLentSelected) {
-      itemType = 'lent';
-    }
+    final progressColor = subscription.isActive ? AppColors.gradientEnd : Colors.grey;
 
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
           context,
-          screen: DetailedItemScreen(itemType: itemType),
+          screen: DetailedItemScreen(itemType: 'subscription', item: subscription),
           withNavBar: false,
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );
@@ -421,7 +379,7 @@ class _PersonalScreenState extends State<PersonalScreen > {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: HugeIcon(
-                    icon: subscription.icon,
+                    icon: HugeIcons.strokeRoundedHome01,
                     size: 24,
                     color: progressColor,
                   ),
@@ -432,29 +390,17 @@ class _PersonalScreenState extends State<PersonalScreen > {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        subscription.title,
+                        subscription.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
-                      if (subscription.description != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subscription.description!,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
                 Text(
-                  subscription.isActive
-                      ? currencyFormat.format(subscription.amount)
-                      : 'Returned',
+                  currencyFormat.format(subscription.price),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -487,21 +433,275 @@ class _PersonalScreenState extends State<PersonalScreen > {
                     ),
                   )
                 else
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Inactive',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Inactive',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBorrowedItem(Borrowed item) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
+
+    return GestureDetector(
+      onTap: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: DetailedItemScreen(itemType: 'borrowed', item: item),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              spreadRadius: 1,
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: progressColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedHome01,
+                    size: 24,
+                    color: progressColor,
+                  ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (item.description != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          item.description!,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(item.price),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Due: ${dateFormat.format(item.dueDate)}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                if (!item.returned)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gradientEnd.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Borrowed',
+                      style: TextStyle(
+                        color: AppColors.gradientEnd,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Returned',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLentItem(Lent item) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
+
+    return GestureDetector(
+      onTap: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: DetailedItemScreen(itemType: 'lent', item: item),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              spreadRadius: 1,
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: progressColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedHome01,
+                    size: 24,
+                    color: progressColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (item.description != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          item.description!,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(item.price),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Due: ${dateFormat.format(item.dueDate)}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                if (!item.returned)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gradientEnd.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Lent',
+                      style: TextStyle(
+                        color: AppColors.gradientEnd,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Returned',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ],

@@ -11,6 +11,7 @@ import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transactio
 import 'package:budgetm/screens/dashboard/navbar/personal/add_borrowed/add_borrowed.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/add_lent/add_lent.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/personal/add_subscription/add_subscription_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
@@ -345,19 +346,22 @@ class _MainScreenState extends State<MainScreen> {
         return [
           _buildFabMenuItem(
             label: "Add Subscription",
-            icon: HugeIcons
-                .strokeRoundedDollar02, // TODO: Change to appropriate icon
+            icon: HugeIcons.strokeRoundedWallet01,
             color: Colors.blue,
             onPressed: () {
               _toggleFabMenu();
-              // TODO: Navigate to Add Subscription screen
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddSubscriptionScreen(),
+                withNavBar: false,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
+              );
             },
           ),
           const SizedBox(height: 16),
           _buildFabMenuItem(
             label: "Add Borrowed",
-            icon: HugeIcons
-                .strokeRoundedDollar02, // TODO: Change to appropriate icon
+            icon: HugeIcons.strokeRoundedBook03,
             color: Colors.green,
             onPressed: () {
               _toggleFabMenu();
@@ -372,8 +376,7 @@ class _MainScreenState extends State<MainScreen> {
           const SizedBox(height: 16),
           _buildFabMenuItem(
             label: "Add Lent",
-            icon: HugeIcons
-                .strokeRoundedDollar02, // TODO: Change to appropriate icon
+            icon: HugeIcons.strokeRoundedDollarSend01,
             color: Colors.orange,
             onPressed: () {
               _toggleFabMenu();
