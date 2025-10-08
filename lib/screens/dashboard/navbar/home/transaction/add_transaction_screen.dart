@@ -15,6 +15,8 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:budgetm/viewmodels/goals_provider.dart';
+import 'package:budgetm/models/goal.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType transactionType;
@@ -34,6 +36,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   List<Category> _categories = [];
   String? _selectedAccountId;
   String? _selectedCategoryId;
+  String? _selectedGoalId;
   bool _hasAutoOpenedCategorySheet = false;
 
   @override
@@ -431,6 +434,41 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ],
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      if (widget.transactionType == TransactionType.income)
+                        StreamBuilder<List<FirestoreGoal>>(
+                          stream: Provider.of<GoalsProvider>(context, listen: false).getGoals(),
+                          builder: (context, snapshot) {
+                            final pendingGoals = (snapshot.data ?? [])
+                                .where((g) => !g.isCompleted)
+                                .toList();
+                            if (pendingGoals.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            return _buildFormSection(
+                              context,
+                              'Goal',
+                              FormBuilderDropdown<String>(
+                                name: 'goal',
+                                initialValue: _selectedGoalId,
+                                decoration: _inputDecoration(hintText: 'Select Goal'),
+                                items: pendingGoals
+                                    .map(
+                                      (g) => DropdownMenuItem(
+                                        value: g.id,
+                                        child: Text(g.name, style: const TextStyle(fontSize: 13)),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _selectedGoalId = val;
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       const SizedBox(height: 10),
                       _buildMoreOptionsToggle(),
                       const SizedBox(height: 10),
@@ -880,6 +918,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Parse amount
       final amount = double.parse(formData['amount'] as String);
 
+      // Selected goal (optional, only for income)
+      final String? selectedGoalId = formData['goal'] as String?;
+
       // Enforce account transaction limit if present
       if (selectedAccount.transactionLimit != null) {
         final limit = selectedAccount.transactionLimit!;
@@ -932,6 +973,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         date: transactionDate,
         categoryId: _selectedCategoryId,
         budgetId: null,
+        goalId: selectedGoalId,
         accountId: _selectedAccountId,
         time: (formData['time'] as DateTime?)?.toIso8601String(),
         repeat: formData['repeat'] as String?,
@@ -953,6 +995,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       
       final updatedAccount = selectedAccount.copyWith(balance: newBalance);
       await _firestoreService.updateAccount(updatedAccount.id, updatedAccount);
+
+      // If income linked to a goal, update the goal progress
+      if (widget.transactionType == TransactionType.income && selectedGoalId != null) {
+        await Provider.of<GoalsProvider>(context, listen: false)
+            .updateGoalProgress(selectedGoalId, amount);
+      }
       
       if (mounted) {
         Provider.of<HomeScreenProvider>(context, listen: false)

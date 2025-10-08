@@ -3,6 +3,7 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/transaction.dart';
+import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -22,6 +23,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   bool _isUpdating = false;
   late bool _isPaid;
   bool _hasChanges = false;
+  late Future<String?> _goalNameFuture;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
     _firestoreService = FirestoreService.instance;
     _isPaid = widget.transaction.paid ?? true;
     print('ExpenseDetailScreen.initState: id=${widget.transaction.id}, incomingPaid=${widget.transaction.paid}, resolvedPaid=$_isPaid');
+    _goalNameFuture = widget.transaction.type == TransactionType.income ? _fetchLinkedGoalName() : Future.value(null);
   }
 
   Future<void> _deleteTransaction() async {
@@ -74,6 +77,26 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
           _isUpdating = false;
         });
       }
+    }
+  }
+
+  Future<String?> _fetchLinkedGoalName() async {
+    try {
+      // Only income transactions can contribute to goals
+      if (widget.transaction.type != TransactionType.income) {
+        return null;
+      }
+      // Fetch full Firestore transaction to access goalId
+      final firestoreTxn = await _firestoreService.getTransactionById(widget.transaction.id);
+      final String? goalId = firestoreTxn?.goalId;
+      if (goalId == null || goalId.isEmpty) {
+        return null;
+      }
+      final goal = await _firestoreService.getGoalById(goalId);
+      return goal?.name;
+    } catch (e) {
+      print('Error fetching linked goal: $e');
+      return null;
     }
   }
 
@@ -212,6 +235,42 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  FutureBuilder<String?>(
+                    future: _goalNameFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        // Avoid layout shift; hide placeholder
+                        return const SizedBox.shrink();
+                      } else if (snapshot.hasError) {
+                        return const SizedBox.shrink();
+                      }
+                      final goalName = snapshot.data;
+                      if (goalName == null || goalName.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'GOAL',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.secondaryTextColorLight,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            goalName,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   Divider(color: Colors.grey.shade300),

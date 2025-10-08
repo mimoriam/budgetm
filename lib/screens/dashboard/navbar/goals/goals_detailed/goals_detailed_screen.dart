@@ -1,11 +1,15 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/goal.dart';
+import 'package:budgetm/models/firestore_transaction.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:budgetm/models/category.dart';
+import 'package:budgetm/utils/icon_utils.dart';
 
 class GoalDetailScreen extends StatelessWidget {
-  final Goal goal;
+  final FirestoreGoal goal;
 
   const GoalDetailScreen({super.key, required this.goal});
 
@@ -29,7 +33,7 @@ class GoalDetailScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(
-                          goal.title,
+                          goal.name,
                           style: Theme.of(
                             context,
                           ).textTheme.displayLarge?.copyWith(fontSize: 32),
@@ -59,7 +63,7 @@ class GoalDetailScreen extends StatelessWidget {
                       _buildInfoCard(
                         context,
                         'Total',
-                        '\$${NumberFormat('#,##0').format(goal.totalAmount)}',
+                        '\$${NumberFormat('#,##0').format(goal.targetAmount)}',
                       ),
                     ],
                   ),
@@ -79,7 +83,7 @@ class GoalDetailScreen extends StatelessWidget {
                       Text(
                         DateFormat(
                           'MMMM d, yyyy',
-                        ).format(goal.date).toUpperCase(),
+                        ).format(goal.targetDate).toUpperCase(),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -88,7 +92,42 @@ class GoalDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 16),
+                  Text(
+                    'TRANSACTIONS',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.secondaryTextColorLight,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  // const SizedBox(height: 8),
+                  Expanded(
+                    child: StreamBuilder<List<FirestoreTransaction>>(
+                      stream: FirestoreService.instance.getTransactionsForGoal(goal.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final transactions = snapshot.data ?? const <FirestoreTransaction>[];
+                        if (transactions.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'No transactions yet',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.secondaryTextColorLight,
+                              ),
+                            ),
+                          );
+                        }
+                        return ListView.separated(
+                          itemCount: transactions.length,
+                          separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200),
+                          itemBuilder: (context, index) => _buildTransactionItem(context, transactions[index]),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
@@ -180,6 +219,85 @@ class GoalDetailScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(BuildContext context, FirestoreTransaction txn) {
+    final bool isIncome = txn.type == 'income';
+
+    return Container(
+      // margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+      ),
+      child: FutureBuilder<Category?>(
+        future: txn.categoryId != null
+            ? FirestoreService.instance.getCategoryById(txn.categoryId!)
+            : Future.value(null),
+        builder: (context, categorySnapshot) {
+          String categoryName = 'Uncategorized';
+          String iconId = isIncome ? 'icon_default_income' : 'icon_default_expense';
+
+          if (categorySnapshot.connectionState == ConnectionState.waiting) {
+            categoryName = '...';
+          } else if (categorySnapshot.hasData && categorySnapshot.data != null) {
+            categoryName = categorySnapshot.data!.name ?? 'Uncategorized';
+            if (categorySnapshot.data!.icon != null) {
+              iconId = categorySnapshot.data!.icon!;
+            }
+          }
+
+          return Row(
+            children: [
+              Container(
+                // padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: HugeIcon(
+                  icon: getIcon(iconId),
+                  color: Colors.black87,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      categoryName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      DateFormat('MMM d, yyyy').format(txn.date),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${isIncome ? '+' : '-'} \$${txn.amount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: isIncome ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -8,6 +8,7 @@ class FirestoreTransaction {
   final DateTime date;
   final String? categoryId;
   final String? budgetId;
+  final String? goalId;
   final String? accountId;
   final String? time;
   final String? repeat;
@@ -26,6 +27,7 @@ class FirestoreTransaction {
     required this.date,
     this.categoryId,
     this.budgetId,
+    this.goalId,
     this.accountId,
     this.time,
     this.repeat,
@@ -46,6 +48,7 @@ class FirestoreTransaction {
       'date': Timestamp.fromDate(date),
       'categoryId': categoryId,
       'budgetId': budgetId,
+      'goalId': goalId,
       'accountId': accountId,
       'time': time,
       'repeat': repeat,
@@ -69,6 +72,7 @@ class FirestoreTransaction {
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       categoryId: data['categoryId'],
       budgetId: data['budgetId'],
+      goalId: data['goalId'],
       accountId: data['accountId'],
       time: data['time'],
       repeat: data['repeat'],
@@ -91,6 +95,7 @@ class FirestoreTransaction {
       'date': Timestamp.fromDate(date),
       'categoryId': categoryId,
       'budgetId': budgetId,
+      'goalId': goalId,
       'accountId': accountId,
       'time': time,
       'repeat': repeat,
@@ -117,6 +122,7 @@ class FirestoreTransaction {
               : DateTime.now(),
       categoryId: json['categoryId'],
       budgetId: json['budgetId'],
+      goalId: json['goalId'],
       accountId: json['accountId'],
       time: json['time'],
       repeat: json['repeat'],
@@ -138,6 +144,7 @@ class FirestoreTransaction {
     DateTime? date,
     String? categoryId,
     String? budgetId,
+    String? goalId,
     String? accountId,
     String? time,
     String? repeat,
@@ -156,6 +163,7 @@ class FirestoreTransaction {
       date: date ?? this.date,
       categoryId: categoryId ?? this.categoryId,
       budgetId: budgetId ?? this.budgetId,
+      goalId: goalId ?? this.goalId,
       accountId: accountId ?? this.accountId,
       time: time ?? this.time,
       repeat: repeat ?? this.repeat,
@@ -170,7 +178,7 @@ class FirestoreTransaction {
 
   @override
   String toString() {
-    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, notes: $notes, paid: $paid, isVacation: $isVacation)';
+    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, notes: $notes, paid: $paid, isVacation: $isVacation)';
   }
 
   @override
@@ -184,6 +192,7 @@ class FirestoreTransaction {
         other.date == date &&
         other.categoryId == categoryId &&
         other.budgetId == budgetId &&
+        other.goalId == goalId &&
         other.accountId == accountId &&
         other.time == time &&
         other.repeat == repeat &&
@@ -198,7 +207,7 @@ class FirestoreTransaction {
   @override
   int get hashCode {
     return Object.hash(
-      id, description, amount, type, date, categoryId, budgetId, accountId,
+      id, description, amount, type, date, categoryId, budgetId, goalId, accountId,
       time, repeat, remind, icon, color, notes, paid, isVacation,
     );
   }

@@ -1,9 +1,12 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/goal.dart';
+import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 import 'goals_detailed/goals_detailed_screen.dart';
 
@@ -17,36 +20,6 @@ class GoalsScreen extends StatefulWidget {
 class _GoalsScreenState extends State<GoalsScreen> {
   bool _isPendingSelected = true;
 
-  final List<Goal> _pendingGoals = [
-    Goal(
-      title: 'Home',
-      currentAmount: 24000,
-      totalAmount: 100000,
-      date: DateTime(2025, 12, 31),
-      icon: HugeIcons.strokeRoundedHome01,
-    ),
-    Goal(
-      title: 'Home',
-      description: 'Here is your descriptionn goes',
-      currentAmount: 24000,
-      totalAmount: 100000,
-      date: DateTime(2026, 6, 30),
-      icon: HugeIcons.strokeRoundedHome01,
-    ),
-  ];
-
-  final List<Goal> _fulfilledGoals = [
-    Goal(
-      title: 'New Car',
-      description: 'Tesla Model Y',
-      currentAmount: 50000,
-      totalAmount: 50000,
-      date: DateTime(2025, 8, 16),
-      icon: HugeIcons.strokeRoundedCar01,
-      isFulfilled: true,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,17 +28,31 @@ class _GoalsScreenState extends State<GoalsScreen> {
         children: [
           _buildCustomAppBar(context),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  _buildInfoCards(),
-                  _isPendingSelected
-                      ? _buildPendingGoalsList()
-                      : _buildFulfilledGoalsList(),
-                  const SizedBox(height: 80), // Padding for FAB
-                ],
-              ),
+            child: StreamBuilder<List<FirestoreGoal>>(
+              stream: context.read<GoalsProvider>().getGoals(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final allGoals = snapshot.data ?? <FirestoreGoal>[];
+                final pendingGoals =
+                    allGoals.where((g) => g.isCompleted == false).toList();
+                final fulfilledGoals =
+                    allGoals.where((g) => g.isCompleted == true).toList();
+
+                return SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      _buildInfoCards(pendingGoals, fulfilledGoals),
+                      _isPendingSelected
+                          ? _buildPendingGoalsList(pendingGoals)
+                          : _buildFulfilledGoalsList(fulfilledGoals),
+                      const SizedBox(height: 80), // Padding for FAB
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -186,7 +173,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  Widget _buildInfoCards() {
+  Widget _buildInfoCards(List<FirestoreGoal> pendingGoals, List<FirestoreGoal> fulfilledGoals) {
+    final currencyFormat = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 2,
+    );
+
+    final double pendingTotal =
+        pendingGoals.fold(0.0, (sum, g) => sum + g.currentAmount);
+    final double fulfilledTotal =
+        fulfilledGoals.fold(0.0, (sum, g) => sum + g.currentAmount);
+
+    final String totalValue = currencyFormat.format(
+      _isPendingSelected ? pendingTotal : fulfilledTotal,
+    );
+
+    final int fulfilledCount = fulfilledGoals.length;
+    final int totalCount = pendingGoals.length + fulfilledGoals.length;
+    final String fulfilledRatio = '$fulfilledCount / $totalCount';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Row(
@@ -194,13 +199,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
           _buildInfoCard(
             context,
             'Total',
-            _isPendingSelected ? '+ \$3,456.98' : '-\$500',
+            totalValue,
           ),
           const SizedBox(width: 16),
           _buildInfoCard(
             context,
             'Fulfilled Goals',
-            _isPendingSelected ? '0/1' : '1/1',
+            fulfilledRatio,
           ),
         ],
       ),
@@ -247,7 +252,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  Widget _buildPendingGoalsList() {
+  Widget _buildPendingGoalsList(List<FirestoreGoal> goals) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -264,13 +269,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ),
           ),
-          ..._pendingGoals.map((goal) => _buildGoalItem(goal)),
+          ...goals.map((goal) => _buildGoalItem(goal)),
         ],
       ),
     );
   }
 
-  Widget _buildFulfilledGoalsList() {
+  Widget _buildFulfilledGoalsList(List<FirestoreGoal> goals) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -287,31 +292,28 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ),
           ),
-          ..._fulfilledGoals.map((goal) => _buildGoalItem(goal)),
+          ...goals.map((goal) => _buildGoalItem(goal)),
         ],
       ),
     );
   }
 
-  Widget _buildGoalItem(Goal goal) {
-    final double progress = goal.totalAmount > 0
-        ? goal.currentAmount / goal.totalAmount
-        : 0;
+  Widget _buildGoalItem(FirestoreGoal goal) {
+    final double progress =
+        goal.targetAmount > 0 ? goal.currentAmount / goal.targetAmount : 0;
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
       decimalDigits: 2,
     );
     final totalFormat = NumberFormat.compactCurrency(symbol: '\$');
-    final progressColor = goal.isFulfilled
-        ? Colors.green
-        : AppColors.gradientEnd;
+    final progressColor = goal.isCompleted ? Colors.green : AppColors.gradientEnd;
 
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
           context,
           screen: GoalDetailScreen(goal: goal),
-          withNavBar: false, // Hides the bottom navigation bar
+          withNavBar: false,
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );
       },
@@ -341,7 +343,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: HugeIcon(
-                    icon: goal.icon,
+                    icon: getIcon(goal.icon),
                     size: 24,
                     color: progressColor,
                   ),
@@ -352,13 +354,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        goal.title,
+                        goal.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
-                      if (goal.description != null) ...[
+                      if (goal.description != null && goal.description!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           goal.description!,
@@ -371,11 +373,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     ],
                   ),
                 ),
-                if (goal.isFulfilled)
+                if (goal.isCompleted)
                   const Icon(Icons.check_circle, color: Colors.green, size: 28)
                 else
                   Text(
-                    currencyFormat.format(20.00), // Placeholder saved amount
+                    currencyFormat.format(goal.currentAmount),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -388,7 +390,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 LinearProgressIndicator(
-                  value: progress,
+                  value: progress.clamp(0.0, 1.0),
                   backgroundColor: Colors.grey.shade200,
                   color: progressColor,
                   minHeight: 6,
@@ -399,7 +401,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      totalFormat.format(goal.totalAmount),
+                      totalFormat.format(goal.targetAmount),
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     Text(
@@ -407,7 +409,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: goal.isFulfilled ? Colors.green : Colors.black,
+                        color: goal.isCompleted ? Colors.green : Colors.black,
                       ),
                     ),
                   ],

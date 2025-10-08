@@ -5,6 +5,7 @@ import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_task.dart';
 import 'package:budgetm/models/budget.dart';
+import 'package:budgetm/models/goal.dart';
 
 class FirestoreService {
   static FirestoreService? _instance;
@@ -55,6 +56,18 @@ class FirestoreService {
         .withConverter<Budget>(
           fromFirestore: (snapshot, _) => Budget.fromFirestore(snapshot),
           toFirestore: (budget, _) => budget.toJson(),
+        );
+  }
+
+  CollectionReference<FirestoreGoal> get _goalsCollection {
+    if (_userId == null) throw Exception('User not authenticated');
+    return _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('goals')
+        .withConverter<FirestoreGoal>(
+          fromFirestore: (snapshot, _) => FirestoreGoal.fromFirestore(snapshot),
+          toFirestore: (goal, _) => goal.toJson(),
         );
   }
 
@@ -148,6 +161,76 @@ class FirestoreService {
     } catch (e) {
       print('Error deleting budget: $e');
       rethrow;
+    }
+  }
+
+  // ================ GOAL OPERATIONS ================
+
+  // Create a new goal
+  Future<void> createGoal(FirestoreGoal goal) async {
+    try {
+      await _goalsCollection.add(goal);
+    } catch (e) {
+      print('Error creating goal: $e');
+      rethrow;
+    }
+  }
+
+  // Stream goals (real-time updates)
+  Stream<List<FirestoreGoal>> getGoals() {
+    try {
+      return _goalsCollection
+          .orderBy('creationDate', descending: false)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming goals: $e');
+      return Stream.empty();
+    }
+  }
+
+  // Update goal
+  Future<void> updateGoal(String goalId, FirestoreGoal goal) async {
+    try {
+      await _goalsCollection.doc(goalId).update(goal.toJson());
+    } catch (e) {
+      print('Error updating goal: $e');
+      rethrow;
+    }
+  }
+
+  // Delete goal
+  Future<void> deleteGoal(String goalId) async {
+    try {
+      await _goalsCollection.doc(goalId).delete();
+    } catch (e) {
+      print('Error deleting goal: $e');
+      rethrow;
+    }
+  }
+
+  // Get goal by ID
+  Future<FirestoreGoal?> getGoalById(String goalId) async {
+    try {
+      final doc = await _goalsCollection.doc(goalId).get();
+      return doc.data();
+    } catch (e) {
+      print('Error getting goal: $e');
+      return null;
+    }
+  }
+
+  // Stream transactions associated with a goal
+  Stream<List<FirestoreTransaction>> getTransactionsForGoal(String goalId) {
+    try {
+      return _transactionsCollection
+          .where('goalId', isEqualTo: goalId)
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming transactions for goal: $e');
+      return Stream.empty();
     }
   }
 

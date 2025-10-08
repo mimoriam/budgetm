@@ -6,6 +6,10 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:budgetm/models/goal.dart';
+import 'package:budgetm/viewmodels/goals_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CreateGoalScreen extends StatefulWidget {
   final GoalType goalType;
@@ -79,7 +83,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                                   name: 'name',
                                   style: const TextStyle(fontSize: 13),
                                   decoration: _inputDecoration(
-                                    hintText: 'Askari Bank',
+                                    hintText: 'Name',
                                   ),
                                   validator: FormBuilderValidators.required(
                                     errorText: 'Name is required',
@@ -87,36 +91,36 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildFormSection(
-                                context,
-                                'Account',
-                                FormBuilderDropdown(
-                                  name: 'icon',
-                                  decoration: _inputDecoration(
-                                    hintText: 'Select Icon',
-                                  ),
-                                  isDense: true,
-                                  items: ['Icon 1', 'Icon 2']
-                                      .map(
-                                        (account) => DropdownMenuItem(
-                                          value: account,
-                                          child: Text(
-                                            account,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  validator: FormBuilderValidators.required(
-                                    errorText: 'Please select an icon',
-                                  ),
-                                ),
-                              ),
-                            ),
+                            // const SizedBox(width: 10),
+                            // Expanded(
+                            //   child: _buildFormSection(
+                            //     context,
+                            //     'Account',
+                            //     FormBuilderDropdown(
+                            //       name: 'icon',
+                            //       decoration: _inputDecoration(
+                            //         hintText: 'Select Icon',
+                            //       ),
+                            //       isDense: true,
+                            //       items: ['Icon 1', 'Icon 2']
+                            //           .map(
+                            //             (account) => DropdownMenuItem(
+                            //               value: account,
+                            //               child: Text(
+                            //                 account,
+                            //                 style: const TextStyle(
+                            //                   fontSize: 13,
+                            //                 ),
+                            //               ),
+                            //             ),
+                            //           )
+                            //           .toList(),
+                            //       validator: FormBuilderValidators.required(
+                            //         errorText: 'Please select an icon',
+                            //       ),
+                            //     ),
+                            //   ),
+                            // ),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -157,8 +161,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
         ),
         const SizedBox(height: 4),
         FormBuilderTextField(
-          name: 'amount',
-          initialValue: "100,000",
+          name: 'targetAmount',
           style: const TextStyle(
             color: AppColors.primaryTextColorLight,
             fontSize: 26,
@@ -190,48 +193,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       children: [
         _buildFormSection(
           context,
-          'Category',
-          FormBuilderDropdown(
-            name: 'category',
-            decoration: _inputDecoration(hintText: 'Select'),
-            items: ['Category 1', 'Category 2']
-                .map(
-                  (category) => DropdownMenuItem(
-                    value: category,
-                    child: Text(category, style: const TextStyle(fontSize: 13)),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
-          'Accumulated Amount',
-          FormBuilderTextField(
-            name: 'accumulated_amount',
-            initialValue: '100,000',
-            style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(),
-            keyboardType: TextInputType.number,
-          ),
-        ),
-        FormBuilderSwitch(
-          name: 'add_progress',
-          title: const Text('Add Progress'),
-          initialValue: true,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-          ),
-          controlAffinity: ListTileControlAffinity.trailing,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-        ),
-        _buildFormSection(
-          context,
           'Date',
           FormBuilderDateTimePicker(
-            name: 'date',
+            name: 'targetDate',
             initialValue: DateTime.now(),
             inputType: InputType.date,
             format: DateFormat('dd/MM/yyyy'),
@@ -286,10 +250,10 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           context,
           'Notes',
           FormBuilderTextField(
-            name: 'notes',
+            name: 'description',
             style: const TextStyle(fontSize: 13),
-            initialValue: "Hi there, I'm designing this app.....",
-            decoration: _inputDecoration(hintText: 'Notes'),
+            // initialValue: "Hi there, I'm designing this app.....",
+            decoration: _inputDecoration(hintText: 'Description'),
             maxLines: 2,
           ),
         ),
@@ -495,11 +459,54 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState?.saveAndValidate() ?? false) {
-                  debugPrint(_formKey.currentState?.value.toString());
-                  Navigator.of(context).pop();
+              onPressed: () async {
+                final isValid = _formKey.currentState?.saveAndValidate() ?? false;
+                if (!isValid) return;
+
+                final values = _formKey.currentState!.value;
+
+                // Extract and transform form values
+                final String name = (values['name'] as String? ?? '').trim();
+                final dynamic amountRaw = values['targetAmount'];
+                double targetAmount;
+                if (amountRaw is num) {
+                  targetAmount = amountRaw.toDouble();
+                } else if (amountRaw is String) {
+                  targetAmount = double.tryParse(amountRaw.replaceAll(',', '').trim()) ?? 0.0;
+                } else {
+                  targetAmount = 0.0;
                 }
+
+                final DateTime targetDate = (values['targetDate'] as DateTime?) ?? DateTime.now();
+                final String? descriptionRaw = values['description'] as String?;
+                final String? description = (descriptionRaw == null || descriptionRaw.trim().isEmpty)
+                    ? null
+                    : descriptionRaw.trim();
+                final String icon = (values['icon'] as String? ?? '').trim();
+
+                // Convert selected color to ARGB hex string (e.g., ffRRGGBB)
+                final String? colorString = _selectedColor == null
+                    ? null
+                    : '#${_selectedColor.value.toRadixString(16).padLeft(8, '0')}';
+
+                final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+                final goal = FirestoreGoal(
+                  id: '', // Firestore will generate the ID
+                  name: name,
+                  description: description,
+                  targetAmount: targetAmount,
+                  creationDate: DateTime.now(),
+                  targetDate: targetDate,
+                  userId: userId,
+                  icon: icon,
+                  color: colorString,
+                  isCompleted: widget.goalType == GoalType.fulfilled,
+                );
+
+                await context.read<GoalsProvider>().addGoal(goal);
+
+                Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
