@@ -467,6 +467,16 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
 
                 // Extract and transform form values
                 final String name = (values['name'] as String? ?? '').trim();
+
+                // Prevent duplicate goal names (case-insensitive)
+                final bool exists = await context.read<GoalsProvider>().doesGoalExist(name);
+                if (exists) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('A goal with this name already exists')),
+                  );
+                  return;
+                }
+
                 final dynamic amountRaw = values['targetAmount'];
                 double targetAmount;
                 if (amountRaw is num) {

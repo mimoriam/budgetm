@@ -54,4 +54,37 @@ class GoalsProvider extends ChangeNotifier {
     // Notify listeners so any UI dependent on goals can refresh
     notifyListeners();
   }
+  
+  Future<void> deleteGoal(String goalId) async {
+    await FirestoreService.instance.deleteGoal(goalId);
+    // Notify listeners so lists refresh after deletion
+    notifyListeners();
+  }
+
+  Future<bool> doesGoalExist(String name) async {
+    final firestore = FirebaseFirestore.instance;
+    final auth = FirebaseAuth.instance;
+    final userId = auth.currentUser?.uid;
+
+    if (userId == null) {
+      // Cannot check without authentication; treat as non-existing
+      return false;
+    }
+
+    final lowerName = name.trim().toLowerCase();
+    final querySnapshot = await firestore
+        .collection('users')
+        .doc(userId)
+        .collection('goals')
+        .get();
+
+    for (final doc in querySnapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final existingName = (data['name'] as String? ?? '').trim().toLowerCase();
+      if (existingName == lowerName) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

@@ -7,6 +7,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/viewmodels/goals_provider.dart';
+import 'package:provider/provider.dart';
 
 class GoalDetailScreen extends StatelessWidget {
   final FirestoreGoal goal;
@@ -23,8 +25,8 @@ class GoalDetailScreen extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 18.0,
-                vertical: 20.0,
+                horizontal: 16.0,
+                vertical: 12.0,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,10 +38,10 @@ class GoalDetailScreen extends StatelessWidget {
                           goal.name,
                           style: Theme.of(
                             context,
-                          ).textTheme.displayLarge?.copyWith(fontSize: 32),
+                          ).textTheme.displayLarge?.copyWith(fontSize: 28),
                         ),
                         if (goal.description != null) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           Text(
                             goal.description!,
                             style: Theme.of(context).textTheme.bodyMedium
@@ -51,7 +53,7 @@ class GoalDetailScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       _buildInfoCard(
@@ -59,7 +61,7 @@ class GoalDetailScreen extends StatelessWidget {
                         'Accumulated Amount',
                         '\$${NumberFormat('#,##0').format(goal.currentAmount)}',
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       _buildInfoCard(
                         context,
                         'Total',
@@ -67,9 +69,9 @@ class GoalDetailScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  Divider(color: Colors.grey.shade300),
                   const SizedBox(height: 16),
+                  Divider(color: Colors.grey.shade300),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -90,9 +92,9 @@ class GoalDetailScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Text(
                     'TRANSACTIONS',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -100,7 +102,7 @@ class GoalDetailScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // const SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Expanded(
                     child: StreamBuilder<List<FirestoreTransaction>>(
                       stream: FirestoreService.instance.getTransactionsForGoal(goal.id),
@@ -127,52 +129,32 @@ class GoalDetailScreen extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
+                  const SizedBox(height: 12),
+                  if (!goal.isCompleted)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await context.read<GoalsProvider>().deleteGoal(goal.id);
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
                             ),
-                            side: const BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
+                            child: Text(
+                              'Delete',
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(color: Colors.white, fontSize: 14),
                             ),
-                          ),
-                          child: Text(
-                            'Move to Calendar',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.black, fontSize: 14),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Add delete logic
-                            Navigator.of(context).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                          ),
-                          child: Text(
-                            'Delete',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.white, fontSize: 14),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -185,15 +167,15 @@ class GoalDetailScreen extends StatelessWidget {
   Widget _buildInfoCard(BuildContext context, String title, String amount) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 2,
-              blurRadius: 10,
+              color: Colors.grey.withOpacity(0.08),
+              spreadRadius: 1,
+              blurRadius: 8,
               offset: const Offset(0, 4),
             ),
           ],
@@ -208,12 +190,12 @@ class GoalDetailScreen extends StatelessWidget {
                 color: AppColors.secondaryTextColorLight,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               amount,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontSize: 16,
                 color: AppColors.primaryTextColorLight,
               ),
             ),
@@ -228,10 +210,10 @@ class GoalDetailScreen extends StatelessWidget {
 
     return Container(
       // margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
       child: FutureBuilder<Category?>(
