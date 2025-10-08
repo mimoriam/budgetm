@@ -21,12 +21,14 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   bool _isDeleting = false;
   bool _isUpdating = false;
   late bool _isPaid;
+  bool _hasChanges = false;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
     _isPaid = widget.transaction.paid ?? true;
+    print('ExpenseDetailScreen.initState: id=${widget.transaction.id}, incomingPaid=${widget.transaction.paid}, resolvedPaid=$_isPaid');
   }
 
   Future<void> _deleteTransaction() async {
@@ -54,6 +56,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
     });
 
     try {
+      print('ExpenseDetailScreen._togglePaidStatus: id=${widget.transaction.id}, currentPaid=$_isPaid, togglingTo=${!_isPaid}');
       await _firestoreService.toggleTransactionPaidStatus(
         widget.transaction.id,
         !_isPaid,
@@ -61,6 +64,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
 
       setState(() {
         _isPaid = !_isPaid;
+        _hasChanges = true;
       });
     } catch (e) {
       print('Error toggling paid status: $e');
@@ -75,9 +79,14 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pop(_hasChanges ? true : null);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
         children: [
           _buildCustomAppBar(context),
           Expanded(
@@ -285,6 +294,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -351,7 +361,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
+                onTap: () => Navigator.of(context).pop(_hasChanges ? true : null),
                 child: Container(
                   width: 36,
                   height: 36,

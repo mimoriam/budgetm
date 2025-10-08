@@ -546,38 +546,66 @@ class FirestoreService {
     }
   }
 
-  // Toggle transaction paid status and update account balance
+  // Toggle transaction paid status and update account balance ATOMICALLY
   Future<void> toggleTransactionPaidStatus(String transactionId, bool isPaid) async {
     final transactionRef = _transactionsCollection.doc(transactionId);
 
-    await _firestore.runTransaction((transaction) async {
-      final transactionSnapshot = await transaction.get(transactionRef);
-      if (!transactionSnapshot.exists) {
+    await _firestore.runTransaction((tx) async {
+      final txnSnap = await tx.get(transactionRef);
+      if (!txnSnap.exists) {
         throw Exception('Transaction not found');
       }
 
-      final transactionData = transactionSnapshot.data()!;
-      final accountId = transactionData.accountId;
-      final amount = transactionData.amount;
+      final txn = txnSnap.data()!;
+      final String? accountId = txn.accountId;
+      final double amount = txn.amount;
+      final String type = txn.type; // 'income' or 'expense'
+      final bool previousPaid = txn.paid ?? false;
 
+      print('toggleTransactionPaidStatus: id=$transactionId prevPaid=$previousPaid -> newPaid=$isPaid type=$type amount=$amount accountId=$accountId');
+
+      // If no change, only ensure the field is persisted and exit early
+      if (previousPaid == isPaid) {
+        tx.update(transactionRef, {'paid': isPaid});
+        print('toggleTransactionPaidStatus: paid state unchanged; persisted field only.');
+        return;
+      }
+
+      // If no linked account, just persist the paid flag
       if (accountId == null || accountId.isEmpty) {
-        // No account linked, just update the transaction
-        transaction.update(transactionRef, {'paid': isPaid});
+        tx.update(transactionRef, {'paid': isPaid});
+        print('toggleTransactionPaidStatus: no account linked; updated paid only.');
         return;
       }
 
       final accountRef = _accountsCollection.doc(accountId);
-      final accountSnapshot = await transaction.get(accountRef);
-      if (!accountSnapshot.exists) {
-        throw Exception('Account not found');
+      final accountSnap = await tx.get(accountRef);
+
+      if (!accountSnap.exists) {
+        // If account is missing, don't fail toggling the paid flag
+        tx.update(transactionRef, {'paid': isPaid});
+        print('toggleTransactionPaidStatus: account not found; updated paid only.');
+        return;
       }
 
-      final currentBalance = accountSnapshot.data()!.balance;
-      // If marking as paid, subtract amount. If marking as unpaid, add amount.
-      final newBalance = isPaid ? currentBalance - amount : currentBalance + amount;
+      final double currentBalance = accountSnap.data()!.balance;
 
-      transaction.update(accountRef, {'balance': newBalance});
-      transaction.update(transactionRef, {'paid': isPaid});
+      // Compute balance delta based on type and direction of toggle
+      double delta;
+      if (type == 'income') {
+        // Income: marking paid adds funds; marking unpaid removes them
+        delta = isPaid ? amount : -amount;
+      } else {
+        // Default/expense: marking paid subtracts funds; marking unpaid adds them back
+        delta = isPaid ? -amount : amount;
+      }
+
+      final double newBalance = currentBalance + delta;
+
+      print('toggleTransactionPaidStatus: currentBalance=$currentBalance delta=$delta newBalance=$newBalance');
+
+      tx.update(accountRef, {'balance': newBalance});
+      tx.update(transactionRef, {'paid': isPaid});
     });
   }
 

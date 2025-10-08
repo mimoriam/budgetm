@@ -76,7 +76,8 @@ class FirestoreTransaction {
       icon: data['icon'],
       color: data['color'],
       notes: data['notes'],
-      paid: data['paid'] ?? true,
+      // Default: expenses are considered paid unless explicitly set; others default to false
+      paid: (data['paid'] as bool?) ?? (data['type'] == 'expense' ? true : false),
       isVacation: data['isVacation'] ?? false,
     );
   }

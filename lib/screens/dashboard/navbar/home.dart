@@ -52,6 +52,7 @@ model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransact
     iconBackgroundColor: Colors.grey.shade100, // Default color
     accountId: firestoreTransaction.accountId, // Pass accountId from Firestore transaction
     categoryId: firestoreTransaction.categoryId, // Already String in Firestore
+    paid: firestoreTransaction.paid, // CRITICAL: carry paid flag into UI model
   );
 }
 
