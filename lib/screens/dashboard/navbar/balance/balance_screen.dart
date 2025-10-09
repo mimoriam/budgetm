@@ -287,7 +287,20 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   ),
                 ),
                 child: TextButton(
-                  child: Text("Add Account", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, size: 16, color: Colors.black),
+                      const SizedBox(width: 6),
+                      const Text(
+                        "Add Account",
+                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
+                      ),
+                    ],
+                  ),
                   onPressed: () async {
                     final result =
                         await PersistentNavBarNavigator.pushNewScreen(

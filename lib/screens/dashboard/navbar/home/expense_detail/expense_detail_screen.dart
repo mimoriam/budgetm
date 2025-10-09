@@ -30,8 +30,12 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
     super.initState();
     _firestoreService = FirestoreService.instance;
     _isPaid = widget.transaction.paid ?? true;
-    print('ExpenseDetailScreen.initState: id=${widget.transaction.id}, incomingPaid=${widget.transaction.paid}, resolvedPaid=$_isPaid');
-    _goalNameFuture = widget.transaction.type == TransactionType.income ? _fetchLinkedGoalName() : Future.value(null);
+    print(
+      'ExpenseDetailScreen.initState: id=${widget.transaction.id}, incomingPaid=${widget.transaction.paid}, resolvedPaid=$_isPaid',
+    );
+    _goalNameFuture = widget.transaction.type == TransactionType.income
+        ? _fetchLinkedGoalName()
+        : Future.value(null);
   }
 
   Future<void> _deleteTransaction() async {
@@ -59,7 +63,9 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
     });
 
     try {
-      print('ExpenseDetailScreen._togglePaidStatus: id=${widget.transaction.id}, currentPaid=$_isPaid, togglingTo=${!_isPaid}');
+      print(
+        'ExpenseDetailScreen._togglePaidStatus: id=${widget.transaction.id}, currentPaid=$_isPaid, togglingTo=${!_isPaid}',
+      );
       await _firestoreService.toggleTransactionPaidStatus(
         widget.transaction.id,
         !_isPaid,
@@ -87,7 +93,9 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
         return null;
       }
       // Fetch full Firestore transaction to access goalId
-      final firestoreTxn = await _firestoreService.getTransactionById(widget.transaction.id);
+      final firestoreTxn = await _firestoreService.getTransactionById(
+        widget.transaction.id,
+      );
       final String? goalId = firestoreTxn?.goalId;
       if (goalId == null || goalId.isEmpty) {
         return null;
@@ -110,250 +118,280 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: Column(
-        children: [
-          _buildCustomAppBar(context),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18.0,
-                vertical: 20.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Column(
+          children: [
+            _buildCustomAppBar(context),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18.0,
+                  vertical: 20.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          FutureBuilder<Category?>(
+                            future: widget.transaction.categoryId != null
+                                ? _firestoreService.getCategoryById(
+                                    widget.transaction.categoryId!,
+                                  )
+                                : Future.value(null),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Text('Loading...');
+                              } else if (snapshot.hasError) {
+                                return Text('Error: ${snapshot.error}');
+                              } else if (snapshot.hasData &&
+                                  snapshot.data != null) {
+                                return Text(
+                                  snapshot.data!.name ??
+                                      widget.transaction.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displayLarge
+                                      ?.copyWith(fontSize: 32),
+                                );
+                              } else {
+                                return Text(
+                                  widget.transaction.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displayLarge
+                                      ?.copyWith(fontSize: 32),
+                                );
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          FutureBuilder<FirestoreAccount?>(
+                            future: widget.transaction.accountId != null
+                                ? _firestoreService.getAccountById(
+                                    widget.transaction.accountId!,
+                                  )
+                                : Future.value(null),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Text('Loading...');
+                              } else if (snapshot.hasError) {
+                                return Text('Error: ${snapshot.error}');
+                              } else if (snapshot.hasData &&
+                                  snapshot.data != null &&
+                                  !(snapshot.data!.isDefault ?? false)) {
+                                return Text(
+                                  "${snapshot.data!.name} - ${snapshot.data!.accountType}",
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color:
+                                            AppColors.secondaryTextColorLight,
+                                      ),
+                                );
+                              } else {
+                                return const SizedBox.shrink();
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
                       children: [
-                        FutureBuilder<Category?>(
-                          future: widget.transaction.categoryId != null
-                              ? _firestoreService.getCategoryById(widget.transaction.categoryId!)
-                              : Future.value(null),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Text('Loading...');
-                            } else if (snapshot.hasError) {
-                              return Text('Error: ${snapshot.error}');
-                            } else if (snapshot.hasData && snapshot.data != null) {
-                              return Text(
-                                snapshot.data!.name ?? widget.transaction.title,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.displayLarge?.copyWith(fontSize: 32),
-                              );
-                            } else {
-                              return Text(
-                                widget.transaction.title,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.displayLarge?.copyWith(fontSize: 32),
-                              );
-                            }
-                          },
+                        _buildInfoCard(
+                          context,
+                          'Accumulated Amount',
+                          '\$${widget.transaction.amount.toStringAsFixed(2)}',
                         ),
-                        const SizedBox(height: 8),
-                        FutureBuilder<FirestoreAccount?>(
-                          future: widget.transaction.accountId != null
-                              ? _firestoreService.getAccountById(widget.transaction.accountId!)
-                              : Future.value(null),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Text('Loading...');
-                            } else if (snapshot.hasError) {
-                              return Text('Error: ${snapshot.error}');
-                            } else if (snapshot.hasData && snapshot.data != null && !(snapshot.data!.isDefault ?? false)) {
-                              return Text(
-                                "${snapshot.data!.name} - ${snapshot.data!.accountType}",
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppColors.secondaryTextColorLight,
-                                    ),
-                              );
-                            } else {
-                              return const SizedBox.shrink();
-                            }
-                          },
+                        const SizedBox(width: 16),
+                        _buildInfoCard(
+                          context,
+                          'Total',
+                          '\$${widget.transaction.amount.toStringAsFixed(2)}',
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      _buildInfoCard(
-                        context,
-                        'Accumulated Amount',
-                        '\$${widget.transaction.amount.toStringAsFixed(2)}',
-                      ),
-                      const SizedBox(width: 16),
-                      _buildInfoCard(
-                        context,
-                        'Total',
-                        '\$${widget.transaction.amount.toStringAsFixed(2)}',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'STATUS',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                          fontWeight: FontWeight.bold,
+                    const SizedBox(height: 24),
+                    Divider(color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'STATUS',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.secondaryTextColorLight,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
-                      ),
-                      Text(
-                        _isPaid ? 'PAID' : 'UNPAID',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: _isPaid ? Colors.green : Colors.red,
+                        Text(
+                          _isPaid ? 'PAID' : 'UNPAID',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: _isPaid ? Colors.green : Colors.red,
+                              ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'DATE',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                          fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Divider(color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'DATE',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.secondaryTextColorLight,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
-                      ),
-                      Text(
-                        DateFormat(
-                          'MMMM d, yyyy',
-                        ).format(widget.transaction.date).toUpperCase(),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          DateFormat(
+                            'MMMM d, yyyy',
+                          ).format(widget.transaction.date).toUpperCase(),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  FutureBuilder<String?>(
-                    future: _goalNameFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        // Avoid layout shift; hide placeholder
-                        return const SizedBox.shrink();
-                      } else if (snapshot.hasError) {
-                        return const SizedBox.shrink();
-                      }
-                      final goalName = snapshot.data;
-                      if (goalName == null || goalName.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'GOAL',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.secondaryTextColorLight,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            goalName,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 40),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _togglePaidStatus,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                            side: const BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: _isUpdating
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.black,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelLarge
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Divider(color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    FutureBuilder<String?>(
+                      future: _goalNameFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          // Avoid layout shift; hide placeholder
+                          return const SizedBox.shrink();
+                        } else if (snapshot.hasError) {
+                          return const SizedBox.shrink();
+                        }
+                        final goalName = snapshot.data;
+                        if (goalName == null || goalName.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'GOAL',
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                          color: Colors.black, fontSize: 14),
+                                        color:
+                                            AppColors.secondaryTextColorLight,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _isDeleting
-                              ? null
-                              : () async {
-                                  // Add delete logic
-                                  await _deleteTransaction();
-                                  // Navigate back to the previous screen
-                                  if (context.mounted) {
-                                    Navigator.of(context).pop(true);
-                                  }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
+                                Text(
+                                  goalName,
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
-                          ),
-                          child: _isDeleting
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
+
+                            const SizedBox(height: 16),
+                            Divider(color: Colors.grey.shade300),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _togglePaidStatus,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
+                              side: const BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: _isUpdating
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.black,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(
+                                          color: Colors.black,
+                                          fontSize: 14,
+                                        ),
                                   ),
-                                )
-                              : Text(
-                                  'Delete',
-                                  style: Theme.of(context).textTheme.labelLarge
-                                      ?.copyWith(color: Colors.white, fontSize: 14),
-                                ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isDeleting
+                                ? null
+                                : () async {
+                                    // Add delete logic
+                                    await _deleteTransaction();
+                                    // Navigate back to the previous screen
+                                    if (context.mounted) {
+                                      Navigator.of(context).pop(true);
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
+                            ),
+                            child: _isDeleting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'Delete',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -420,7 +458,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => Navigator.of(context).pop(_hasChanges ? true : null),
+                onTap: () =>
+                    Navigator.of(context).pop(_hasChanges ? true : null),
                 child: Container(
                   width: 36,
                   height: 36,

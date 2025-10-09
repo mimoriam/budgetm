@@ -151,7 +151,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<T?> _showPrettySelectionBottomSheet<T>({
     required String title,
     required List<T> items,
-    required T? selectedItem,
+    required T selectedItem,
     required String Function(T) getDisplayName,
   }) async {
     return await showModalBottomSheet<T>(
@@ -161,7 +161,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         return PrettyBottomSheet<T>(
           title: title,
           items: items,
-          selectedItem: selectedItem!,
+          selectedItem: selectedItem,
           getDisplayName: getDisplayName,
         );
       },
@@ -445,25 +445,79 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             if (pendingGoals.isEmpty) {
                               return const SizedBox.shrink();
                             }
+                            // Determine currently selected goal object if any
+                            final FirestoreGoal? selectedGoal = _selectedGoalId != null
+                                ? pendingGoals.firstWhere(
+                                    (g) => g.id == _selectedGoalId,
+                                    orElse: () => pendingGoals.first,
+                                  )
+                                : null;
+
                             return _buildFormSection(
                               context,
                               'Goal',
-                              FormBuilderDropdown<String>(
+                              FormBuilderField<String>(
                                 name: 'goal',
                                 initialValue: _selectedGoalId,
-                                decoration: _inputDecoration(hintText: 'Select Goal'),
-                                items: pendingGoals
-                                    .map(
-                                      (g) => DropdownMenuItem(
-                                        value: g.id,
-                                        child: Text(g.name, style: const TextStyle(fontSize: 13)),
+                                builder: (FormFieldState<String?> field) {
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      // Build items with a "None" option at the top
+                                      final List<FirestoreGoal?> items = [null, ...pendingGoals];
+                                      final result = await _showPrettySelectionBottomSheet<FirestoreGoal?>(
+                                        title: 'Select Goal',
+                                        items: items,
+                                        selectedItem: selectedGoal,
+                                        getDisplayName: (g) => g == null ? 'None' : g.name,
+                                      );
+                                      // Update selection and form field
+                                      setState(() {
+                                        _selectedGoalId = result?.id;
+                                      });
+                                      field.didChange(_selectedGoalId);
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
                                       ),
-                                    )
-                                    .toList(),
-                                onChanged: (val) {
-                                  setState(() {
-                                    _selectedGoalId = val;
-                                  });
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30.0),
+                                        border: Border.all(
+                                          color: field.hasError
+                                              ? AppColors.errorColor
+                                              : Colors.grey.shade300,
+                                          width: field.hasError ? 1.5 : 1.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _selectedGoalId != null
+                                                  ? (pendingGoals.firstWhere(
+                                                      (g) => g.id == _selectedGoalId,
+                                                      orElse: () => pendingGoals.first,
+                                                    ).name)
+                                                  : 'None',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: _selectedGoalId != null
+                                                    ? AppColors.primaryTextColorLight
+                                                    : AppColors.lightGreyBackground,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                             );
