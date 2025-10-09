@@ -51,18 +51,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     try {
       // Get all accounts
       final allAccounts = await _firestoreService.getAllAccounts();
-      final nonDefaultAccounts = allAccounts.where((account) => !(account.isDefault ?? false)).toList();
+      final nonDefaultAccounts = allAccounts
+          .where((account) => !(account.isDefault ?? false))
+          .toList();
       final defaultAccount = allAccounts.cast<FirestoreAccount?>().firstWhere(
         (account) => account?.isDefault ?? false,
         orElse: () => null,
       );
-      
+
       setState(() {
         if (nonDefaultAccounts.isNotEmpty) {
           // If user has created accounts, show all accounts including the default one.
           _accounts = allAccounts;
           if (defaultAccount != null) {
-            _selectedAccountId = defaultAccount.id; // Auto-select the default account
+            _selectedAccountId =
+                defaultAccount.id; // Auto-select the default account
           } else if (allAccounts.isNotEmpty) {
             _selectedAccountId = allAccounts.first.id;
           }
@@ -76,7 +79,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           _selectedAccountId = null;
         }
       });
-      
+
       if (_selectedAccountId != null) {
         _formKey.currentState?.patchValue({'account': _selectedAccountId});
       }
@@ -91,15 +94,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Get categories filtered by transaction type and ordered by displayOrder
       final allCategories = await _firestoreService.getAllCategories();
       final filteredCategories = allCategories
-          .where((category) => category.type == (widget.transactionType == TransactionType.income ? 'income' : 'expense'))
+          .where(
+            (category) =>
+                category.type ==
+                (widget.transactionType == TransactionType.income
+                    ? 'income'
+                    : 'expense'),
+          )
           .toList();
-      
+
       // Sort by display order
-      filteredCategories.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-      
+      filteredCategories.sort(
+        (a, b) => a.displayOrder.compareTo(b.displayOrder),
+      );
+
       setState(() {
         _categories = filteredCategories;
-        
+
         // Set default category
         if (_categories.isNotEmpty) {
           // Try to find "Misc" category first
@@ -126,6 +137,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             items: _categories,
             selectedItem: selectedCategory,
             getDisplayName: (category) => category.name ?? 'Unnamed Category',
+            getLeading: (category) => HugeIcon(
+              icon: getIcon(category.icon),
+              color: AppColors.primaryTextColorLight,
+            ),
           );
 
           if (result != null) {
@@ -148,11 +163,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
+  /// Shows a pretty selection bottom sheet for choosing an item of type [T].
+  ///
+  /// Parameters:
+  /// - [title]: The title displayed at the top of the bottom sheet.
+  /// - [items]: The list of items to choose from.
+  /// - [selectedItem]: The currently selected item to highlight.
+  /// - [getDisplayName]: A function that returns the display name for each item.
+  /// - [getLeading]: Optional builder to provide a leading widget for each item
+  ///   in the list (e.g., an icon). If provided, it is passed through to
+  ///   PrettyBottomSheet so each list tile can render a leading widget.
   Future<T?> _showPrettySelectionBottomSheet<T>({
     required String title,
     required List<T> items,
     required T selectedItem,
     required String Function(T) getDisplayName,
+    Widget Function(T)? getLeading,
   }) async {
     return await showModalBottomSheet<T>(
       context: context,
@@ -163,6 +189,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           items: items,
           selectedItem: selectedItem,
           getDisplayName: getDisplayName,
+          getLeading: getLeading,
         );
       },
     );
@@ -264,14 +291,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                       }
                                       final result =
                                           await _showPrettySelectionBottomSheet<
-                                              Category>(
-                                        title: 'Select Category',
-                                        items: _categories,
-                                        selectedItem:
-                                            selectedCategory ?? _categories.first,
-                                        getDisplayName: (category) =>
-                                            category.name ?? 'Unnamed Category',
-                                      );
+                                            Category
+                                          >(
+                                            title: 'Select Category',
+                                            items: _categories,
+                                            selectedItem:
+                                                selectedCategory ??
+                                                _categories.first,
+                                            getDisplayName: (category) =>
+                                                category.name ??
+                                                'Unnamed Category',
+                                            getLeading: (category) => HugeIcon(
+                                              icon: getIcon(category.icon),
+                                              color: AppColors
+                                                  .primaryTextColorLight,
+                                            ),
+                                          );
 
                                       if (result != null) {
                                         setState(() {
@@ -287,7 +322,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30.0),
+                                        borderRadius: BorderRadius.circular(
+                                          30.0,
+                                        ),
                                         border: Border.all(
                                           color: field.hasError
                                               ? AppColors.errorColor
@@ -304,13 +341,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                               children: [
                                                 HugeIcon(
                                                   icon: getIcon(
-                                                      selectedCategory?.icon),
+                                                    selectedCategory?.icon,
+                                                  ),
                                                   size: 18,
-                                                  color: selectedCategory != null
+                                                  color:
+                                                      selectedCategory != null
                                                       ? AppColors
-                                                          .primaryTextColorLight
+                                                            .primaryTextColorLight
                                                       : AppColors
-                                                          .lightGreyBackground,
+                                                            .lightGreyBackground,
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Flexible(
@@ -319,12 +358,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                                         'Select',
                                                     style: TextStyle(
                                                       fontSize: 13,
-                                                      color: selectedCategory !=
+                                                      color:
+                                                          selectedCategory !=
                                                               null
                                                           ? AppColors
-                                                              .primaryTextColorLight
+                                                                .primaryTextColorLight
                                                           : AppColors
-                                                              .lightGreyBackground,
+                                                                .lightGreyBackground,
                                                     ),
                                                   ),
                                                 ),
@@ -360,18 +400,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                     if (_accounts.isNotEmpty) {
                                       return GestureDetector(
                                         onTap: () async {
-                                          final selectedAccount = _accounts.firstWhere(
-                                            (acc) => acc.id == _selectedAccountId,
-                                            orElse: () => _accounts.first,
-                                          );
-                                          
-                                          final result = await _showPrettySelectionBottomSheet<FirestoreAccount>(
-                                            title: 'Select Account',
-                                            items: _accounts,
-                                            selectedItem: selectedAccount,
-                                            getDisplayName: (account) => account.name,
-                                          );
-                                          
+                                          final selectedAccount = _accounts
+                                              .firstWhere(
+                                                (acc) =>
+                                                    acc.id ==
+                                                    _selectedAccountId,
+                                                orElse: () => _accounts.first,
+                                              );
+
+                                          final result =
+                                              await _showPrettySelectionBottomSheet<
+                                                FirestoreAccount
+                                              >(
+                                                title: 'Select Account',
+                                                items: _accounts,
+                                                selectedItem: selectedAccount,
+                                                getDisplayName: (account) =>
+                                                    account.name,
+                                              );
+
                                           if (result != null) {
                                             setState(() {
                                               _selectedAccountId = result.id;
@@ -386,7 +433,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.white,
-                                            borderRadius: BorderRadius.circular(30.0),
+                                            borderRadius: BorderRadius.circular(
+                                              30.0,
+                                            ),
                                             border: Border.all(
                                               color: field.hasError
                                                   ? AppColors.errorColor
@@ -395,21 +444,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                             ),
                                           ),
                                           child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Expanded(
                                                 child: Text(
                                                   _selectedAccountId != null
-                                                      ? (_accounts.firstWhere(
-                                                          (acc) => acc.id == _selectedAccountId,
-                                                          orElse: () => _accounts.first,
-                                                        ).name)
+                                                      ? (_accounts
+                                                            .firstWhere(
+                                                              (acc) =>
+                                                                  acc.id ==
+                                                                  _selectedAccountId,
+                                                              orElse: () =>
+                                                                  _accounts
+                                                                      .first,
+                                                            )
+                                                            .name)
                                                       : 'Select',
                                                   style: TextStyle(
                                                     fontSize: 13,
-                                                    color: _selectedAccountId != null
-                                                        ? AppColors.primaryTextColorLight
-                                                        : AppColors.lightGreyBackground,
+                                                    color:
+                                                        _selectedAccountId !=
+                                                            null
+                                                        ? AppColors
+                                                              .primaryTextColorLight
+                                                        : AppColors
+                                                              .lightGreyBackground,
                                                   ),
                                                 ),
                                               ),
@@ -437,7 +497,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       const SizedBox(height: 10),
                       if (widget.transactionType == TransactionType.income)
                         StreamBuilder<List<FirestoreGoal>>(
-                          stream: Provider.of<GoalsProvider>(context, listen: false).getGoals(),
+                          stream: Provider.of<GoalsProvider>(
+                            context,
+                            listen: false,
+                          ).getGoals(),
                           builder: (context, snapshot) {
                             final pendingGoals = (snapshot.data ?? [])
                                 .where((g) => !g.isCompleted)
@@ -446,7 +509,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               return const SizedBox.shrink();
                             }
                             // Determine currently selected goal object if any
-                            final FirestoreGoal? selectedGoal = _selectedGoalId != null
+                            final FirestoreGoal? selectedGoal =
+                                _selectedGoalId != null
                                 ? pendingGoals.firstWhere(
                                     (g) => g.id == _selectedGoalId,
                                     orElse: () => pendingGoals.first,
@@ -463,13 +527,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   return GestureDetector(
                                     onTap: () async {
                                       // Build items with a "None" option at the top
-                                      final List<FirestoreGoal?> items = [null, ...pendingGoals];
-                                      final result = await _showPrettySelectionBottomSheet<FirestoreGoal?>(
-                                        title: 'Select Goal',
-                                        items: items,
-                                        selectedItem: selectedGoal,
-                                        getDisplayName: (g) => g == null ? 'None' : g.name,
-                                      );
+                                      final List<FirestoreGoal?> items = [
+                                        null,
+                                        ...pendingGoals,
+                                      ];
+                                      final result =
+                                          await _showPrettySelectionBottomSheet<
+                                            FirestoreGoal?
+                                          >(
+                                            title: 'Select Goal',
+                                            items: items,
+                                            selectedItem: selectedGoal,
+                                            getDisplayName: (g) =>
+                                                g == null ? 'None' : g.name,
+                                          );
                                       // Update selection and form field
                                       setState(() {
                                         _selectedGoalId = result?.id;
@@ -483,7 +554,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30.0),
+                                        borderRadius: BorderRadius.circular(
+                                          30.0,
+                                        ),
                                         border: Border.all(
                                           color: field.hasError
                                               ? AppColors.errorColor
@@ -492,21 +565,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                         ),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Expanded(
                                             child: Text(
                                               _selectedGoalId != null
-                                                  ? (pendingGoals.firstWhere(
-                                                      (g) => g.id == _selectedGoalId,
-                                                      orElse: () => pendingGoals.first,
-                                                    ).name)
+                                                  ? (pendingGoals
+                                                        .firstWhere(
+                                                          (g) =>
+                                                              g.id ==
+                                                              _selectedGoalId,
+                                                          orElse: () =>
+                                                              pendingGoals
+                                                                  .first,
+                                                        )
+                                                        .name)
                                                   : 'None',
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: _selectedGoalId != null
-                                                    ? AppColors.primaryTextColorLight
-                                                    : AppColors.lightGreyBackground,
+                                                    ? AppColors
+                                                          .primaryTextColorLight
+                                                    : AppColors
+                                                          .lightGreyBackground,
                                               ),
                                             ),
                                           ),
@@ -611,6 +693,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 .toList(),
           ),
         ),
+        if (widget.transactionType == TransactionType.income) ...[
+          const SizedBox(height: 8),
+          _buildFormSection(
+            context,
+            'Paid',
+            FormBuilderSwitch(
+              name: 'paid',
+              title: const Text('Paid', style: TextStyle(fontSize: 13)),
+              initialValue: true,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ],
         if (widget.transactionType == TransactionType.expense) ...[
           const SizedBox(height: 8),
           _buildFormSection(
@@ -618,10 +716,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             'Paid',
             FormBuilderSwitch(
               name: 'paid',
-              title: const Text(
-                'Paid',
-                style: TextStyle(fontSize: 13),
-              ),
+              title: const Text('Paid', style: TextStyle(fontSize: 13)),
               initialValue: true,
               decoration: const InputDecoration(
                 border: InputBorder.none,
@@ -939,7 +1034,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       final formData = _formKey.currentState!.value;
-      
+
       // Get the selected account - need to fetch all accounts if _accounts is empty (default account case)
       FirestoreAccount selectedAccount;
       if (_accounts.isNotEmpty) {
@@ -949,29 +1044,27 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       } else {
         // Fetch the account from Firestore if not in the list (default account case)
         if (_selectedAccountId == null) {
-          throw Exception('No account available. Please create an account first.');
+          throw Exception(
+            'No account available. Please create an account first.',
+          );
         }
-        final fetchedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
+        final fetchedAccount = await _firestoreService.getAccountById(
+          _selectedAccountId!,
+        );
         if (fetchedAccount == null) {
           throw Exception('Selected account not found');
         }
         selectedAccount = fetchedAccount;
       }
-      
+
       // Calculate the transaction date with time
       // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
       final date = formData['date'] as DateTime? ?? DateTime.now();
       final time = formData['time'] as DateTime?;
       final transactionDate = time != null
-          ? DateTime(
-              date.year,
-              date.month,
-              date.day,
-              time.hour,
-              time.minute,
-            )
+          ? DateTime(date.year, date.month, date.day, time.hour, time.minute)
           : date;
-      
+
       // Parse amount
       final amount = double.parse(formData['amount'] as String);
 
@@ -1002,7 +1095,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       // Check for credit limit on credit accounts
-      if (selectedAccount.creditLimit != null && widget.transactionType == TransactionType.expense) {
+      if (selectedAccount.creditLimit != null &&
+          widget.transactionType == TransactionType.expense) {
         final newBalance = selectedAccount.balance - amount;
         if (newBalance.abs() > selectedAccount.creditLimit!) {
           if (mounted) {
@@ -1011,7 +1105,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('This transaction exceeds the credit limit for this account.'),
+                content: Text(
+                  'This transaction exceeds the credit limit for this account.',
+                ),
               ),
             );
           } else {
@@ -1021,12 +1117,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         }
       }
 
+      print(amount);
+
       // Create transaction
       final transaction = FirestoreTransaction(
         id: '', // Will be generated by Firestore
         description: '', // Default empty description
         amount: amount,
-        type: widget.transactionType == TransactionType.income ? 'income' : 'expense',
+        type: widget.transactionType == TransactionType.income
+            ? 'income'
+            : 'expense',
         date: transactionDate,
         categoryId: _selectedCategoryId,
         budgetId: null,
@@ -1038,30 +1138,43 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         icon: formData['icon'] as String?,
         color: formData['color'] as String?,
         notes: formData['notes'] as String?,
-        paid: widget.transactionType == TransactionType.expense ? formData['paid'] as bool? : null,
+        paid: (formData['paid'] as bool? ?? true),
       );
 
       // Insert transaction with vacation flag
-      final isVacation = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-      await _firestoreService.createTransaction(transaction, isVacation: isVacation);
-      
+      final isVacation = Provider.of<VacationProvider>(
+        context,
+        listen: false,
+      ).isVacationMode;
+      await _firestoreService.createTransaction(
+        transaction,
+        isVacation: isVacation,
+      );
+
       // Update account balance
       final newBalance = widget.transactionType == TransactionType.income
           ? selectedAccount.balance + amount
           : selectedAccount.balance - amount;
-      
+
+      print(newBalance);
+
       final updatedAccount = selectedAccount.copyWith(balance: newBalance);
       await _firestoreService.updateAccount(updatedAccount.id, updatedAccount);
 
       // If income linked to a goal, update the goal progress
-      if (widget.transactionType == TransactionType.income && selectedGoalId != null) {
-        await Provider.of<GoalsProvider>(context, listen: false)
-            .updateGoalProgress(selectedGoalId, amount);
+      if (widget.transactionType == TransactionType.income &&
+          selectedGoalId != null) {
+        await Provider.of<GoalsProvider>(
+          context,
+          listen: false,
+        ).updateGoalProgress(selectedGoalId, amount);
       }
-      
+
       if (mounted) {
-        Provider.of<HomeScreenProvider>(context, listen: false)
-            .triggerRefresh(transactionDate: transactionDate);
+        Provider.of<HomeScreenProvider>(
+          context,
+          listen: false,
+        ).triggerRefresh(transactionDate: transactionDate);
         Navigator.of(context).pop(true); // Pass true to indicate success
       }
     } catch (e) {

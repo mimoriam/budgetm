@@ -248,6 +248,21 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
+                                          if (_selectedCategoryId != null && provider.expenseCategories.isNotEmpty) ...[
+                                            Padding(
+                                              padding: const EdgeInsets.only(right: 8.0),
+                                              child: HugeIcon(
+                                                icon: getIcon(
+                                                  provider.expenseCategories.firstWhere(
+                                                    (cat) => cat.id == _selectedCategoryId,
+                                                    orElse: () => provider.expenseCategories.first,
+                                                  ).icon,
+                                                ),
+                                                color: AppColors.secondaryTextColorLight,
+                                                size: 20,
+                                              ),
+                                            ),
+                                          ],
                                           Expanded(
                                             child: Text(
                                               _selectedCategoryId != null

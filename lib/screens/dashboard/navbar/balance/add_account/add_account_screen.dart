@@ -10,6 +10,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
+import 'package:budgetm/utils/account_icon_utils.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -48,6 +49,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     required List<dynamic> items,
     required dynamic selectedItem,
     required String Function(dynamic) getDisplayName,
+    Widget Function(dynamic)? getLeading,
   }) async {
     final result = await showModalBottomSheet<dynamic>(
       context: context,
@@ -58,6 +60,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           items: items,
           selectedItem: selectedItem,
           getDisplayName: getDisplayName,
+          getLeading: getLeading,
         );
       },
     );
@@ -85,6 +88,23 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       items: types,
       selectedItem: selected,
       getDisplayName: (t) => t.toString(),
+      getLeading: (t) {
+        final icons = getAccountIcon(t.toString());
+        final iconData = (icons.isNotEmpty && icons.first.isNotEmpty)
+            ? icons.first.first
+            : HugeIcons.strokeRoundedCash01;
+        return SizedBox(
+          width: 28,
+          height: 28,
+          child: Center(
+            child: HugeIcon(
+              icon: iconData,
+              color: AppColors.primaryTextColorLight,
+              size: 20,
+            ),
+          ),
+        );
+      },
     );
 
     if (result == null) {
@@ -162,14 +182,34 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      _selectedAccountType ?? 'Select Account Type',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: _selectedAccountType != null
-                                            ? AppColors.primaryTextColorLight
-                                            : AppColors.lightGreyBackground,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Builder(
+                                          builder: (context) {
+                                            final icons = getAccountIcon(_selectedAccountType);
+                                            final iconData = (icons.isNotEmpty && icons.first.isNotEmpty)
+                                                ? icons.first.first
+                                                : HugeIcons.strokeRoundedCash01;
+                                            return HugeIcon(
+                                              icon: iconData,
+                                              color: _selectedAccountType != null
+                                                  ? AppColors.primaryTextColorLight
+                                                  : AppColors.lightGreyBackground,
+                                              size: 16,
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _selectedAccountType ?? 'Select Account Type',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: _selectedAccountType != null
+                                                ? AppColors.primaryTextColorLight
+                                                : AppColors.lightGreyBackground,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     const Icon(
                                       Icons.arrow_drop_down,
