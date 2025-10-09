@@ -15,6 +15,7 @@ import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter/rendering.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -66,6 +67,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late ScrollController _monthScrollController;
   late ScrollController _contentScrollController;
+  late PageController _pageController;
   late FirestoreService _firestoreService;
   List<DateTime> _months = [];
   int _selectedMonthIndex = 0;
@@ -80,6 +82,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isLoading = false;
   
   double _lastContentOffset = 0.0;
+  // Debounce timer to delay loads until after page settling
+  Timer? _settleTimer;
+  // Prevent duplicate loads for the same target month
+  int? _loadingMonthIndex;
 
   @override
   void initState() {
@@ -87,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _firestoreService = FirestoreService.instance;
     _monthScrollController = ScrollController();
     _contentScrollController = ScrollController();
+    _pageController = PageController();
     _lastContentOffset = 0.0;
 
     // Listen to vertical content scrolls to toggle navbar visibility.
@@ -101,6 +108,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       } else if (direction == ScrollDirection.forward) {
         provider.setNavBarVisibility(true);
       }
+    });
+
+    // Load data only after horizontal scroll fully settles (better UX, prevents thrashing)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_pageController.hasClients) return;
+      _pageController.position.isScrollingNotifier.addListener(() {
+        final isScrolling = _pageController.position.isScrollingNotifier.value;
+        if (!isScrolling) {
+          final page = _pageController.page;
+          if (page != null) {
+            final newIndex = page.round();
+            if (newIndex >= 0 &&
+                newIndex < _months.length &&
+                newIndex != _selectedMonthIndex) {
+              debugPrint('Home: scroll end -> month index $newIndex');
+              setState(() {
+                _selectedMonthIndex = newIndex;
+              });
+              _scrollToSelectedMonth();
+              final isVacationMode =
+                  Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+              debugPrint('Home: loading data for ${_months[newIndex]}');
+              _loadIncomeAndExpensesForMonth(
+                _months[newIndex],
+                isVacation: isVacationMode,
+              );
+              _loadTransactionsForMonth(
+                _months[newIndex],
+                isVacation: isVacationMode,
+              );
+              _loadUpcomingTasksForMonth(_months[newIndex]);
+            }
+          }
+        }
+      });
     });
 
     _loadMonths();
@@ -123,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _monthScrollController.dispose();
     _contentScrollController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -205,6 +248,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_monthScrollController.hasClients) {
         _scrollToSelectedMonth();
+      }
+      // Align PageView to the determined initial month once months are ready
+      if (_pageController.hasClients &&
+          _selectedMonthIndex >= 0 &&
+          _selectedMonthIndex < _months.length) {
+        try {
+          _pageController.jumpToPage(_selectedMonthIndex);
+        } catch (_) {
+          // no-op: safe guard against rare cases before attachment
+        }
       }
     });
   }
@@ -511,7 +564,50 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     _buildMonthSelector(),
                     _buildBalanceCards(),
                     const SizedBox(height: 16),
-                    Expanded(child: _buildTransactionSectionContent()),
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: _months.length,
+                        onPageChanged: (index) {
+                          // Debounce loads to fire only after page settle/animation completion
+                          _settleTimer?.cancel();
+                          _settleTimer = Timer(const Duration(milliseconds: 250), () async {
+                            if (!mounted) return;
+                            if (index < 0 || index >= _months.length) return;
+
+                            if (index != _selectedMonthIndex) {
+                              setState(() {
+                                _selectedMonthIndex = index;
+                              });
+                              _scrollToSelectedMonth();
+                            }
+
+                            // Avoid starting a second load for the same index
+                            if (_loadingMonthIndex == index) return;
+                            _loadingMonthIndex = index;
+
+                            final isVacationMode =
+                                Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+                            debugPrint('Home: debounced load for ${_months[index]}');
+
+                            try {
+                              await Future.wait([
+                                _loadIncomeAndExpensesForMonth(_months[index], isVacation: isVacationMode),
+                                _loadTransactionsForMonth(_months[index], isVacation: isVacationMode),
+                                _loadUpcomingTasksForMonth(_months[index]),
+                              ]);
+                            } finally {
+                              if (mounted) {
+                                _loadingMonthIndex = null;
+                              }
+                            }
+                          });
+                        },
+                        itemBuilder: (context, index) {
+                          return _buildTransactionSectionContent(index);
+                        },
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -669,33 +765,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           final month = _months[index];
           final isSelected = index == _selectedMonthIndex;
           return GestureDetector(
-            onTap: () async {
-              setState(() {
-                _selectedMonthIndex = index;
-                _isLoading = true;
-              });
-              final isVacationMode =
-                  Provider.of<VacationProvider>(context, listen: false)
-                      .isVacationMode;
-              try {
-                await Future.wait([
-                  _loadIncomeAndExpensesForMonth(
-                    _months[index],
-                    isVacation: isVacationMode,
-                  ),
-                  _loadTransactionsForMonth(
-                    _months[index],
-                    isVacation: isVacationMode,
-                  ),
-                  _loadUpcomingTasksForMonth(_months[index]),
-                ]);
-              } finally {
-                if (mounted) {
-                  setState(() {
-                    _isLoading = false;
-                  });
-                }
-              }
+            onTap: () {
+              // Animate PageController to selected month; actual data loads after scroll settles
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
             },
             child: Container(
               width: 85,
@@ -801,12 +877,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildTransactionSection() {
     return SliverList(
-      delegate: SliverChildListDelegate([_buildTransactionSectionContent()]),
+      delegate: SliverChildListDelegate([_buildTransactionSectionContent(_selectedMonthIndex)]),
     );
   }
 
-  Widget _buildTransactionSectionContent() {
+  Widget _buildTransactionSectionContent(int monthIndex) {
     final currencyProvider = context.watch<CurrencyProvider>();
+
+    // Pure renderer: data loads are handled centrally on scroll end via PageController listener
 
     // If there are no transactions for the selected period, show an empty state.
     if (_transactionsWithAccounts.isEmpty) {
