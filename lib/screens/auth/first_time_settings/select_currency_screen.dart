@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/theme_provider.dart';
 import 'package:budgetm/services/firestore_service.dart';
-import 'package:budgetm/data/local/category_initializer.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SelectCurrencyScreen extends StatefulWidget {
   const SelectCurrencyScreen({super.key});
@@ -202,13 +203,26 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                           Provider.of<CurrencyProvider>(context, listen: false);
                                       await currencyProvider.setCurrency(_selectedCurrency!, 1.0);
 
-                                      // Initialize categories for authenticated users
-                                      await CategoryInitializer.initializeCategories();
+                                      // Determine theme mode string from provider
+                                      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+                                      String themeModeStr = 'system';
+                                      final tm = themeProvider.themeMode;
+                                      if (tm == ThemeMode.light) {
+                                        themeModeStr = 'light';
+                                      } else if (tm == ThemeMode.dark) {
+                                        themeModeStr = 'dark';
+                                      }
 
-                                      // Create default account if user has no accounts
-                                      await _firestoreService.createDefaultAccountIfNeeded(
+                                      // Begin initialization: upsert default categories and update account profile
+                                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                                      if (uid == null) {
+                                        throw Exception('User not authenticated');
+                                      }
+
+                                      await FirestoreService.instance.beginInitialization(
+                                        uid,
                                         _selectedCurrency!.code,
-                                        _selectedCurrency!.symbol,
+                                        themeModeStr,
                                       );
 
                                       if (context.mounted) {

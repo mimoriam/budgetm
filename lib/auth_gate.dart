@@ -4,6 +4,7 @@ import 'package:budgetm/screens/auth/login/login_screen.dart';
 import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -132,22 +133,25 @@ class _AuthGateState extends State<AuthGate> {
           return const LoginScreen();
         }
         
-        // If user is logged in, check setup status
-        // Cache the authenticated status
+        // If user is logged in, check Firestore initialization status via FutureBuilder
         _cachedAuthStatus = true;
-        final setupStatus = _checkSetupStatus();
-        final bool themeChosen = setupStatus['themeChosen']!;
-        final bool currencyChosen = setupStatus['currencyChosen']!;
-        
-        // Incomplete setup flows
-        if (!themeChosen) {
-          return const ChooseThemeScreen();
-        } else if (!currencyChosen) {
-          return const SelectCurrencyScreen();
-        } else {
-          // Setup is complete, go to MainScreen
-          return const MainScreen();
-        }
+        final user = authSnapshot.data!;
+        return FutureBuilder<bool>(
+          future: FirestoreService.instance.isUserInitialized(user.uid),
+          builder: (context, initSnapshot) {
+            if (initSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final bool initialized = initSnapshot.data == true;
+            if (initialized) {
+              return const MainScreen();
+            }
+            // Not initialized yet: send user to first-time setup flow
+            return const ChooseThemeScreen();
+          },
+        );
       },
     );
   }

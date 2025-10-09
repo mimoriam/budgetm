@@ -6,6 +6,9 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
+import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
+import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/models/category.dart';
 
 class AddBudgetScreen extends StatefulWidget {
   const AddBudgetScreen({super.key});
@@ -91,63 +94,26 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
     }
   }
 
-  Future<dynamic?> _showSelectionBottomSheet({
+  Future<T?> _openBottomSheet<T>({
     required String title,
-    required List<dynamic> items,
-    required Function(dynamic) onSelect,
-    required String Function(dynamic) getDisplayName,
-    required dynamic selectedItem,
+    required List<T> items,
+    required T selectedItem,
+    required String Function(T) getDisplayName,
+    Widget Function(T)? getLeading,
   }) async {
-    final result = await showModalBottomSheet<dynamic>(
+    final result = await showModalBottomSheet<T>(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final isSelected = item == selectedItem;
-                  return ListTile(
-                    title: Text(
-                      getDisplayName(item),
-                      style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? Theme.of(context).primaryColor : null,
-                      ),
-                    ),
-                    trailing: isSelected
-                        ? Icon(
-                            Icons.check,
-                            color: Theme.of(context).primaryColor,
-                          )
-                        : null,
-                    onTap: () {
-                      onSelect(item);
-                      Navigator.of(context).pop(item);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+        return PrettyBottomSheet<T>(
+          title: title,
+          items: items,
+          selectedItem: selectedItem,
+          getDisplayName: getDisplayName,
+          getLeading: getLeading,
         );
       },
     );
@@ -164,16 +130,16 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
       orElse: () => provider.expenseCategories.first,
     );
 
-    final result = await _showSelectionBottomSheet(
+    final result = await _openBottomSheet<Category>(
       title: 'Select Category',
       items: provider.expenseCategories,
       selectedItem: selectedCategory,
       getDisplayName: (category) => category.name ?? 'Unnamed Category',
-      onSelect: (category) {
-        setState(() {
-          _selectedCategoryId = category.id;
-        });
-      },
+      getLeading: (category) => HugeIcon(
+        icon: getIcon(category.icon),
+        color: AppColors.secondaryTextColorLight,
+        size: 20,
+      ),
     );
 
     if (result == null) {
@@ -323,7 +289,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                     BudgetType.yearly,
                                   ];
                                   
-                                  await _showSelectionBottomSheet(
+                                  final selected = await _openBottomSheet<BudgetType>(
                                     title: 'Select Budget Type',
                                     items: budgetTypes,
                                     selectedItem: _selectedType,
@@ -339,12 +305,12 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                           return 'Monthly';
                                       }
                                     },
-                                    onSelect: (type) {
-                                      setState(() {
-                                        _selectedType = type;
-                                      });
-                                    },
                                   );
+                                  if (selected != null) {
+                                    setState(() {
+                                      _selectedType = selected;
+                                    });
+                                  }
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(

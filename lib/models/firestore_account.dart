@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreAccount {
+  // Core fields for financial accounts (existing)
   final String id;
   final String name;
   final String accountType;
@@ -8,12 +9,22 @@ class FirestoreAccount {
   final String? description;
   final String? color;
   final String? icon;
+
+  // Currency already existed for account; also reused by top-level account profile
   final String? currency;
+
   final double? creditLimit;
   final double? balanceLimit;
-  final bool? isDefault;
-  final DateTime? createdAt;
   final double? transactionLimit;
+  final bool? isDefault;
+
+  // Timestamps and initialization metadata (extended for account profile at accounts/{uid})
+  // Backward compatible: treat nulls safely.
+  final bool? isInitialized; // default false if null when reading profile
+  final DateTime? defaultCategoriesCreatedAt; // from Timestamp?
+  final String? themeMode; // 'light' | 'dark' | 'system'
+  final DateTime? createdAt; // from Timestamp (existing)
+  final DateTime? updatedAt; // from Timestamp?
 
   FirestoreAccount({
     required this.id,
@@ -28,7 +39,11 @@ class FirestoreAccount {
     this.balanceLimit,
     this.transactionLimit,
     this.isDefault,
+    this.isInitialized,
+    this.defaultCategoriesCreatedAt,
+    this.themeMode,
     this.createdAt,
+    this.updatedAt,
   });
 
   // Convert FirestoreAccount to JSON for Firestore
@@ -45,14 +60,22 @@ class FirestoreAccount {
       'balanceLimit': balanceLimit,
       'transactionLimit': transactionLimit,
       'isDefault': isDefault,
+
+      // Initialization/profile fields (optional; only present for accounts/{uid} profile doc)
+      'isInitialized': isInitialized,
+      'defaultCategoriesCreatedAt': defaultCategoriesCreatedAt != null
+          ? Timestamp.fromDate(defaultCategoriesCreatedAt!)
+          : null,
+      'themeMode': themeMode,
       // For new accounts where createdAt is null, use server timestamp
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     };
   }
 
   // Create FirestoreAccount from Firestore document
   factory FirestoreAccount.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final Map<String, dynamic> data = (doc.data() as Map<String, dynamic>? ?? {});
     return FirestoreAccount(
       id: doc.id,
       name: data['name'] ?? '',
@@ -66,7 +89,13 @@ class FirestoreAccount {
       balanceLimit: (data['balanceLimit'] as num?)?.toDouble(),
       transactionLimit: (data['transactionLimit'] as num?)?.toDouble(),
       isDefault: data['isDefault'] as bool?,
+
+      // Profile/initialization fields with backward compatibility
+      isInitialized: data.containsKey('isInitialized') ? (data['isInitialized'] as bool?) ?? false : null,
+      defaultCategoriesCreatedAt: (data['defaultCategoriesCreatedAt'] as Timestamp?)?.toDate(),
+      themeMode: data['themeMode'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -81,7 +110,27 @@ class FirestoreAccount {
     } else {
       createdAt = null;
     }
- 
+
+    final dynamic updatedAtRaw = json['updatedAt'];
+    DateTime? updatedAt;
+    if (updatedAtRaw is Timestamp) {
+      updatedAt = updatedAtRaw.toDate();
+    } else if (updatedAtRaw is DateTime) {
+      updatedAt = updatedAtRaw;
+    } else {
+      updatedAt = null;
+    }
+
+    final dynamic defaultsCreatedRaw = json['defaultCategoriesCreatedAt'];
+    DateTime? defaultCategoriesCreatedAt;
+    if (defaultsCreatedRaw is Timestamp) {
+      defaultCategoriesCreatedAt = defaultsCreatedRaw.toDate();
+    } else if (defaultsCreatedRaw is DateTime) {
+      defaultCategoriesCreatedAt = defaultsCreatedRaw;
+    } else {
+      defaultCategoriesCreatedAt = null;
+    }
+
     return FirestoreAccount(
       id: id,
       name: json['name'] ?? '',
@@ -95,7 +144,11 @@ class FirestoreAccount {
       balanceLimit: (json['balanceLimit'] as num?)?.toDouble(),
       transactionLimit: (json['transactionLimit'] as num?)?.toDouble(),
       isDefault: json['isDefault'] as bool?,
+      isInitialized: json.containsKey('isInitialized') ? (json['isInitialized'] as bool?) ?? false : null,
+      defaultCategoriesCreatedAt: defaultCategoriesCreatedAt,
+      themeMode: json['themeMode'] as String?,
       createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
@@ -113,7 +166,11 @@ class FirestoreAccount {
     double? balanceLimit,
     double? transactionLimit,
     bool? isDefault,
+    bool? isInitialized,
+    DateTime? defaultCategoriesCreatedAt,
+    String? themeMode,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return FirestoreAccount(
       id: id ?? this.id,
@@ -128,13 +185,35 @@ class FirestoreAccount {
       balanceLimit: balanceLimit ?? this.balanceLimit,
       transactionLimit: transactionLimit ?? this.transactionLimit,
       isDefault: isDefault ?? this.isDefault,
+      isInitialized: isInitialized ?? this.isInitialized,
+      defaultCategoriesCreatedAt: defaultCategoriesCreatedAt ?? this.defaultCategoriesCreatedAt,
+      themeMode: themeMode ?? this.themeMode,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   @override
   String toString() {
-    return 'FirestoreAccount(id: $id, name: $name, accountType: $accountType, balance: $balance, description: $description, color: $color, icon: $icon, currency: $currency, creditLimit: $creditLimit, balanceLimit: $balanceLimit, transactionLimit: $transactionLimit, isDefault: $isDefault, createdAt: $createdAt)';
+    return 'FirestoreAccount('
+        'id: $id, '
+        'name: $name, '
+        'accountType: $accountType, '
+        'balance: $balance, '
+        'description: $description, '
+        'color: $color, '
+        'icon: $icon, '
+        'currency: $currency, '
+        'creditLimit: $creditLimit, '
+        'balanceLimit: $balanceLimit, '
+        'transactionLimit: $transactionLimit, '
+        'isDefault: $isDefault, '
+        'isInitialized: $isInitialized, '
+        'defaultCategoriesCreatedAt: $defaultCategoriesCreatedAt, '
+        'themeMode: $themeMode, '
+        'createdAt: $createdAt, '
+        'updatedAt: $updatedAt'
+        ')';
   }
 
   @override
@@ -153,13 +232,33 @@ class FirestoreAccount {
         other.balanceLimit == balanceLimit &&
         other.transactionLimit == transactionLimit &&
         other.isDefault == isDefault &&
-        other.createdAt == createdAt;
+        other.isInitialized == isInitialized &&
+        other.defaultCategoriesCreatedAt == defaultCategoriesCreatedAt &&
+        other.themeMode == themeMode &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt;
   }
 
   @override
   int get hashCode {
     return Object.hash(
-      id, name, accountType, balance, description, color, icon, currency, creditLimit, balanceLimit, transactionLimit, isDefault, createdAt,
+      id,
+      name,
+      accountType,
+      balance,
+      description,
+      color,
+      icon,
+      currency,
+      creditLimit,
+      balanceLimit,
+      transactionLimit,
+      isDefault,
+      isInitialized,
+      defaultCategoriesCreatedAt,
+      themeMode,
+      createdAt,
+      updatedAt,
     );
   }
 }

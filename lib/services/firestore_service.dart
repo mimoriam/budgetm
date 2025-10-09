@@ -6,6 +6,7 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_task.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/goal.dart';
+import 'package:budgetm/data/local/category_initializer.dart';
 
 class FirestoreService {
   static FirestoreService? _instance;
@@ -1060,6 +1061,134 @@ class FirestoreService {
       print('All user data cleared');
     } catch (e) {
       print('Error clearing user data: $e');
+    }
+  }
+
+  // ================ ACCOUNT PROFILE INITIALIZATION ================
+  // Slug utility for deterministic category document IDs
+  static String createSlug(String name) {
+    final s = name.trim().toLowerCase();
+    var normalized = s.replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    normalized = normalized.replaceAll(RegExp(r'-+'), '-');
+    normalized = normalized.replaceAll(RegExp(r'^-|-$'), '');
+    return normalized.isEmpty ? 'uncategorized' : normalized;
+  }
+
+  // Fetch or create the top-level account profile document at accounts/{uid}
+  Future<FirestoreAccount> getOrCreateAccount(String uid) async {
+    try {
+      final docRef = _firestore.collection('accounts').doc(uid);
+      final snap = await docRef.get();
+      if (snap.exists) {
+        final data = snap.data() as Map<String, dynamic>;
+        return FirestoreAccount.fromJson(data, uid);
+      }
+      await docRef.set({
+        'isInitialized': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Return a minimal FirestoreAccount profile representation for compatibility
+      return FirestoreAccount.fromJson({
+        'isInitialized': false,
+      }, uid);
+    } catch (e) {
+      print('Error in getOrCreateAccount: $e');
+      rethrow;
+    }
+  }
+
+  // Begin first-time initialization: default categories upsert + account profile update + default shadow account
+  Future<void> beginInitialization(String uid, String currency, String themeMode) async {
+    try {
+      final batch = _firestore.batch();
+
+      // Upsert default categories with deterministic IDs using merge
+      await CategoryInitializer.createDefaultCategoriesForUser(batch, uid);
+
+      // Upsert default shadow account under users/{uid}/accounts/default_cash
+      final defaultAccountDoc = _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('accounts')
+          .doc('default_cash');
+
+      final defaultAccountData = FirestoreAccount(
+        id: 'default_cash',
+        name: 'None',
+        accountType: 'Cash',
+        balance: 0.0,
+        description: 'Default $currency account',
+        color: 'green',
+        icon: 'account_balance_wallet',
+        currency: currency,
+        isDefault: true,
+      ).toJson() as Map<String, Object?>;
+
+      // Use merge to avoid overwriting if it already exists
+      batch.set(defaultAccountDoc, defaultAccountData, SetOptions(merge: true));
+
+      // Update account profile document at accounts/{uid}
+      final accountProfileDoc = _firestore.collection('accounts').doc(uid);
+      batch.set(accountProfileDoc, {
+        'currency': currency,
+        'themeMode': themeMode,
+        'defaultCategoriesCreatedAt': FieldValue.serverTimestamp(),
+        'isInitialized': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+      print('Initialization completed for uid=$uid (categories + default account + profile)');
+    } catch (e) {
+      print('Error in beginInitialization: $e');
+      rethrow;
+    }
+  }
+
+  // Check if the user has been initialized.
+  // If categories exist but account profile says uninitialized, mark initialized.
+  Future<bool> isUserInitialized(String uid) async {
+    try {
+      final profileRef = _firestore.collection('accounts').doc(uid);
+      final profileSnap = await profileRef.get();
+
+      bool initialized = false;
+      if (profileSnap.exists) {
+        final data = profileSnap.data() as Map<String, dynamic>? ?? {};
+        initialized = (data['isInitialized'] as bool?) ?? false;
+        if (initialized) {
+          return true;
+        }
+      } else {
+        // Ensure the profile doc exists for future updates
+        await profileRef.set({
+          'isInitialized': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      // If not initialized or missing flag, check categories collection
+      final catsSnap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('categories')
+          .limit(1)
+          .get();
+
+      if (catsSnap.docs.isNotEmpty) {
+        await profileRef.set({
+          'isInitialized': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print('Error in isUserInitialized: $e');
+      // Fail-safe: treat as not initialized
+      return false;
     }
   }
 }

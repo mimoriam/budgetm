@@ -6,6 +6,7 @@ class PrettyBottomSheet<T> extends StatelessWidget {
   final List<T> items;
   final T selectedItem;
   final String Function(T) getDisplayName;
+  final Widget Function(T)? getLeading;
 
   const PrettyBottomSheet({
     super.key,
@@ -13,6 +14,7 @@ class PrettyBottomSheet<T> extends StatelessWidget {
     required this.items,
     required this.selectedItem,
     required this.getDisplayName,
+    this.getLeading,
   });
 
   @override
@@ -89,6 +91,7 @@ class PrettyBottomSheet<T> extends StatelessWidget {
                           horizontal: 16.0,
                           vertical: 0.0,
                         ),
+                        leading: getLeading != null ? getLeading!(item) : null,
                         title: Text(
                           getDisplayName(item),
                           style: TextStyle(

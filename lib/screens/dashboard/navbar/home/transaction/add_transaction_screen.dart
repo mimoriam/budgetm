@@ -948,6 +948,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         );
       } else {
         // Fetch the account from Firestore if not in the list (default account case)
+        if (_selectedAccountId == null) {
+          throw Exception('No account available. Please create an account first.');
+        }
         final fetchedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
         if (fetchedAccount == null) {
           throw Exception('Selected account not found');
