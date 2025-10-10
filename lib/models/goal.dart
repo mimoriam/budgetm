@@ -12,6 +12,7 @@ class FirestoreGoal {
   final String userId;
   final String icon;
   final String? color;
+  final String currency; // New field for currency
 
   FirestoreGoal({
     required this.id,
@@ -25,6 +26,7 @@ class FirestoreGoal {
     required this.userId,
     required this.icon,
     this.color,
+    required this.currency, // New required field
   });
 
   Map<String, dynamic> toJson() {
@@ -39,6 +41,7 @@ class FirestoreGoal {
       'userId': userId,
       'icon': icon,
       'color': color,
+      'currency': currency, // New field in JSON
     };
   }
 
@@ -56,6 +59,7 @@ class FirestoreGoal {
       userId: data['userId'] ?? '',
       icon: data['icon'] ?? '',
       color: data['color'],
+      currency: data['currency'] ?? 'USD', // New field with default
     );
   }
 
@@ -93,6 +97,7 @@ class FirestoreGoal {
       userId: json['userId'] ?? '',
       icon: json['icon'] ?? '',
       color: json['color'],
+      currency: json['currency'] ?? 'USD', // New field with default
     );
   }
 }

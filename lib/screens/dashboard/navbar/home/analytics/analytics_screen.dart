@@ -1,9 +1,11 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/analytics/calendar/calendar_screen.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -165,9 +167,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget _buildBalanceCards() {
     return Row(
       children: [
-        _buildInfoCard('Balance', '+ \$3,456.98'),
+        _buildInfoCard('Balance', '+ ${Provider.of<CurrencyProvider>(context).currencySymbol}3,456.98'),
         const SizedBox(width: 16),
-        _buildInfoCard('Period Balance', '+ \$3,456.98'),
+        _buildInfoCard('Period Balance', '+ ${Provider.of<CurrencyProvider>(context).currencySymbol}3,456.98'),
       ],
     );
   }
@@ -438,8 +440,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           'INCOME',
           style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
         ),
-        const Text(
-          '\$ 100,000.0',
+        Text(
+          '${Provider.of<CurrencyProvider>(context).currencySymbol} 100,000.0',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ],
@@ -565,7 +567,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
           const Spacer(),
           Text(
-            '\$${amount.toStringAsFixed(2)}',
+            '${Provider.of<CurrencyProvider>(context).currencySymbol}${amount.toStringAsFixed(2)}',
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
         ],

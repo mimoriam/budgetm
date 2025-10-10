@@ -33,7 +33,10 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
         ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
-        ChangeNotifierProvider(create: (_) => BudgetProvider()),
+        ChangeNotifierProxyProvider<CurrencyProvider, BudgetProvider>(
+          create: (context) => BudgetProvider(currencyProvider: Provider.of<CurrencyProvider>(context, listen: false)),
+          update: (context, currencyProvider, budgetProvider) => budgetProvider ?? BudgetProvider(currencyProvider: currencyProvider),
+        ),
         ChangeNotifierProvider(create: (_) => GoalsProvider()),
       ],
       child: MyApp(onboardingDone: onboardingDone),

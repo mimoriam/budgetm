@@ -457,6 +457,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
         date: date,
         dueDate: dueDate,
         returned: returned,
+        currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
       );
 
       // TODO: Persist the lent item using a provider/service

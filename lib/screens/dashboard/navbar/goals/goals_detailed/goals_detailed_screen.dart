@@ -2,6 +2,7 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -59,13 +60,13 @@ class GoalDetailScreen extends StatelessWidget {
                       _buildInfoCard(
                         context,
                         'Accumulated Amount',
-                        '\$${NumberFormat('#,##0').format(goal.currentAmount)}',
+                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(goal.currentAmount)}',
                       ),
                       const SizedBox(width: 12),
                       _buildInfoCard(
                         context,
                         'Total',
-                        '\$${NumberFormat('#,##0').format(goal.targetAmount)}',
+                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(goal.targetAmount)}',
                       ),
                     ],
                   ),
@@ -269,7 +270,7 @@ class GoalDetailScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                '${isIncome ? '+' : '-'} \$${txn.amount.toStringAsFixed(2)}',
+                '${isIncome ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${txn.amount.toStringAsFixed(2)}',
                 style: TextStyle(
                   color: isIncome ? Colors.green : Colors.red,
                   fontWeight: FontWeight.bold,

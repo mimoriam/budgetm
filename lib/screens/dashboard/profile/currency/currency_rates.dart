@@ -181,7 +181,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
           name,
           currencyCode,
           value:
-              '\$10.00', // This should be replaced with actual conversion logic
+              '${currencyProvider.currencySymbol}10.00', // This should be replaced with actual conversion logic
         ),
       );
 

@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -844,7 +845,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 ),
               ),
               Text(
-                '\$${item.spentAmount.toStringAsFixed(2)}',
+                '${Provider.of<CurrencyProvider>(context).currencySymbol}${item.spentAmount.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -907,10 +908,11 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   String _formatAmountForCard(double amount) {
+    final currencySymbol = Provider.of<CurrencyProvider>(context, listen: false).currencySymbol;
     if (amount.abs() >= 1000) {
-      return '\$${(amount / 1000).floor()}k';
+      return '$currencySymbol${(amount / 1000).floor()}k';
     }
-    return '\$${amount.toStringAsFixed(2)}';
+    return '$currencySymbol${amount.toStringAsFixed(2)}';
   }
 
   Widget _buildCategoryCard(
@@ -1138,8 +1140,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                   const SizedBox(height: 4),
                   Text(
                     isOverBudget
-                        ? '\$${(spent - limit).toStringAsFixed(2)} over budget'
-                        : '\$${remaining.toStringAsFixed(2)} remaining',
+                        ? '${Provider.of<CurrencyProvider>(context).currencySymbol}${(spent - limit).toStringAsFixed(2)} over budget'
+                        : '${Provider.of<CurrencyProvider>(context).currencySymbol}${remaining.toStringAsFixed(2)} remaining',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,

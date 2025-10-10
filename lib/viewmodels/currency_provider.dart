@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:currency_picker/currency_picker.dart';
+import 'package:budgetm/services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CurrencyProvider extends ChangeNotifier {
   String _selectedCurrencyCode = 'USD';
   String _selectedCurrencySymbol = '\$';
   double _conversionRate = 1.0;
   List<String> _otherCurrencies = [];
+  bool _isLoading = false;
 
   // Keys for SharedPreferences
   static const String _selectedCurrencyCodeKey = 'selectedCurrencyCode';
@@ -16,12 +19,14 @@ class CurrencyProvider extends ChangeNotifier {
 
   CurrencyProvider() {
     _loadFromPreferences();
+    _loadFromFirestore();
   }
 
   String get selectedCurrencyCode => _selectedCurrencyCode;
   String get selectedCurrencySymbol => _selectedCurrencySymbol;
   double get conversionRate => _conversionRate;
   List<String> get otherCurrencies => _otherCurrencies;
+  bool get isLoading => _isLoading;
 
   // Get currency symbol for the selected currency
   String get currencySymbol {
@@ -64,6 +69,36 @@ class CurrencyProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadFromFirestore() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      final userDoc = await FirestoreService.instance.getUserDocument(userId);
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        if (data.containsKey('currency')) {
+          final currencyCode = data['currency'] as String?;
+          if (currencyCode != null && currencyCode.isNotEmpty) {
+            // Find the currency object to get the symbol
+            final currency = CurrencyService().findByCode(currencyCode);
+            if (currency != null) {
+              _selectedCurrencyCode = currency.code;
+              _selectedCurrencySymbol = currency.symbol ?? '\$';
+              // For now, we'll assume a conversion rate of 1.0
+              // In a real app, you might want to fetch this from an API
+              _conversionRate = 1.0;
+              await _saveToPreferences();
+              notifyListeners();
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading currency from Firestore: $e');
+    }
+  }
+
   Future<void> _saveToPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -77,9 +112,23 @@ class CurrencyProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _saveToFirestore() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      await FirestoreService.instance.updateUserCurrency(userId, _selectedCurrencyCode);
+    } catch (e) {
+      print('Error saving currency to Firestore: $e');
+    }
+  }
+
   /// Set selected currency and its conversion rate.
   /// Accepts a [Currency] object and a conversion [rate].
   Future<void> setCurrency(Currency currency, double rate) async {
+    _isLoading = true;
+    notifyListeners();
+
     final oldCode = _selectedCurrencyCode;
     _selectedCurrencyCode = currency.code;
     _selectedCurrencySymbol = currency.symbol ?? _selectedCurrencySymbol;
@@ -94,7 +143,13 @@ class CurrencyProvider extends ChangeNotifier {
 
     notifyListeners();
     // Persist changes and wait for completion so callers can reliably observe persisted state.
-    await _saveToPreferences();
+    await Future.wait([
+      _saveToPreferences(),
+      _saveToFirestore(),
+    ]);
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   void addOtherCurrency(String currencyCode) {

@@ -8,6 +8,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -512,6 +513,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   icon: icon,
                   color: colorString,
                   isCompleted: widget.goalType == GoalType.fulfilled,
+                  currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
                 );
 
                 await context.read<GoalsProvider>().addGoal(goal);

@@ -12,6 +12,7 @@ class Budget {
   final DateTime startDate;
   final DateTime endDate;
   final String userId;
+  final String currency; // New field for currency
   double spentAmount; // Calculated dynamically, not stored in Firestore
 
   Budget({
@@ -24,6 +25,7 @@ class Budget {
     required this.startDate,
     required this.endDate,
     required this.userId,
+    required this.currency, // New required field
     this.spentAmount = 0.0,
   });
 
@@ -37,6 +39,7 @@ class Budget {
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
       'userId': userId,
+      'currency': currency, // New field in JSON
     };
   }
 
@@ -52,6 +55,7 @@ class Budget {
       startDate: (data['startDate'] as Timestamp).toDate(),
       endDate: (data['endDate'] as Timestamp).toDate(),
       userId: data['userId'] ?? '',
+      currency: data['currency'] ?? 'USD', // New field with default
       spentAmount: 0.0,
     );
   }
@@ -67,6 +71,7 @@ class Budget {
       startDate: (json['startDate'] as Timestamp).toDate(),
       endDate: (json['endDate'] as Timestamp).toDate(),
       userId: json['userId'] ?? '',
+      currency: json['currency'] ?? 'USD', // New field with default
       spentAmount: 0.0,
     );
   }
@@ -94,6 +99,7 @@ class Budget {
     DateTime? startDate,
     DateTime? endDate,
     String? userId,
+    String? currency, // New field
     double? spentAmount,
   }) {
     return Budget(
@@ -106,13 +112,14 @@ class Budget {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       userId: userId ?? this.userId,
+      currency: currency ?? this.currency, // New field
       spentAmount: spentAmount ?? this.spentAmount,
     );
   }
 
   @override
   String toString() {
-    return 'Budget(id: $id, categoryId: $categoryId, type: $type, year: $year, period: $period, limit: $limit, spentAmount: $spentAmount, userId: $userId)';
+    return 'Budget(id: $id, categoryId: $categoryId, type: $type, year: $year, period: $period, limit: $limit, spentAmount: $spentAmount, userId: $userId, currency: $currency)';
   }
 
   @override
@@ -125,12 +132,13 @@ class Budget {
         other.year == year &&
         other.period == period &&
         other.limit == limit &&
-        other.userId == userId;
+        other.userId == userId &&
+        other.currency == currency;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, categoryId, type, year, period, limit, userId);
+    return Object.hash(id, categoryId, type, year, period, limit, userId, currency);
   }
 
   // Helper method to generate budget ID

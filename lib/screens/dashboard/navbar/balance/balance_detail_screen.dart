@@ -7,6 +7,7 @@ import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -24,7 +25,7 @@ class BalanceDetailScreen extends StatefulWidget {
 
 class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService.instance;
-  final NumberFormat _currencyFormat = NumberFormat.currency(symbol: '\$');
+  NumberFormat get _currencyFormat => NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol);
 
   @override
   Widget build(BuildContext context) {
@@ -260,7 +261,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
               ),
             ),
             Text(
-              '${isIncome ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}',
+              '${isIncome ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${transaction.amount.toStringAsFixed(2)}',
               style: TextStyle(
                 color: isIncome ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,
@@ -363,6 +364,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
       accountId: firestoreTransaction.accountId,
       categoryId: firestoreTransaction.categoryId,
       paid: firestoreTransaction.paid,
+      currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
     );
   }
 }

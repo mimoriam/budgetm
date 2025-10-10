@@ -13,6 +13,7 @@ class Transaction {
   final String? accountId;
   final String? categoryId;
   final bool? paid;
+  final String currency; // New field for currency
 
   Transaction({
     required this.id,
@@ -26,6 +27,7 @@ class Transaction {
     this.accountId,
     this.categoryId,
     this.paid,
+    required this.currency, // New required field
   });
 
   // Create a copy of Transaction with updated values
@@ -41,6 +43,7 @@ class Transaction {
     String? accountId,
     String? categoryId,
     bool? paid,
+    String? currency, // New field
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -54,12 +57,13 @@ class Transaction {
       accountId: accountId ?? this.accountId,
       categoryId: categoryId ?? this.categoryId,
       paid: paid ?? this.paid,
+      currency: currency ?? this.currency, // New field
     );
   }
 
   @override
   String toString() {
-    return 'Transaction(id: $id, title: $title, description: $description, amount: $amount, type: $type, date: $date, accountId: $accountId, categoryId: $categoryId, paid: $paid)';
+    return 'Transaction(id: $id, title: $title, description: $description, amount: $amount, type: $type, date: $date, accountId: $accountId, categoryId: $categoryId, paid: $paid, currency: $currency)';
   }
 
   @override
@@ -74,13 +78,14 @@ class Transaction {
         other.date == date &&
         other.accountId == accountId &&
         other.categoryId == categoryId &&
-        other.paid == paid;
+        other.paid == paid &&
+        other.currency == currency;
   }
 
   @override
   int get hashCode {
     return Object.hash(
-      id, title, description, amount, type, date, accountId, categoryId, paid,
+      id, title, description, amount, type, date, accountId, categoryId, paid, currency,
     );
   }
 }

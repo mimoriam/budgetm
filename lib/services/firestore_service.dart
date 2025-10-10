@@ -862,6 +862,30 @@ class FirestoreService {
 
   // ================ USER MANAGEMENT ================
 
+  // Get user document
+  Future<DocumentSnapshot<Map<String, dynamic>>> getUserDocument(String uid) async {
+    try {
+      return await _firestore.collection('users').doc(uid).get();
+    } catch (e) {
+      print('Error getting user document: $e');
+      rethrow;
+    }
+  }
+
+  // Update user currency
+  Future<void> updateUserCurrency(String uid, String currencyCode) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'currency': currencyCode,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('User currency updated successfully');
+    } catch (e) {
+      print('Error updating user currency: $e');
+      rethrow;
+    }
+  }
+
   // Check if user document exists
   Future<bool> doesUserDocumentExist(String uid) async {
     try {

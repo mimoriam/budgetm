@@ -4,10 +4,12 @@ import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class BudgetProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService.instance;
+  final CurrencyProvider _currencyProvider; // New dependency
   
   // Selected budget type filter
   BudgetType _selectedBudgetType = BudgetType.monthly;
@@ -32,6 +34,10 @@ class BudgetProvider with ChangeNotifier {
   
   // Stream subscription for auto-refresh
   StreamSubscription<List<FirestoreTransaction>>? _transactionsSubscription;
+  
+  // Constructor
+  BudgetProvider({required CurrencyProvider currencyProvider}) 
+      : _currencyProvider = currencyProvider;
   
   // Getters
   BudgetType get selectedBudgetType => _selectedBudgetType;
@@ -76,6 +82,7 @@ class BudgetProvider with ChangeNotifier {
               startDate: DateTime.now(),
               endDate: DateTime.now(),
               userId: '',
+              currency: _currencyProvider.selectedCurrencyCode, // New required field
               spentAmount: 0.0,
             ),
           );
@@ -98,6 +105,7 @@ class BudgetProvider with ChangeNotifier {
               startDate: DateTime(_selectedMonth.year, _selectedMonth.month, 1),
               endDate: DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59),
               userId: '',
+              currency: _currencyProvider.selectedCurrencyCode, // New required field
               spentAmount: 0.0,
             ),
           );
@@ -119,6 +127,7 @@ class BudgetProvider with ChangeNotifier {
               startDate: DateTime(_selectedYear.year, 1, 1),
               endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
               userId: '',
+              currency: _currencyProvider.selectedCurrencyCode, // New required field
               spentAmount: 0.0,
             ),
           );
@@ -502,6 +511,7 @@ class BudgetProvider with ChangeNotifier {
           startDate: DateTime.now(),
           endDate: DateTime.now(),
           userId: '',
+          currency: _currencyProvider.selectedCurrencyCode, // New required field
         ),
       );
       
@@ -520,6 +530,7 @@ class BudgetProvider with ChangeNotifier {
         startDate: dateRange['startDate']!,
         endDate: dateRange['endDate']!,
         userId: userId,
+        currency: _currencyProvider.selectedCurrencyCode, // New required field
       );
       
       print('BudgetProvider.addBudget: calling FirestoreService.addBudget with ${newBudget.toString()}');

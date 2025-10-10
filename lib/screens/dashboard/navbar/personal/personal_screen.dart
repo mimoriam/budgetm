@@ -3,9 +3,11 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/models/personal/subscription.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 import 'detailed_item/detailed_item_screen.dart';
 
 class PersonalScreen extends StatefulWidget {
@@ -210,7 +212,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
             context,
             'Total',
             _isSubscriptionsSelected
-                ? '\$${_subscriptions.fold(0.0, (sum, item) => sum + item.price).toStringAsFixed(2)}'
+                ? '${Provider.of<CurrencyProvider>(context).currencySymbol}${_subscriptions.fold(0.0, (sum, item) => sum + item.price).toStringAsFixed(2)}'
                 : _isBorrowedSelected
                     ? '${_borrowedItems.length} Item(s)'
                     : '${_lentItems.length} Item(s)',
@@ -340,7 +342,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildSubscriptionItem(Subscription subscription) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol, decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = subscription.isActive ? AppColors.gradientEnd : Colors.grey;
 
@@ -457,7 +459,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildBorrowedItem(Borrowed item) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol, decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 
@@ -584,7 +586,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildLentItem(Lent item) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol, decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 

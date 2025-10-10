@@ -5,6 +5,7 @@ class Subscription {
   final DateTime nextBillingDate;
   final List<List<dynamic>> icon;
   final bool isActive;
+  final String currency; // New field for currency
 
   Subscription({
     required this.title,
@@ -13,5 +14,6 @@ class Subscription {
     required this.nextBillingDate,
     required this.icon,
     this.isActive = true,
+    required this.currency, // New required field
   });
 }

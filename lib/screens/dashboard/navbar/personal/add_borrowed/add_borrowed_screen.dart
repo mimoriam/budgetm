@@ -547,6 +547,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         date: _date!,
         dueDate: _dueDate!,
         returned: _returned,
+        currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
       );
 
       // TODO: Persist the borrowed item using a provider/service

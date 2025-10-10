@@ -39,7 +39,7 @@ class TransactionWithAccount {
 }
 
 // Helper function to convert Firestore transaction to UI transaction
-model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, [Category? category]) {
+model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context, [Category? category]) {
   return model.Transaction(
     id: firestoreTransaction.id, // ID is already String in Firestore
     title: firestoreTransaction.description,
@@ -55,6 +55,7 @@ model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransact
     accountId: firestoreTransaction.accountId, // Pass accountId from Firestore transaction
     categoryId: firestoreTransaction.categoryId, // Already String in Firestore
     paid: firestoreTransaction.paid, // CRITICAL: carry paid flag into UI model
+    currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
   );
 }
 
@@ -1051,7 +1052,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildTransactionItem(TransactionWithAccount transactionWithAccount, CurrencyProvider currencyProvider) {
     final transaction = transactionWithAccount.transaction;
     final account = transactionWithAccount.account;
-    final uiTransaction = _convertToUiTransaction(transaction, transactionWithAccount.category);
+    final uiTransaction = _convertToUiTransaction(transaction, context, transactionWithAccount.category);
 
     return InkWell(
       onTap: () async {

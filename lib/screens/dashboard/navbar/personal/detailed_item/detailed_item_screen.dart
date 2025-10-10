@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
+import 'package:provider/provider.dart';
 
 class DetailedItemScreen extends StatelessWidget {
   final String itemType;
@@ -72,7 +74,7 @@ class DetailedItemScreen extends StatelessWidget {
                       _buildInfoCard(
                         context,
                         'Amount',
-                        _formatCurrency(amount),
+                        _formatCurrency(amount, Provider.of<CurrencyProvider>(context).currencySymbol),
                       ),
                       const SizedBox(width: 12),
                       _buildInfoCard(
@@ -317,7 +319,7 @@ class DetailedItemScreen extends StatelessWidget {
             ),
           ),
           Text(
-            '+ ${_formatCurrency(entry.amount)}',
+            '+ ${_formatCurrency(entry.amount, Provider.of<CurrencyProvider>(context).currencySymbol)}',
             style: const TextStyle(
               color: Colors.green,
               fontWeight: FontWeight.bold,
@@ -386,8 +388,8 @@ class DetailedItemScreen extends StatelessWidget {
     );
   }
 
-  String _formatCurrency(double value) {
-    return '\$${NumberFormat('#,##0.00').format(value)}';
+  String _formatCurrency(double value, String currencySymbol) {
+    return '$currencySymbol${NumberFormat('#,##0.00').format(value)}';
   }
 
   String _getName(Object item) {

@@ -6,6 +6,7 @@ import 'package:budgetm/models/transaction.dart' as model;
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -14,7 +15,7 @@ import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:intl/intl.dart';
 
 // Helper function to convert Firestore transaction to UI transaction
-model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction) {
+model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context) {
   return model.Transaction(
     id: firestoreTransaction.id,
     title: firestoreTransaction.description,
@@ -28,6 +29,7 @@ model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransact
     iconBackgroundColor: Colors.grey.shade100,
     accountId: firestoreTransaction.accountId,
     categoryId: firestoreTransaction.categoryId,
+    currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
   );
 }
 
@@ -281,7 +283,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     return GestureDetector(
       onTap: () async {
         // Convert FirestoreTransaction to Transaction for navigation
-        final uiTransaction = _convertToUiTransaction(transaction);
+        final uiTransaction = _convertToUiTransaction(transaction, context);
         
         // Navigate to ExpenseDetailScreen
         final result = await PersistentNavBarNavigator.pushNewScreen(
@@ -345,7 +347,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
             ),
             Text(
               // Match home.dart amount formatting and style (sign + space + currency)
-              '${transaction.type == 'income' ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}',
+              '${transaction.type == 'income' ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${transaction.amount.toStringAsFixed(2)}',
               style: TextStyle(
                 color: transaction.type == 'income' ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,

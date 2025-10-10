@@ -4,9 +4,11 @@ import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class ExpenseDetailScreen extends StatefulWidget {
   final Transaction transaction;
@@ -203,13 +205,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                         _buildInfoCard(
                           context,
                           'Accumulated Amount',
-                          '\$${widget.transaction.amount.toStringAsFixed(2)}',
+                          '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
                         ),
                         const SizedBox(width: 16),
                         _buildInfoCard(
                           context,
                           'Total',
-                          '\$${widget.transaction.amount.toStringAsFixed(2)}',
+                          '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
                         ),
                       ],
                     ),

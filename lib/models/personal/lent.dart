@@ -8,6 +8,7 @@ class Lent with DueDateContract {
   final DateTime date;    // when lent
   final DateTime dueDate; // expected return/repayment date
   final bool returned;
+  final String currency; // New field for currency
 
   Lent({
     required this.id,
@@ -17,6 +18,7 @@ class Lent with DueDateContract {
     required this.date,
     required this.dueDate,
     required this.returned,
+    required this.currency, // New required field
   }) {
     validateDates();
   }
@@ -29,6 +31,7 @@ class Lent with DueDateContract {
     DateTime? date,
     DateTime? dueDate,
     bool? returned,
+    String? currency, // New field
   }) {
     final updated = Lent(
       id: id ?? this.id,
@@ -38,6 +41,7 @@ class Lent with DueDateContract {
       date: date ?? this.date,
       dueDate: dueDate ?? this.dueDate,
       returned: returned ?? this.returned,
+      currency: currency ?? this.currency, // New field
     );
     return updated;
   }
@@ -50,6 +54,7 @@ class Lent with DueDateContract {
         'date': date.toIso8601String(),
         'dueDate': dueDate.toIso8601String(),
         'returned': returned,
+        'currency': currency, // New field in JSON
       };
 
   factory Lent.fromJson(Map<String, dynamic> json) => Lent(
@@ -60,5 +65,6 @@ class Lent with DueDateContract {
         date: DateTime.parse(json['date'] as String),
         dueDate: DateTime.parse(json['dueDate'] as String),
         returned: json['returned'] as bool,
+        currency: json['currency'] as String? ?? 'USD', // New field with default
       );
 }
