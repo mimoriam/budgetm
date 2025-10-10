@@ -5,6 +5,7 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -109,6 +110,12 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
         widget.transaction.id,
         !_isPaid,
       );
+
+      // Notify the rest of the app that transaction data has changed.
+      if (mounted) {
+        Provider.of<HomeScreenProvider>(context, listen: false)
+            .triggerTransactionsRefresh();
+      }
 
       setState(() {
         _isPaid = !_isPaid;

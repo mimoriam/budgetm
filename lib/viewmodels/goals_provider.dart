@@ -55,8 +55,8 @@ class GoalsProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  Future<void> deleteGoal(String goalId) async {
-    await FirestoreService.instance.deleteGoal(goalId);
+  Future<void> deleteGoal(String goalId, {bool cascadeDelete = false}) async {
+    await FirestoreService.instance.deleteGoal(goalId, cascadeDelete: cascadeDelete);
     // Notify listeners so lists refresh after deletion
     notifyListeners();
   }

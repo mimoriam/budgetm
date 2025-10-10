@@ -203,6 +203,26 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
         ),
         child: Row(
           children: [
+            Checkbox(
+              value: transaction.paid ?? true,
+              onChanged: (bool? value) async {
+                if (value == null) return;
+                try {
+                  await _firestoreService.toggleTransactionPaidStatus(
+                    transaction.id,
+                    value,
+                  );
+                  if (mounted) {
+                    Provider.of<HomeScreenProvider>(context, listen: false)
+                        .triggerTransactionsRefresh();
+                    setState(() {}); // Refresh current screen
+                  }
+                } catch (e) {
+                  // Optionally show an error message
+                  print('Error toggling paid status: $e');
+                }
+              },
+            ),
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -247,15 +267,6 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                   Text(
                     DateFormat('MMM d, yyyy').format(transaction.date),
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    (transaction.paid ?? true) ? 'Paid' : 'Unpaid',
-                    style: TextStyle(
-                      color: (transaction.paid ?? true) ? Colors.green : Colors.red,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
                   ),
                 ],
               ),

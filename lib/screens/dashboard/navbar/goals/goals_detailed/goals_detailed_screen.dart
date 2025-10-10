@@ -1,8 +1,12 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
+import 'package:budgetm/models/transaction.dart' as model;
+import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -10,11 +14,39 @@ import 'package:budgetm/models/category.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
-class GoalDetailScreen extends StatelessWidget {
+class GoalDetailScreen extends StatefulWidget {
   final FirestoreGoal goal;
 
   const GoalDetailScreen({super.key, required this.goal});
+
+  @override
+  State<GoalDetailScreen> createState() => _GoalDetailScreenState();
+}
+
+class _GoalDetailScreenState extends State<GoalDetailScreen> {
+
+  // Helper function to convert Firestore transaction to UI transaction
+  model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context, [Category? category]) {
+    return model.Transaction(
+      id: firestoreTransaction.id, // ID is already String in Firestore
+      title: firestoreTransaction.description,
+      description: firestoreTransaction.description,
+      amount: firestoreTransaction.amount,
+      type: firestoreTransaction.type == 'income'
+          ? TransactionType.income
+          : TransactionType.expense,
+      date: firestoreTransaction.date,
+      // Use category (when available) to resolve the correct icon via getIcon.
+      icon: HugeIcon(icon: getIcon(category?.icon), color: Colors.black87, size: 20),
+      iconBackgroundColor: Colors.grey.shade100, // Default color
+      accountId: firestoreTransaction.accountId, // Pass accountId from Firestore transaction
+      categoryId: firestoreTransaction.categoryId, // Already String in Firestore
+      paid: firestoreTransaction.paid, // CRITICAL: carry paid flag into UI model
+      currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,15 +68,15 @@ class GoalDetailScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(
-                          goal.name,
+                          widget.goal.name,
                           style: Theme.of(
                             context,
                           ).textTheme.displayLarge?.copyWith(fontSize: 28),
                         ),
-                        if (goal.description != null) ...[
+                        if (widget.goal.description != null) ...[
                           const SizedBox(height: 4),
                           Text(
-                            goal.description!,
+                            widget.goal.description!,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: AppColors.secondaryTextColorLight,
@@ -60,13 +92,13 @@ class GoalDetailScreen extends StatelessWidget {
                       _buildInfoCard(
                         context,
                         'Accumulated Amount',
-                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(goal.currentAmount)}',
+                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(widget.goal.currentAmount)}',
                       ),
                       const SizedBox(width: 12),
                       _buildInfoCard(
                         context,
                         'Total',
-                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(goal.targetAmount)}',
+                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(widget.goal.targetAmount)}',
                       ),
                     ],
                   ),
@@ -86,7 +118,7 @@ class GoalDetailScreen extends StatelessWidget {
                       Text(
                         DateFormat(
                           'MMMM d, yyyy',
-                        ).format(goal.targetDate).toUpperCase(),
+                        ).format(widget.goal.targetDate).toUpperCase(),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -106,7 +138,7 @@ class GoalDetailScreen extends StatelessWidget {
                   // const SizedBox(height: 8),
                   Expanded(
                     child: StreamBuilder<List<FirestoreTransaction>>(
-                      stream: FirestoreService.instance.getTransactionsForGoal(goal.id),
+                      stream: FirestoreService.instance.getTransactionsForGoal(widget.goal.id),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());
@@ -136,8 +168,69 @@ class GoalDetailScreen extends StatelessWidget {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
-                            await context.read<GoalsProvider>().deleteGoal(goal.id);
-                            Navigator.of(context).pop();
+                            final result = await showDialog<Map<String, bool>>(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (ctx) {
+                                bool cascadeDelete = false;
+                                return StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return AlertDialog(
+                                      title: const Text('Delete Goal'),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('Are you sure you want to delete "${widget.goal.name}"? This action cannot be undone.'),
+                                          const SizedBox(height: 8),
+                                          CheckboxListTile(
+                                            title: const Text('Cascade delete transactions'),
+                                            value: cascadeDelete,
+                                            onChanged: (val) => setState(() => cascadeDelete = val ?? false),
+                                            controlAffinity: ListTileControlAffinity.leading,
+                                            contentPadding: EdgeInsets.zero,
+                                          ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': cascadeDelete}),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.red,
+                                          ),
+                                          child: const Text('Delete'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            );
+
+                            if (result != null && result['confirmed'] == true) {
+                              final cascadeDelete = result['cascadeDelete'] == true;
+                              try {
+                                await context.read<GoalsProvider>().deleteGoal(widget.goal.id, cascadeDelete: cascadeDelete);
+                                
+                                // Trigger a refresh of transactions if cascade delete was performed
+                                if (cascadeDelete) {
+                                  Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
+                                }
+                                
+                                if (mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Failed to delete goal')),
+                                  );
+                                }
+                              }
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
@@ -208,78 +301,102 @@ class GoalDetailScreen extends StatelessWidget {
   Widget _buildTransactionItem(BuildContext context, FirestoreTransaction txn) {
     final bool isIncome = txn.type == 'income';
 
-    return Container(
-      // margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
-      ),
-      child: FutureBuilder<Category?>(
-        future: txn.categoryId != null
-            ? FirestoreService.instance.getCategoryById(txn.categoryId!)
-            : Future.value(null),
-        builder: (context, categorySnapshot) {
-          String categoryName = 'Uncategorized';
-          String iconId = isIncome ? 'icon_default_income' : 'icon_default_expense';
+    return InkWell(
+      onTap: () async {
+        // Get the category for the conversion
+        final category = txn.categoryId != null
+            ? await FirestoreService.instance.getCategoryById(txn.categoryId!)
+            : null;
+        
+        // Convert FirestoreTransaction to Transaction
+        final uiTransaction = _convertToUiTransaction(txn, context, category);
+        
+        // Navigate to ExpenseDetailScreen
+        final result = await PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: ExpenseDetailScreen(transaction: uiTransaction),
+          withNavBar: false,
+          pageTransitionAnimation: PageTransitionAnimation.cupertino,
+        );
+        
+        // Refresh data if needed when returning from the detail screen
+        if (result == true) {
+          // You might want to refresh the data here if needed
+        }
+      },
+      child: Container(
+        // margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+        ),
+        child: FutureBuilder<Category?>(
+          future: txn.categoryId != null
+              ? FirestoreService.instance.getCategoryById(txn.categoryId!)
+              : Future.value(null),
+          builder: (context, categorySnapshot) {
+            String categoryName = 'Uncategorized';
+            String iconId = isIncome ? 'icon_default_income' : 'icon_default_expense';
 
-          if (categorySnapshot.connectionState == ConnectionState.waiting) {
-            categoryName = '...';
-          } else if (categorySnapshot.hasData && categorySnapshot.data != null) {
-            categoryName = categorySnapshot.data!.name ?? 'Uncategorized';
-            if (categorySnapshot.data!.icon != null) {
-              iconId = categorySnapshot.data!.icon!;
+            if (categorySnapshot.connectionState == ConnectionState.waiting) {
+              categoryName = '...';
+            } else if (categorySnapshot.hasData && categorySnapshot.data != null) {
+              categoryName = categorySnapshot.data!.name ?? 'Uncategorized';
+              if (categorySnapshot.data!.icon != null) {
+                iconId = categorySnapshot.data!.icon!;
+              }
             }
-          }
 
-          return Row(
-            children: [
-              Container(
-                // padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(14),
+            return Row(
+              children: [
+                Container(
+                  // padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: HugeIcon(
+                    icon: getIcon(iconId),
+                    color: Colors.black87,
+                    size: 18,
+                  ),
                 ),
-                child: HugeIcon(
-                  icon: getIcon(iconId),
-                  color: Colors.black87,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      categoryName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        categoryName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      DateFormat('MMM d, yyyy').format(txn.date),
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat('MMM d, yyyy').format(txn.date),
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Text(
-                '${isIncome ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${txn.amount.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: isIncome ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                Text(
+                  '${isIncome ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${txn.amount.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: isIncome ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

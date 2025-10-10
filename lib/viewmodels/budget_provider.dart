@@ -560,9 +560,9 @@ class BudgetProvider with ChangeNotifier {
   }
   
   // Delete a budget
-  Future<void> deleteBudget(String budgetId) async {
+  Future<void> deleteBudget(String budgetId, {bool cascadeDelete = false}) async {
     try {
-      await _firestoreService.deleteBudget(budgetId);
+      await _firestoreService.deleteBudget(budgetId, cascadeDelete: cascadeDelete);
       await loadData();
     } catch (e) {
       print('Error deleting budget: $e');

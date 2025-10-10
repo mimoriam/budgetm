@@ -156,9 +156,37 @@ class FirestoreService {
     }
   }
 
-  Future<void> deleteBudget(String id) async {
+  Future<void> deleteBudget(String id, {bool cascadeDelete = false}) async {
     try {
+      if (cascadeDelete) {
+        // Get the budget to determine its category and date range
+        final budgetDoc = await _budgetsCollection.doc(id).get();
+        if (!budgetDoc.exists) {
+          throw Exception('Budget not found');
+        }
+        final budget = budgetDoc.data()!;
+        
+        // Find all transactions associated with this budget's category within the date range
+        final transactionsQuery = await _transactionsCollection
+            .where('categoryId', isEqualTo: budget.categoryId)
+            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(budget.startDate))
+            .where('date', isLessThanOrEqualTo: Timestamp.fromDate(budget.endDate))
+            .get();
+        
+        // If there are transactions, delete them in a batch
+        if (transactionsQuery.docs.isNotEmpty) {
+          final batch = _firestore.batch();
+          for (final doc in transactionsQuery.docs) {
+            batch.delete(doc.reference);
+          }
+          await batch.commit();
+          print('Deleted ${transactionsQuery.docs.length} transactions associated with budget $id');
+        }
+      }
+      
+      // Finally, delete the budget document
       await _budgetsCollection.doc(id).delete();
+      print('Budget $id deleted successfully');
     } catch (e) {
       print('Error deleting budget: $e');
       rethrow;
@@ -201,9 +229,42 @@ class FirestoreService {
   }
 
   // Delete goal
-  Future<void> deleteGoal(String goalId) async {
+  Future<void> deleteGoal(String goalId, {bool cascadeDelete = false}) async {
     try {
+      if (cascadeDelete) {
+        // Find all transactions associated with this goal
+        final transactionsQuery = await _transactionsCollection
+            .where('goalId', isEqualTo: goalId)
+            .get();
+        
+        // If there are transactions, delete them in a batch
+        if (transactionsQuery.docs.isNotEmpty) {
+          final batch = _firestore.batch();
+          for (final doc in transactionsQuery.docs) {
+            batch.delete(doc.reference);
+          }
+          await batch.commit();
+          print('Deleted ${transactionsQuery.docs.length} transactions associated with goal $goalId');
+        }
+      } else {
+        // Non-cascade: Update transactions to remove the goalId
+        final transactionsQuery = await _transactionsCollection
+            .where('goalId', isEqualTo: goalId)
+            .get();
+        
+        if (transactionsQuery.docs.isNotEmpty) {
+          final batch = _firestore.batch();
+          for (final doc in transactionsQuery.docs) {
+            batch.update(doc.reference, {'goalId': null});
+          }
+          await batch.commit();
+          print('Disassociated ${transactionsQuery.docs.length} transactions from goal $goalId');
+        }
+      }
+      
+      // Finally, delete the goal document
       await _goalsCollection.doc(goalId).delete();
+      print('Goal $goalId deleted successfully');
     } catch (e) {
       print('Error deleting goal: $e');
       rethrow;

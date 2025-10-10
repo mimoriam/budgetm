@@ -7,6 +7,7 @@ import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -172,40 +173,66 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                     onPressed: () async {
                       // Diagnostic log: user initiated delete
                       print('BudgetDetail: delete pressed for budgetId=${widget.budget.id}');
-                      final confirmed = await showDialog<bool>(
+                      final result = await showDialog<Map<String, bool>>(
                         context: context,
                         barrierDismissible: false,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Delete budget'),
-                          content: const Text('Are you sure you want to delete this budget? This action cannot be undone.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(true),
-                              child: const Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
-                          ],
-                        ),
+                        builder: (ctx) {
+                          bool cascadeDelete = false;
+                          return StatefulBuilder(
+                            builder: (context, setState) {
+                              return AlertDialog(
+                                title: const Text('Delete Budget'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('Are you sure you want to delete "${widget.category.name ?? 'this budget'}"? This action cannot be undone.'),
+                                    const SizedBox(height: 8),
+                                    CheckboxListTile(
+                                      title: const Text('Cascade delete transactions'),
+                                      value: cascadeDelete,
+                                      onChanged: (val) => setState(() => cascadeDelete = val ?? false),
+                                      controlAffinity: ListTileControlAffinity.leading,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': cascadeDelete}),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                    ),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
                       );
                         
                       // Diagnostic log: result from confirmation dialog
-                      print('BudgetDetail: delete confirmed=$confirmed for budgetId=${widget.budget.id}');
+                      print('BudgetDetail: delete confirmed=${result?['confirmed']} for budgetId=${widget.budget.id}');
                         
-                      if (confirmed == true) {
+                      if (result != null && result['confirmed'] == true) {
+                        final cascadeDelete = result['cascadeDelete'] == true;
                         try {
                           // Attempt deletion and log outcome
                           await Provider.of<BudgetProvider>(context, listen: false)
-                              .deleteBudget(widget.budget.id);
+                              .deleteBudget(widget.budget.id, cascadeDelete: cascadeDelete);
                           print('BudgetDetail: delete succeeded for budgetId=${widget.budget.id}');
                         
                           // Ensure budgets list is refreshed so UI shows deletion immediately
                           await Provider.of<BudgetProvider>(context, listen: false).initialize();
+                        
+                          // Trigger a refresh of transactions if cascade delete was performed
+                          if (cascadeDelete) {
+                            Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
+                          }
                         
                           if (mounted) {
                             // Navigate back after deletion
