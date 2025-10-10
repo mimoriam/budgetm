@@ -176,22 +176,24 @@ class BudgetProvider with ChangeNotifier {
   // Calculate spent amount for a budget
   double _calculateSpentAmount(Budget budget) {
     return _allTransactions
-        .where((t) => 
+        .where((t) =>
             t.type == 'expense' &&
             t.categoryId == budget.categoryId &&
             t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
-            t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))))
+            t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))) &&
+            !t.isVacation) // Exclude vacation transactions
         .fold(0.0, (sum, t) => sum + t.amount);
   }
   
   // Get transactions for a specific budget
   List<FirestoreTransaction> getTransactionsForBudget(Budget budget) {
     return _allTransactions
-        .where((t) => 
+        .where((t) =>
             t.type == 'expense' &&
             t.categoryId == budget.categoryId &&
             t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
-            t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))))
+            t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))) &&
+            !t.isVacation) // Exclude vacation transactions
         .toList();
   }
   
