@@ -1123,13 +1123,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ],
               ),
             ),
-            Text(
-              '${transaction.type == 'income' ? '+' : '-'} ${currencyProvider.currencySymbol}${(transaction.amount * currencyProvider.conversionRate).toStringAsFixed(2)}',
-              style: TextStyle(
-                color: transaction.type == 'income' ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  transaction.paid == true ? Icons.check_circle : Icons.circle_outlined,
+                  color: transaction.paid == true ? Colors.green : Colors.grey,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${transaction.type == 'income' ? '+' : '-'} ${currencyProvider.currencySymbol}${(transaction.amount * currencyProvider.conversionRate).toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: transaction.type == 'income' ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
