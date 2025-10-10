@@ -14,8 +14,9 @@ import 'package:provider/provider.dart';
 
 class BalanceDetailScreen extends StatefulWidget {
   final FirestoreAccount account;
+  final int accountsCount;
 
-  const BalanceDetailScreen({super.key, required this.account});
+  const BalanceDetailScreen({super.key, required this.account, required this.accountsCount});
 
   @override
   State<BalanceDetailScreen> createState() => _BalanceDetailScreenState();
@@ -82,8 +83,8 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.delete_forever, color: Colors.red),
-                    onPressed: () => _showDeleteConfirmationDialog(),
+                    icon: Icon(Icons.delete_forever, color: widget.accountsCount == 1 ? Colors.grey : Colors.red),
+                    onPressed: widget.accountsCount == 1 ? null : () => _showDeleteConfirmationDialog(),
                   ),
                 ],
               ),
@@ -273,32 +274,51 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   }
 
   Future<void> _showDeleteConfirmationDialog() async {
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<Map<String, bool>>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Account'),
-          content: Text('Are you sure you want to delete "${widget.account.name}"? This action cannot be undone.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
+        bool cascadeDelete = false;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Delete Account'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Are you sure you want to delete "${widget.account.name}"? This action cannot be undone.'),
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    title: const Text('Cascade delete transactions'),
+                    value: cascadeDelete,
+                    onChanged: (val) => setState(() => cascadeDelete = val ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ],
               ),
-              child: const Text('Delete'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop({'confirmed': false, 'cascadeDelete': false}),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop({'confirmed': true, 'cascadeDelete': cascadeDelete}),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text('Delete'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
-    if (confirmed == true && mounted) {
+    if (result != null && result['confirmed'] == true && mounted) {
+      final cascadeDelete = result['cascadeDelete'] == true;
       try {
-        await _firestoreService.deleteAccount(widget.account.id);
+        await _firestoreService.deleteAccount(widget.account.id, cascadeDelete: cascadeDelete);
         Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
         if (mounted) {
           Navigator.of(context).pop(true); // Return true to indicate deletion

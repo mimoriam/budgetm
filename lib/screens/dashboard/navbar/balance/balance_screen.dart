@@ -263,20 +263,21 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                         accountData['finalBalance'] as double;
                                     final isHighlighted = index == touchedIndex;
                                     return _buildAccountCard(
-                                      context: context,
-                                      account: account,
-                                      icon: Icons.account_balance,
-                                      iconColor: Colors.black,
-                                      iconBackgroundColor: Colors.grey.shade200,
-                                      accountName: account.name,
-                                      amount: finalBalance,
-                                      accountType: account.accountType,
-                                      creditLimit: account.creditLimit,
-                                      balanceLimit: account.balanceLimit,
-                                      currencySymbol:
-                                          currencyProvider.currencySymbol,
-                                      isHighlighted: isHighlighted,
-                                    );
+                                     context: context,
+                                     account: account,
+                                     icon: Icons.account_balance,
+                                     iconColor: Colors.black,
+                                     iconBackgroundColor: Colors.grey.shade200,
+                                     accountName: account.name,
+                                     amount: finalBalance,
+                                     accountType: account.accountType,
+                                     creditLimit: account.creditLimit,
+                                     balanceLimit: account.balanceLimit,
+                                     currencySymbol:
+                                         currencyProvider.currencySymbol,
+                                     isHighlighted: isHighlighted,
+                                     accountsCount: accountsWithData.length,
+                                   );
                                   },
                                 ),
                                 const SizedBox(height: 12),
@@ -548,12 +549,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     double? balanceLimit,
     required String currencySymbol,
     required bool isHighlighted,
+    required int accountsCount,
   }) {
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
           context,
-          screen: BalanceDetailScreen(account: account),
+          screen: BalanceDetailScreen(account: account, accountsCount: accountsCount),
           withNavBar: false,
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );

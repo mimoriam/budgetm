@@ -587,28 +587,55 @@ class FirestoreService {
     }
   }
 
-  // Delete account
-  Future<void> deleteAccount(String id) async {
+  // Delete account. If cascadeDelete is true, delete associated transactions.
+  // If cascadeDelete is false, migrate transactions to the default account (isDefault == true)
+  // by updating their accountId, then delete the account document.
+  Future<void> deleteAccount(String id, {bool cascadeDelete = false}) async {
     try {
       // First, query all transactions associated with this account
       final transactionsQuery = await _transactionsCollection
           .where('accountId', isEqualTo: id)
           .get();
-      
-      // If there are transactions, delete them using a batch write for efficiency
-      if (transactionsQuery.docs.isNotEmpty) {
-        final batch = _firestore.batch();
-        
-        for (final doc in transactionsQuery.docs) {
-          batch.delete(doc.reference);
+
+      if (cascadeDelete) {
+        // If cascadeDelete requested, remove all associated transactions
+        if (transactionsQuery.docs.isNotEmpty) {
+          final batch = _firestore.batch();
+
+          for (final doc in transactionsQuery.docs) {
+            batch.delete(doc.reference);
+          }
+
+          // Commit the batch delete for all associated transactions
+          await batch.commit();
+          print('Deleted ${transactionsQuery.docs.length} transactions associated with account $id');
         }
-        
-        // Commit the batch delete for all associated transactions
-        await batch.commit();
-        print('Deleted ${transactionsQuery.docs.length} transactions associated with account $id');
+      } else {
+        // Migrate transactions to the default account
+        final defaultQuery = await _accountsCollection
+            .where('isDefault', isEqualTo: true)
+            .limit(1)
+            .get();
+
+        if (defaultQuery.docs.isEmpty) {
+          throw Exception('Default account not found. Cannot migrate transactions.');
+        }
+
+        final defaultAccountId = defaultQuery.docs.first.id;
+
+        if (transactionsQuery.docs.isNotEmpty) {
+          final batch = _firestore.batch();
+
+          for (final doc in transactionsQuery.docs) {
+            batch.update(doc.reference, {'accountId': defaultAccountId});
+          }
+
+          await batch.commit();
+          print('Migrated ${transactionsQuery.docs.length} transactions from account $id to default account $defaultAccountId');
+        }
       }
-      
-      // After deleting all associated transactions, delete the account document
+
+      // After handling transactions, delete the account document
       await _accountsCollection.doc(id).delete();
       print('Account $id deleted successfully');
     } catch (e) {
