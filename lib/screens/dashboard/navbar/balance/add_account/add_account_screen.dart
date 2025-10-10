@@ -13,8 +13,9 @@ import 'package:provider/provider.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
 
 class AddAccountScreen extends StatefulWidget {
-  const AddAccountScreen({super.key});
-
+  final bool isCreatingVacationAccount;
+  const AddAccountScreen({super.key, this.isCreatingVacationAccount = false});
+ 
   @override
   State<AddAccountScreen> createState() => _AddAccountScreenState();
 }
@@ -32,10 +33,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     super.initState();
     _firestoreService = FirestoreService.instance;
     _amountFocusNode = FocusNode();
-    // Show account type selection bottom sheet immediately after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showAccountTypeSelection();
-    });
+    // If creating a vacation account, default to Credit and don't prompt selection.
+    if (widget.isCreatingVacationAccount) {
+      _isCreditSelected = true;
+      _selectedAccountType = 'Credit';
+    } else {
+      // Show account type selection bottom sheet immediately after first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showAccountTypeSelection();
+      });
+    }
   }
   
   @override
@@ -167,65 +174,111 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         'Account Type',
                         Column(
                           children: [
-                            GestureDetector(
-                              onTap: _showAccountTypeSelection,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10.0,
-                                  horizontal: 16.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(30.0),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
+                            widget.isCreatingVacationAccount
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10.0,
+                                      horizontal: 16.0,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(30.0),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Builder(
-                                          builder: (context) {
-                                            final icons = getAccountIcon(_selectedAccountType);
-                                            final iconData = (icons.isNotEmpty && icons.first.isNotEmpty)
-                                                ? icons.first.first
-                                                : HugeIcons.strokeRoundedCash01;
-                                            return HugeIcon(
-                                              icon: iconData,
-                                              color: _selectedAccountType != null
-                                                  ? AppColors.primaryTextColorLight
-                                                  : AppColors.lightGreyBackground,
-                                              size: 16,
-                                            );
-                                          },
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _selectedAccountType ?? 'Select Account Type',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: _selectedAccountType != null
-                                                ? AppColors.primaryTextColorLight
-                                                : AppColors.lightGreyBackground,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Builder(
+                                              builder: (context) {
+                                                final icons = getAccountIcon(_selectedAccountType);
+                                                final iconData = (icons.isNotEmpty && icons.first.isNotEmpty)
+                                                    ? icons.first.first
+                                                    : HugeIcons.strokeRoundedCash01;
+                                                return HugeIcon(
+                                                  icon: iconData,
+                                                  color: _selectedAccountType != null
+                                                      ? AppColors.primaryTextColorLight
+                                                      : AppColors.lightGreyBackground,
+                                                  size: 16,
+                                                );
+                                              },
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              _selectedAccountType ?? 'Credit',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: _selectedAccountType != null
+                                                    ? AppColors.primaryTextColorLight
+                                                    : AppColors.lightGreyBackground,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                    const Icon(
-                                      Icons.arrow_drop_down,
-                                      color: AppColors.secondaryTextColorLight,
+                                  )
+                                : GestureDetector(
+                                    onTap: _showAccountTypeSelection,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30.0),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Builder(
+                                                builder: (context) {
+                                                  final icons = getAccountIcon(_selectedAccountType);
+                                                  final iconData = (icons.isNotEmpty && icons.first.isNotEmpty)
+                                                      ? icons.first.first
+                                                      : HugeIcons.strokeRoundedCash01;
+                                                  return HugeIcon(
+                                                    icon: iconData,
+                                                    color: _selectedAccountType != null
+                                                        ? AppColors.primaryTextColorLight
+                                                        : AppColors.lightGreyBackground,
+                                                    size: 16,
+                                                  );
+                                                },
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _selectedAccountType ?? 'Select Account Type',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: _selectedAccountType != null
+                                                      ? AppColors.primaryTextColorLight
+                                                      : AppColors.lightGreyBackground,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const Icon(
+                                            Icons.arrow_drop_down,
+                                            color: AppColors.secondaryTextColorLight,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                  ),
                             // Hidden field to store and validate the account_type
                             Opacity(
                               opacity: 0,
                               child: AbsorbPointer(
                                 child: FormBuilderTextField(
                                   name: 'account_type',
-                                  initialValue: _selectedAccountType,
+                                  initialValue: widget.isCreatingVacationAccount ? 'Credit' : _selectedAccountType,
                                   validator: FormBuilderValidators.required(
                                     errorText: 'Account type is required',
                                   ),
@@ -612,6 +665,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             balanceLimit: balanceLimitValue,
                             transactionLimit: transactionLimitValue,
                             isDefault: false,
+                            isVacationAccount: widget.isCreatingVacationAccount,
                           );
 
                           // Prevent duplicate account names

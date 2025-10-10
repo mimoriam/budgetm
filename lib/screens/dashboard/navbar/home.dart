@@ -10,6 +10,7 @@ import 'package:budgetm/screens/dashboard/navbar/feedback_modal.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/analytics/analytics_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/vacation_dialog.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
@@ -693,7 +694,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 _buildAppBarButton(
                   HugeIcons.strokeRoundedAirplaneMode,
-                  onPressed: _isTogglingVacationMode ? null : _toggleVacationModeWithDebounce,
+                  onPressed: () async {
+                    if (vacationProvider.isVacationMode) {
+                      // If vacation mode is active, deactivate it.
+                      await Provider.of<VacationProvider>(context, listen: false).setVacationMode(false);
+                    } else {
+                      // If vacation mode is inactive, open the selection dialog.
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          return const VacationDialog();
+                        },
+                      );
+                    }
+                  },
                   isActive: vacationProvider.isVacationMode,
                 ),
                 _buildAppBarButton(

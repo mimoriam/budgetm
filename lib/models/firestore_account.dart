@@ -9,15 +9,17 @@ class FirestoreAccount {
   final String? description;
   final String? color;
   final String? icon;
-
+ 
   // Currency already existed for account; also reused by top-level account profile
   final String? currency;
-
+ 
   final double? creditLimit;
   final double? balanceLimit;
   final double? transactionLimit;
   final bool? isDefault;
-
+  // Flag to indicate this account is a vacation account (new)
+  final bool? isVacationAccount;
+ 
   // Timestamps and initialization metadata (extended for account profile at accounts/{uid})
   // Backward compatible: treat nulls safely.
   final bool? isInitialized; // default false if null when reading profile
@@ -39,6 +41,7 @@ class FirestoreAccount {
     this.balanceLimit,
     this.transactionLimit,
     this.isDefault,
+    this.isVacationAccount,
     this.isInitialized,
     this.defaultCategoriesCreatedAt,
     this.themeMode,
@@ -60,7 +63,8 @@ class FirestoreAccount {
       'balanceLimit': balanceLimit,
       'transactionLimit': transactionLimit,
       'isDefault': isDefault,
-
+      'isVacationAccount': isVacationAccount,
+ 
       // Initialization/profile fields (optional; only present for accounts/{uid} profile doc)
       'isInitialized': isInitialized,
       'defaultCategoriesCreatedAt': defaultCategoriesCreatedAt != null
@@ -89,7 +93,8 @@ class FirestoreAccount {
       balanceLimit: (data['balanceLimit'] as num?)?.toDouble(),
       transactionLimit: (data['transactionLimit'] as num?)?.toDouble(),
       isDefault: data['isDefault'] as bool?,
-
+      isVacationAccount: data['isVacationAccount'] as bool?,
+ 
       // Profile/initialization fields with backward compatibility
       isInitialized: data.containsKey('isInitialized') ? (data['isInitialized'] as bool?) ?? false : null,
       defaultCategoriesCreatedAt: (data['defaultCategoriesCreatedAt'] as Timestamp?)?.toDate(),
@@ -110,7 +115,7 @@ class FirestoreAccount {
     } else {
       createdAt = null;
     }
-
+ 
     final dynamic updatedAtRaw = json['updatedAt'];
     DateTime? updatedAt;
     if (updatedAtRaw is Timestamp) {
@@ -120,7 +125,7 @@ class FirestoreAccount {
     } else {
       updatedAt = null;
     }
-
+ 
     final dynamic defaultsCreatedRaw = json['defaultCategoriesCreatedAt'];
     DateTime? defaultCategoriesCreatedAt;
     if (defaultsCreatedRaw is Timestamp) {
@@ -130,7 +135,7 @@ class FirestoreAccount {
     } else {
       defaultCategoriesCreatedAt = null;
     }
-
+ 
     return FirestoreAccount(
       id: id,
       name: json['name'] ?? '',
@@ -144,6 +149,7 @@ class FirestoreAccount {
       balanceLimit: (json['balanceLimit'] as num?)?.toDouble(),
       transactionLimit: (json['transactionLimit'] as num?)?.toDouble(),
       isDefault: json['isDefault'] as bool?,
+      isVacationAccount: json['isVacationAccount'] as bool?,
       isInitialized: json.containsKey('isInitialized') ? (json['isInitialized'] as bool?) ?? false : null,
       defaultCategoriesCreatedAt: defaultCategoriesCreatedAt,
       themeMode: json['themeMode'] as String?,
@@ -166,6 +172,7 @@ class FirestoreAccount {
     double? balanceLimit,
     double? transactionLimit,
     bool? isDefault,
+    bool? isVacationAccount,
     bool? isInitialized,
     DateTime? defaultCategoriesCreatedAt,
     String? themeMode,
@@ -185,6 +192,7 @@ class FirestoreAccount {
       balanceLimit: balanceLimit ?? this.balanceLimit,
       transactionLimit: transactionLimit ?? this.transactionLimit,
       isDefault: isDefault ?? this.isDefault,
+      isVacationAccount: isVacationAccount ?? this.isVacationAccount,
       isInitialized: isInitialized ?? this.isInitialized,
       defaultCategoriesCreatedAt: defaultCategoriesCreatedAt ?? this.defaultCategoriesCreatedAt,
       themeMode: themeMode ?? this.themeMode,
@@ -208,6 +216,7 @@ class FirestoreAccount {
         'balanceLimit: $balanceLimit, '
         'transactionLimit: $transactionLimit, '
         'isDefault: $isDefault, '
+        'isVacationAccount: $isVacationAccount, '
         'isInitialized: $isInitialized, '
         'defaultCategoriesCreatedAt: $defaultCategoriesCreatedAt, '
         'themeMode: $themeMode, '
@@ -232,6 +241,7 @@ class FirestoreAccount {
         other.balanceLimit == balanceLimit &&
         other.transactionLimit == transactionLimit &&
         other.isDefault == isDefault &&
+        other.isVacationAccount == isVacationAccount &&
         other.isInitialized == isInitialized &&
         other.defaultCategoriesCreatedAt == defaultCategoriesCreatedAt &&
         other.themeMode == themeMode &&
@@ -254,6 +264,7 @@ class FirestoreAccount {
       balanceLimit,
       transactionLimit,
       isDefault,
+      isVacationAccount,
       isInitialized,
       defaultCategoriesCreatedAt,
       themeMode,

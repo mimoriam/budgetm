@@ -4,6 +4,7 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_detail_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +12,7 @@ import 'package:flutter/rendering.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
-
+ 
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 
 class BalanceScreen extends StatefulWidget {
@@ -55,6 +56,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   List<FirestoreAccount>? _latestAccounts;
   List<FirestoreTransaction>? _latestTransactions;
 
+  // Keep a reference to the VacationProvider and a listener so we can
+  // re-evaluate filtering when vacation mode changes.
+  VacationProvider? _vacationProvider;
+  VoidCallback? _vacationListener;
+
   @override
   void initState() {
     super.initState();
@@ -66,14 +72,26 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         listen: false,
       );
       final direction = _scrollController.position.userScrollDirection;
-
+  
       if (direction == ScrollDirection.reverse) {
         provider.setNavBarVisibility(false);
       } else if (direction == ScrollDirection.forward) {
         provider.setNavBarVisibility(true);
       }
     });
+
     _initStreams();
+
+    // Subscribe to VacationProvider changes so the account list is re-filtered
+    // immediately when vacation mode toggles. We use listen: false here and
+    // add a ChangeNotifier listener to avoid rebuilding the whole widget.
+    _vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+    _vacationListener = () {
+      if (!mounted) return;
+      // Recompute and emit combined data using the latest cached accounts/transactions.
+      _tryEmitCombined();
+    };
+    _vacationProvider?.addListener(_vacationListener!);
   }
 
   void _initStreams() {
@@ -99,49 +117,78 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
   void _tryEmitCombined() {
     if (_latestAccounts == null || _latestTransactions == null) return;
-
+ 
     final transactions = _latestTransactions!;
-    final transactionAmounts = <String, double>{};
-    
-    // First, get all accounts to identify the default one
     final allAccounts = _latestAccounts!;
     final defaultAccountIds = allAccounts.where((acc) => acc.isDefault ?? false).map((acc) => acc.id).toSet();
-    
+ 
+    // Read vacation mode state
+    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+    final isVacationMode = vacationProvider.isVacationMode;
+ 
+    // For normal mode: compute net transaction amounts (income positive, expense negative) for paid txns
+    final transactionAmounts = <String, double>{};
     for (var transaction in transactions) {
       final accId = transaction.accountId;
-      if (accId == null || defaultAccountIds.contains(accId)) continue; // Skip if no account or if it's a default account
-      
+      if (accId == null || defaultAccountIds.contains(accId)) continue;
       if (transaction.paid ?? true) {
-        final isIncome =
-            transaction.type != null &&
+        final isIncome = transaction.type != null &&
             transaction.type.toString().toLowerCase().contains('income');
         final txnAmount = isIncome ? transaction.amount : -transaction.amount;
-        transactionAmounts.update(
-          accId,
-          (value) => value + txnAmount,
-          ifAbsent: () => txnAmount,
-        );
+        transactionAmounts.update(accId, (v) => v + txnAmount, ifAbsent: () => txnAmount);
       }
     }
-
-    final accountsWithData = _latestAccounts!
-        .where((account) => !(account.isDefault ?? false)) // Filter out default accounts
+ 
+    // For vacation mode: compute total expenses ever made for each account (ignore paid flag; include all expense transactions)
+    final expenseSums = <String, double>{};
+    for (var transaction in transactions) {
+      final accId = transaction.accountId;
+      if (accId == null || defaultAccountIds.contains(accId)) continue;
+      final isExpense = transaction.type != null &&
+          transaction.type.toString().toLowerCase().contains('expense');
+      if (isExpense) {
+        expenseSums.update(accId, (v) => v + transaction.amount, ifAbsent: () => transaction.amount);
+      }
+    }
+ 
+    final accountsWithData = allAccounts
+        .where((account) => !(account.isDefault ?? false))
+        // Filter accounts based on vacation flag:
+        // - when in vacation mode: include only accounts explicitly marked as vacation accounts.
+        // - when not in vacation mode: include accounts not marked as vacation accounts (false or null).
+        .where((account) => isVacationMode
+            ? (account.isVacationAccount == true)
+            : (account.isVacationAccount != true))
         .map((account) {
-      final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-      final finalBalance = account.balance + transactionsAmount;
-
-      return {
-        'account': account,
-        'transactionsAmount': transactionsAmount,
-        'finalBalance': finalBalance,
-      };
+      if (isVacationMode) {
+        final totalExpenses = expenseSums[account.id] ?? 0.0;
+        final finalBalance = account.balance - totalExpenses;
+        return {
+          'account': account,
+          'transactionsAmount': -totalExpenses, // keep sign for consistency (expenses as negative)
+          'finalBalance': finalBalance,
+        };
+      } else {
+        final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
+        final finalBalance = account.balance + transactionsAmount;
+        return {
+          'account': account,
+          'transactionsAmount': transactionsAmount,
+          'finalBalance': finalBalance,
+        };
+      }
     }).toList();
-
+ 
     _accountsWithTransactionsController?.add(accountsWithData);
   }
 
   @override
   void dispose() {
+    // Remove vacation listener if attached
+    if (_vacationProvider != null && _vacationListener != null) {
+      _vacationProvider!.removeListener(_vacationListener!);
+    }
+
     _scrollController.dispose();
     _accountsSub?.cancel();
     _transactionsSub?.cancel();
@@ -248,6 +295,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
+    final vacationProvider = context.watch<VacationProvider>();
     return Container(
       padding: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -276,46 +324,48 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   fontSize: 20,
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  shape: BoxShape.rectangle,
-                  gradient: LinearGradient(
-                    colors: [AppColors.gradientStart, AppColors.gradientEnd],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              // Hide Add Account button when vacation mode is active
+              if (!vacationProvider.isVacationMode)
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    shape: BoxShape.rectangle,
+                    gradient: LinearGradient(
+                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add, size: 16, color: Colors.black),
+                        const SizedBox(width: 6),
+                        const Text(
+                          "Add Account",
+                          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    onPressed: () async {
+                      final result =
+                          await PersistentNavBarNavigator.pushNewScreen(
+                            context,
+                            screen: const AddAccountScreen(),
+                            withNavBar: false,
+                            pageTransitionAnimation:
+                                PageTransitionAnimation.cupertino,
+                          );
+                      if (result == true) {
+                        if (mounted) setState(() {});
+                      }
+                    },
                   ),
                 ),
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add, size: 16, color: Colors.black),
-                      const SizedBox(width: 6),
-                      const Text(
-                        "Add Account",
-                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  onPressed: () async {
-                    final result =
-                        await PersistentNavBarNavigator.pushNewScreen(
-                          context,
-                          screen: const AddAccountScreen(),
-                          withNavBar: false,
-                          pageTransitionAnimation:
-                              PageTransitionAnimation.cupertino,
-                        );
-                    if (result == true) {
-                      if (mounted) setState(() {});
-                    }
-                  },
-                ),
-              ),
             ],
           ),
         ),

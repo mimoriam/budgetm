@@ -49,7 +49,42 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _loadAccounts() async {
     try {
-      // Get all accounts
+      // When vacation mode is active, show only vacation accounts and allow selection.
+      final vacationProvider =
+          Provider.of<VacationProvider>(context, listen: false);
+      if (vacationProvider.isVacationMode) {
+        // Load all accounts then filter to vacation accounts.
+        final allAccounts = await _firestoreService.getAllAccounts();
+        final vacationAccounts = allAccounts
+            .where((account) => account.isVacationAccount == true)
+            .toList();
+
+        if (vacationAccounts.isNotEmpty) {
+          final activeId = vacationProvider.activeVacationAccountId;
+          String? selectedId;
+          if (activeId != null &&
+              vacationAccounts.any((acc) => acc.id == activeId)) {
+            selectedId = activeId;
+          } else {
+            selectedId = vacationAccounts.first.id;
+          }
+
+          setState(() {
+            // Populate selector with vacation accounts and default to activeVacationAccountId (if any).
+            _accounts = vacationAccounts;
+            _selectedAccountId = selectedId;
+          });
+
+          _formKey.currentState?.patchValue({'account': _selectedAccountId});
+          return;
+        } else {
+          // No vacation accounts found — fall back to normal loading below.
+          debugPrint(
+              'Vacation mode active but no vacation accounts found, falling back to regular accounts');
+        }
+      }
+
+      // Default behavior: Get all accounts
       final allAccounts = await _firestoreService.getAllAccounts();
       final nonDefaultAccounts = allAccounts
           .where((account) => !(account.isDefault ?? false))
