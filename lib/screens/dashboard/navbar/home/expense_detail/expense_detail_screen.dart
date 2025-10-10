@@ -25,7 +25,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   bool _isUpdating = false;
   late bool _isPaid;
   bool _hasChanges = false;
-  late Future<String?> _goalNameFuture;
+  late Future<Map<String, dynamic>> _dataFuture;
 
   @override
   void initState() {
@@ -35,9 +35,46 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
     print(
       'ExpenseDetailScreen.initState: id=${widget.transaction.id}, incomingPaid=${widget.transaction.paid}, resolvedPaid=$_isPaid',
     );
-    _goalNameFuture = widget.transaction.type == TransactionType.income
-        ? _fetchLinkedGoalName()
-        : Future.value(null);
+    _dataFuture = _fetchAllData();
+  }
+
+  Future<Map<String, dynamic>> _fetchAllData() async {
+    try {
+      final futures = <Future>[];
+      
+      // Fetch category data
+      final categoryFuture = widget.transaction.categoryId != null
+          ? _firestoreService.getCategoryById(widget.transaction.categoryId!)
+          : Future.value(null);
+      futures.add(categoryFuture);
+      
+      // Fetch account data
+      final accountFuture = widget.transaction.accountId != null
+          ? _firestoreService.getAccountById(widget.transaction.accountId!)
+          : Future.value(null);
+      futures.add(accountFuture);
+      
+      // Fetch goal data only for income transactions
+      final goalFuture = widget.transaction.type == TransactionType.income
+          ? _fetchLinkedGoalName()
+          : Future.value(null);
+      futures.add(goalFuture);
+      
+      final results = await Future.wait(futures);
+      
+      return {
+        'category': results[0] as Category?,
+        'account': results[1] as FirestoreAccount?,
+        'goalName': results[2] as String?,
+      };
+    } catch (e) {
+      print('Error fetching data: $e');
+      return {
+        'category': null,
+        'account': null,
+        'goalName': null,
+      };
+    }
   }
 
   Future<void> _deleteTransaction() async {
@@ -76,15 +113,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       setState(() {
         _isPaid = !_isPaid;
         _hasChanges = true;
+        _isUpdating = false;
       });
     } catch (e) {
       print('Error toggling paid status: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUpdating = false;
-        });
-      }
+      setState(() {
+        _isUpdating = false;
+      });
     }
   }
 
@@ -123,272 +158,222 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
           children: [
             _buildCustomAppBar(context),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18.0,
-                  vertical: 20.0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Column(
-                        children: [
-                          FutureBuilder<Category?>(
-                            future: widget.transaction.categoryId != null
-                                ? _firestoreService.getCategoryById(
-                                    widget.transaction.categoryId!,
-                                  )
-                                : Future.value(null),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Text('Loading...');
-                              } else if (snapshot.hasError) {
-                                return Text('Error: ${snapshot.error}');
-                              } else if (snapshot.hasData &&
-                                  snapshot.data != null) {
-                                return Text(
-                                  snapshot.data!.name ??
-                                      widget.transaction.title,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .displayLarge
-                                      ?.copyWith(fontSize: 32),
-                                );
-                              } else {
-                                return Text(
-                                  widget.transaction.title,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .displayLarge
-                                      ?.copyWith(fontSize: 32),
-                                );
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          FutureBuilder<FirestoreAccount?>(
-                            future: widget.transaction.accountId != null
-                                ? _firestoreService.getAccountById(
-                                    widget.transaction.accountId!,
-                                  )
-                                : Future.value(null),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Text('Loading...');
-                              } else if (snapshot.hasError) {
-                                return Text('Error: ${snapshot.error}');
-                              } else if (snapshot.hasData &&
-                                  snapshot.data != null &&
-                                  !(snapshot.data!.isDefault ?? false)) {
-                                return Text(
-                                  "${snapshot.data!.name} - ${snapshot.data!.accountType}",
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color:
-                                            AppColors.secondaryTextColorLight,
-                                      ),
-                                );
-                              } else {
-                                return const SizedBox.shrink();
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        _buildInfoCard(
-                          context,
-                          'Accumulated Amount',
-                          '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
-                        ),
-                        const SizedBox(width: 16),
-                        _buildInfoCard(
-                          context,
-                          'Total',
-                          '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: Colors.grey.shade300),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'STATUS',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: AppColors.secondaryTextColorLight,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        Text(
-                          _isPaid ? 'PAID' : 'UNPAID',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: _isPaid ? Colors.green : Colors.red,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Divider(color: Colors.grey.shade300),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'DATE',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: AppColors.secondaryTextColorLight,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        Text(
-                          DateFormat(
-                            'MMMM d, yyyy',
-                          ).format(widget.transaction.date).toUpperCase(),
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Divider(color: Colors.grey.shade300),
-                    const SizedBox(height: 16),
-                    FutureBuilder<String?>(
-                      future: _goalNameFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          // Avoid layout shift; hide placeholder
-                          return const SizedBox.shrink();
-                        } else if (snapshot.hasError) {
-                          return const SizedBox.shrink();
-                        }
-                        final goalName = snapshot.data;
-                        if (goalName == null || goalName.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-                        return Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'GOAL',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color:
-                                            AppColors.secondaryTextColorLight,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                Text(
-                                  goalName,
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
+              child: FutureBuilder<Map<String, dynamic>>(
+                future: _dataFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  } else if (snapshot.hasError) {
+                    return Center(
+                      child: Text('Error loading data: ${snapshot.error}'),
+                    );
+                  }
 
-                            const SizedBox(height: 16),
-                            Divider(color: Colors.grey.shade300),
-                          ],
-                        );
-                      },
+                  final category = snapshot.data?['category'] as Category?;
+                  final account = snapshot.data?['account'] as FirestoreAccount?;
+                  final goalName = snapshot.data?['goalName'] as String?;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18.0,
+                      vertical: 20.0,
                     ),
-                    const SizedBox(height: 40),
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _togglePaidStatus,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30.0),
+                        Center(
+                          child: Column(
+                            children: [
+                              Text(
+                                category?.name ?? widget.transaction.title,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displayLarge
+                                    ?.copyWith(fontSize: 32),
                               ),
-                              side: const BorderSide(
-                                color: Colors.black,
-                                width: 1.5,
-                              ),
-                            ),
-                            child: _isUpdating
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.black,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelLarge
-                                        ?.copyWith(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                        ),
-                                  ),
+                              const SizedBox(height: 8),
+                              if (account != null && !(account.isDefault ?? false))
+                                Text(
+                                  "${account.name} - ${account.accountType}",
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color:
+                                            AppColors.secondaryTextColorLight,
+                                      ),
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _isDeleting
-                                ? null
-                                : () async {
-                                    // Add delete logic
-                                    await _deleteTransaction();
-                                    // Navigate back to the previous screen
-                                    if (context.mounted) {
-                                      Navigator.of(context).pop(true);
-                                    }
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30.0),
-                              ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            _buildInfoCard(
+                              context,
+                              'Accumulated Amount',
+                              '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
-                            child: _isDeleting
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    'Delete',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelLarge
+                            const SizedBox(width: 16),
+                            _buildInfoCard(
+                              context,
+                              'Total',
+                              '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Divider(color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'STATUS',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.secondaryTextColorLight,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              _isPaid ? 'PAID' : 'UNPAID',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: _isPaid ? Colors.green : Colors.red,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Divider(color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'DATE',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.secondaryTextColorLight,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              DateFormat(
+                                'MMMM d, yyyy',
+                              ).format(widget.transaction.date).toUpperCase(),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Divider(color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        if (goalName != null && goalName.isNotEmpty)
+                          Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'GOAL',
+                                    style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
-                                          color: Colors.white,
-                                          fontSize: 14,
+                                          color:
+                                              AppColors.secondaryTextColorLight,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                   ),
+                                  Text(
+                                    goalName,
+                                    style: Theme.of(context).textTheme.bodyMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+                              Divider(color: Colors.grey.shade300),
+                            ],
                           ),
+                        const SizedBox(height: 40),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isUpdating ? null : _togglePaidStatus,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30.0),
+                                  ),
+                                  side: const BorderSide(
+                                    color: Colors.black,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelLarge
+                                      ?.copyWith(
+                                        color: Colors.black,
+                                        fontSize: 14,
+                                      ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isDeleting
+                                    ? null
+                                    : () async {
+                                        // Add delete logic
+                                        await _deleteTransaction();
+                                        // Navigate back to the previous screen
+                                        if (context.mounted) {
+                                          Navigator.of(context).pop(true);
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30.0),
+                                  ),
+                                ),
+                                child: _isDeleting
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Delete',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelLarge
+                                            ?.copyWith(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                            ),
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
