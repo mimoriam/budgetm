@@ -9,6 +9,9 @@ import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'detailed_item/detailed_item_screen.dart';
+import 'add_subscription/add_subscription_screen.dart';
+import 'add_borrowed/add_borrowed_screen.dart';
+import 'add_lent/add_lent_screen.dart';
 
 class PersonalScreen extends StatefulWidget {
   const PersonalScreen({super.key});
@@ -35,6 +38,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
       body: Column(
         children: [
           _buildCustomAppBar(context),
+          _buildToggleChips(),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -46,7 +50,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
                       : _isBorrowedSelected
                           ? _buildBorrowedItemsList()
                           : _buildLentItemsList(),
-                  const SizedBox(height: 80), // Padding for FAB
                 ],
               ),
             ),
@@ -59,7 +62,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
 
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.gradientStart, AppColors.gradientEnd2],
@@ -74,34 +77,95 @@ class _PersonalScreenState extends State<PersonalScreen> {
       ),
       child: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14.0,
-                vertical: 10,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Personal',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
               ),
-              child: Center(
-                child: Text(
-                  'Personal',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.rectangle,
+                  gradient: LinearGradient(
+                    colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, size: 16, color: Colors.black),
+                      const SizedBox(width: 6),
+                      Text(
+                        _isSubscriptionsSelected
+                            ? "Add Subscription"
+                            : _isBorrowedSelected
+                                ? "Add Borrowed"
+                                : "Add Lent",
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
                       ),
+                    ],
+                  ),
+                  onPressed: () async {
+                    if (_isSubscriptionsSelected) {
+                      await PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const AddSubscriptionScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                      );
+                    } else if (_isBorrowedSelected) {
+                      await PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const AddBorrowedScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                      );
+                    } else if (_isLentSelected) {
+                      await PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const AddLentScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                      );
+                    }
+                  },
                 ),
               ),
-            ),
-            _buildToggleChips(),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildToggleChips() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 0),
-      child: LayoutBuilder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 0),
+          child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           return Container(
@@ -181,6 +245,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
             ),
           );
         },
+          ),
+        ),
       ),
     );
   }

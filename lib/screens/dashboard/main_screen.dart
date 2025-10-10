@@ -176,7 +176,7 @@ class _MainScreenState extends State<MainScreen> {
               behavior: HitTestBehavior.opaque,
               child: Container(color: Colors.black54.withOpacity(0.5)),
             ),
-          if (_controller.index != 1 && _controller.index != 2) // Hide FAB when budget screen (index 1) or balance screen (index 2) is active
+          if (_controller.index == 0) // Only show FAB on home screen (index 0)
             Positioned(
               bottom: 100,
               right: 20,
@@ -325,70 +325,6 @@ class _MainScreenState extends State<MainScreen> {
         return []; // Budget screen no longer needs FAB actions
       case 2: // Balance
         return []; // Balance screen no longer needs FAB actions
-      case 3: // Goals
-        return [
-          _buildFabMenuItem(
-            label: "Pending Goal",
-            icon: HugeIcons.strokeRoundedClock01,
-            color: Colors.orange,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const CreateGoalScreen(goalType: GoalType.pending),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
-        ];
-      case 4: // Personal
-        return [
-          _buildFabMenuItem(
-            label: "Add Subscription",
-            icon: HugeIcons.strokeRoundedWallet01,
-            color: Colors.blue,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const AddSubscriptionScreen(),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          _buildFabMenuItem(
-            label: "Add Borrowed",
-            icon: HugeIcons.strokeRoundedBook03,
-            color: Colors.green,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const AddBorrowedScreen(),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          _buildFabMenuItem(
-            label: "Add Lent",
-            icon: HugeIcons.strokeRoundedDollarSend01,
-            color: Colors.orange,
-            onPressed: () {
-              _toggleFabMenu();
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: const AddLentScreen(),
-                withNavBar: false,
-                pageTransitionAnimation: PageTransitionAnimation.cupertino,
-              );
-            },
-          ),
-        ];
       default:
         return [];
     }

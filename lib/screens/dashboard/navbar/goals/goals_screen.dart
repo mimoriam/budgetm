@@ -1,6 +1,8 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -9,6 +11,7 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 import 'goals_detailed/goals_detailed_screen.dart';
+import 'create_goal/create_goal_screen.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -27,6 +30,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       body: Column(
         children: [
           _buildCustomAppBar(context),
+          _buildToggleChips(),
           Expanded(
             child: StreamBuilder<List<FirestoreGoal>>(
               stream: context.read<GoalsProvider>().getGoals(),
@@ -48,7 +52,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       _isPendingSelected
                           ? _buildPendingGoalsList(pendingGoals)
                           : _buildFulfilledGoalsList(fulfilledGoals),
-                      const SizedBox(height: 80), // Padding for FAB
                     ],
                   ),
                 );
@@ -62,7 +65,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.gradientStart, AppColors.gradientEnd2],
@@ -77,80 +80,123 @@ class _GoalsScreenState extends State<GoalsScreen> {
       ),
       child: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14.0,
-                vertical: 10,
-              ),
-              child: Center(
-                child: Text(
-                  'Goals',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Goals',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
                 ),
               ),
-            ),
-            _buildToggleChips(),
-          ],
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.rectangle,
+                  gradient: LinearGradient(
+                    colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, size: 16, color: Colors.black),
+                      const SizedBox(width: 6),
+                      const Text(
+                        "Add Goal",
+                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  onPressed: () async {
+                    await PersistentNavBarNavigator.pushNewScreen(
+                      context,
+                      screen: const CreateGoalScreen(goalType: GoalType.pending),
+                      withNavBar: false,
+                      pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildToggleChips() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          return Container(
-            height: 55,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Stack(
-              children: [
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  left: _isPendingSelected ? 0 : width / 2 - 5,
-                  right: _isPendingSelected ? width / 2 - 5 : 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.gradientEnd,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    height: 45,
-                  ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))]
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 0),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              return Container(
+                height: 55,
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                Row(
+                child: Stack(
                   children: [
-                    Expanded(
-                      child: _buildChip(
-                        'Pending Goals',
-                        _isPendingSelected,
-                        () => setState(() => _isPendingSelected = true),
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      left: _isPendingSelected ? 0 : width / 2 - 5,
+                      right: _isPendingSelected ? width / 2 - 5 : 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.gradientEnd,
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        height: 45,
                       ),
                     ),
-                    Expanded(
-                      child: _buildChip(
-                        'Fulfilled Goals',
-                        !_isPendingSelected,
-                        () => setState(() => _isPendingSelected = false),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildChip(
+                            'Pending Goals',
+                            _isPendingSelected,
+                            () => setState(() => _isPendingSelected = true),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildChip(
+                            'Fulfilled Goals',
+                            !_isPendingSelected,
+                            () => setState(() => _isPendingSelected = false),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -174,8 +220,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Widget _buildInfoCards(List<FirestoreGoal> pendingGoals, List<FirestoreGoal> fulfilledGoals) {
+    final currencySymbol = context.watch<CurrencyProvider>().currencySymbol;
     final currencyFormat = NumberFormat.currency(
-      symbol: '\$',
+      symbol: currencySymbol,
       decimalDigits: 2,
     );
 
@@ -301,11 +348,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Widget _buildGoalItem(FirestoreGoal goal) {
     final double progress =
         goal.targetAmount > 0 ? goal.currentAmount / goal.targetAmount : 0;
+    final currencySymbol = context.watch<CurrencyProvider>().currencySymbol;
     final currencyFormat = NumberFormat.currency(
-      symbol: '\$',
+      symbol: currencySymbol,
       decimalDigits: 2,
     );
-    final totalFormat = NumberFormat.compactCurrency(symbol: '\$');
+    final totalFormat = NumberFormat.compactCurrency(symbol: currencySymbol);
     final progressColor = goal.isCompleted ? Colors.green : AppColors.gradientEnd;
 
     return GestureDetector(
