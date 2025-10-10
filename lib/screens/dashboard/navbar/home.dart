@@ -266,21 +266,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _loadIncomeAndExpenses({required bool isVacation}) async {
     try {
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1));
-  
-      // Get income and expense totals using Firestore helper method
-      final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
-        startOfMonth,
-        endOfMonth,
-        isVacation: isVacation,
-      );
-  
-      setState(() {
-        _totalIncome = totals['income'] ?? 0.0;
-        _totalExpenses = totals['expenses'] ?? 0.0;
-      });
+      if (isVacation) {
+        // For vacation mode: fetch all transactions marked as vacation (across all dates)
+        // and treat income as 0 while summing expenses.
+        final start = DateTime(1970);
+        final end = DateTime.now().add(const Duration(days: 365 * 200));
+        final transactions = await _firestoreService.getTransactionsForDateRange(
+          start,
+          end,
+          isVacation: true,
+        );
+        double expenseSum = 0.0;
+        for (var t in transactions) {
+          if (t.type != 'income') {
+            expenseSum += t.amount;
+          }
+        }
+        setState(() {
+          _totalIncome = 0.0;
+          _totalExpenses = expenseSum;
+        });
+      } else {
+        final now = DateTime.now();
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        final endOfMonth = DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1));
+    
+        // Get income and expense totals using Firestore helper method
+        final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
+          startOfMonth,
+          endOfMonth,
+          isVacation: isVacation,
+        );
+    
+        setState(() {
+          _totalIncome = totals['income'] ?? 0.0;
+          _totalExpenses = totals['expenses'] ?? 0.0;
+        });
+      }
     } catch (e) {
       print('Error loading income and expenses: $e');
       setState(() {
@@ -575,28 +597,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           _settleTimer = Timer(const Duration(milliseconds: 250), () async {
                             if (!mounted) return;
                             if (index < 0 || index >= _months.length) return;
-
+    
                             if (index != _selectedMonthIndex) {
                               setState(() {
                                 _selectedMonthIndex = index;
                               });
                               _scrollToSelectedMonth();
                             }
-
+    
                             // Avoid starting a second load for the same index
                             if (_loadingMonthIndex == index) return;
                             _loadingMonthIndex = index;
-
+    
                             final isVacationMode =
                                 Provider.of<VacationProvider>(context, listen: false).isVacationMode;
                             debugPrint('Home: debounced load for ${_months[index]}');
-
+    
                             try {
-                              await Future.wait([
-                                _loadIncomeAndExpensesForMonth(_months[index], isVacation: isVacationMode),
-                                _loadTransactionsForMonth(_months[index], isVacation: isVacationMode),
-                                _loadUpcomingTasksForMonth(_months[index]),
-                              ]);
+                              // When in vacation mode, the total vacation balance is calculated globally.
+                              // Prevent per-month income/expense recalculation from overriding that.
+                              final futures = <Future>[];
+                              if (!isVacationMode) {
+                                futures.add(_loadIncomeAndExpensesForMonth(_months[index], isVacation: isVacationMode));
+                              }
+                              // Still load transactions and upcoming tasks for the selected month.
+                              futures.add(_loadTransactionsForMonth(_months[index], isVacation: isVacationMode));
+                              futures.add(_loadUpcomingTasksForMonth(_months[index]));
+    
+                              await Future.wait(futures);
                             } finally {
                               if (mounted) {
                                 _loadingMonthIndex = null;
@@ -678,7 +706,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${currencyProvider.currencySymbol} ${(( _totalIncome - _totalExpenses ) * currencyProvider.conversionRate).toStringAsFixed(2)}',
+                      vacationProvider.isVacationMode
+                          ? '${currencyProvider.currencySymbol} ${( -_totalExpenses * currencyProvider.conversionRate).toStringAsFixed(2)}'
+                          : '${currencyProvider.currencySymbol} ${((_totalIncome - _totalExpenses) * currencyProvider.conversionRate).toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,

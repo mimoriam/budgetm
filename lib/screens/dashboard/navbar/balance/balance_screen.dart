@@ -162,7 +162,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         .map((account) {
       if (isVacationMode) {
         final totalExpenses = expenseSums[account.id] ?? 0.0;
-        final finalBalance = account.balance - totalExpenses;
+        // For vacation accounts the final balance should represent the negative
+        // sum of expenses (not account.balance - totalExpenses).
+        final finalBalance = -totalExpenses;
         return {
           'account': account,
           'transactionsAmount': -totalExpenses, // keep sign for consistency (expenses as negative)
