@@ -9,6 +9,7 @@ import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart'
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/screens/dashboard/navbar/home/vacation_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -439,8 +440,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(width: 8),
                     Switch(
                       value: vacationProvider.isVacationMode,
-                      onChanged: (value) {
-                        vacationProvider.toggleVacationMode();
+                      onChanged: (value) async {
+                        if (value) {
+                          // Present VacationDialog as a non-dismissible modal bottom sheet.
+                          await showModalBottomSheet(
+                            context: context,
+                            isDismissible: false,
+                            enableDrag: false,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => const VacationDialog(),
+                          );
+                        } else {
+                          // Deactivate vacation mode immediately.
+                          await Provider.of<VacationProvider>(context, listen: false)
+                              .setVacationMode(false);
+                        }
                       },
                       activeColor: AppColors.gradientEnd,
                     ),
