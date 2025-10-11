@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -11,7 +12,9 @@ import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/models/category.dart';
 
 class AddBudgetScreen extends StatefulWidget {
-  const AddBudgetScreen({super.key});
+  final bool isVacationMode;
+  
+  const AddBudgetScreen({super.key, this.isVacationMode = false});
 
   @override
   State<AddBudgetScreen> createState() => _AddBudgetScreenState();
@@ -67,7 +70,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
 
       try {
         await Provider.of<BudgetProvider>(context, listen: false)
-            .addBudget(_selectedCategoryId!, limit, _selectedType);
+            .addBudget(_selectedCategoryId!, limit, _selectedType, isVacation: widget.isVacationMode);
         
         if (mounted) {
           Navigator.of(context).pop(true);

@@ -33,9 +33,16 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
         ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
-        ChangeNotifierProxyProvider<CurrencyProvider, BudgetProvider>(
-          create: (context) => BudgetProvider(currencyProvider: Provider.of<CurrencyProvider>(context, listen: false)),
-          update: (context, currencyProvider, budgetProvider) => budgetProvider ?? BudgetProvider(currencyProvider: currencyProvider),
+        ChangeNotifierProxyProvider2<CurrencyProvider, VacationProvider, BudgetProvider>(
+          create: (context) => BudgetProvider(
+            currencyProvider: Provider.of<CurrencyProvider>(context, listen: false),
+            vacationProvider: Provider.of<VacationProvider>(context, listen: false),
+          ),
+          update: (context, currencyProvider, vacationProvider, budgetProvider) =>
+              budgetProvider ?? BudgetProvider(
+                currencyProvider: currencyProvider,
+                vacationProvider: vacationProvider,
+              ),
         ),
         ChangeNotifierProvider(create: (_) => GoalsProvider()),
       ],

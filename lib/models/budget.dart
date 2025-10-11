@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum BudgetType { weekly, monthly, yearly }
 
 class Budget {
-  final String id; // Composite key: {userId}_{categoryId}_{type}_{year}_{period}
+  final String id; // Composite key: {userId}_{categoryId}_{type}_{year}_{period}_{isVacation}
   final String categoryId;
   final double limit;
   final BudgetType type;
@@ -13,6 +13,7 @@ class Budget {
   final DateTime endDate;
   final String userId;
   final String currency; // New field for currency
+  final bool isVacation; // New field to differentiate vacation budgets
   double spentAmount; // Calculated dynamically, not stored in Firestore
 
   Budget({
@@ -26,6 +27,7 @@ class Budget {
     required this.endDate,
     required this.userId,
     required this.currency, // New required field
+    this.isVacation = false, // New field, defaulting to false
     this.spentAmount = 0.0,
   });
 
@@ -39,7 +41,8 @@ class Budget {
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
       'userId': userId,
-      'currency': currency, // New field in JSON
+      'currency': currency,
+      'isVacation': isVacation, // New field in JSON
     };
   }
 
@@ -55,7 +58,8 @@ class Budget {
       startDate: (data['startDate'] as Timestamp).toDate(),
       endDate: (data['endDate'] as Timestamp).toDate(),
       userId: data['userId'] ?? '',
-      currency: data['currency'] ?? 'USD', // New field with default
+      currency: data['currency'] ?? 'USD',
+      isVacation: data['isVacation'] ?? false, // New field with default
       spentAmount: 0.0,
     );
   }
@@ -71,7 +75,8 @@ class Budget {
       startDate: (json['startDate'] as Timestamp).toDate(),
       endDate: (json['endDate'] as Timestamp).toDate(),
       userId: json['userId'] ?? '',
-      currency: json['currency'] ?? 'USD', // New field with default
+      currency: json['currency'] ?? 'USD',
+      isVacation: json['isVacation'] ?? false, // New field with default
       spentAmount: 0.0,
     );
   }
@@ -99,7 +104,8 @@ class Budget {
     DateTime? startDate,
     DateTime? endDate,
     String? userId,
-    String? currency, // New field
+    String? currency,
+    bool? isVacation, // New field
     double? spentAmount,
   }) {
     return Budget(
@@ -112,14 +118,15 @@ class Budget {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       userId: userId ?? this.userId,
-      currency: currency ?? this.currency, // New field
+      currency: currency ?? this.currency,
+      isVacation: isVacation ?? this.isVacation, // New field
       spentAmount: spentAmount ?? this.spentAmount,
     );
   }
 
   @override
   String toString() {
-    return 'Budget(id: $id, categoryId: $categoryId, type: $type, year: $year, period: $period, limit: $limit, spentAmount: $spentAmount, userId: $userId, currency: $currency)';
+    return 'Budget(id: $id, categoryId: $categoryId, type: $type, year: $year, period: $period, limit: $limit, spentAmount: $spentAmount, userId: $userId, currency: $currency, isVacation: $isVacation)';
   }
 
   @override
@@ -133,17 +140,19 @@ class Budget {
         other.period == period &&
         other.limit == limit &&
         other.userId == userId &&
-        other.currency == currency;
+        other.currency == currency &&
+        other.isVacation == isVacation; // New field
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, categoryId, type, year, period, limit, userId, currency);
+    return Object.hash(id, categoryId, type, year, period, limit, userId, currency, isVacation);
   }
 
   // Helper method to generate budget ID
-  static String generateId(String userId, String categoryId, BudgetType type, int year, int period) {
-    return '${userId}_${categoryId}_${type.toString().split('.').last}_${year}_$period';
+  static String generateId(String userId, String categoryId, BudgetType type, int year, int period, bool isVacation) {
+    final modeSuffix = isVacation ? '_vacation' : '';
+    return '${userId}_${categoryId}_${type.toString().split('.').last}_${year}_$period$modeSuffix';
   }
 
   // Helper method to calculate week number (Sunday to Saturday) — week-of-year

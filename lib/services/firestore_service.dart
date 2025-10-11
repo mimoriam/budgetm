@@ -96,12 +96,16 @@ class FirestoreService {
   }
 
   // Stream budgets (real-time) - for a specific budget type
-  Stream<List<Budget>> streamBudgets({BudgetType? type}) {
+  Stream<List<Budget>> streamBudgets({BudgetType? type, bool? isVacation}) {
     try {
       Query<Budget> query = _budgetsCollection;
       
       if (type != null) {
         query = query.where('type', isEqualTo: type.toString().split('.').last);
+      }
+      
+      if (isVacation != null) {
+        query = query.where('isVacation', isEqualTo: isVacation);
       }
       
       return query
@@ -114,9 +118,15 @@ class FirestoreService {
   }
 
   // Get all budgets
-  Future<List<Budget>> getAllBudgets() async {
+  Future<List<Budget>> getAllBudgets({bool? isVacation}) async {
     try {
-      final querySnapshot = await _budgetsCollection.get();
+      Query<Budget> query = _budgetsCollection;
+      
+      if (isVacation != null) {
+        query = query.where('isVacation', isEqualTo: isVacation);
+      }
+      
+      final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Error getting all budgets: $e');
@@ -125,11 +135,16 @@ class FirestoreService {
   }
 
   // Get budgets by type
-  Future<List<Budget>> getBudgetsByType(BudgetType type) async {
+  Future<List<Budget>> getBudgetsByType(BudgetType type, {bool? isVacation}) async {
     try {
-      final querySnapshot = await _budgetsCollection
-          .where('type', isEqualTo: type.toString().split('.').last)
-          .get();
+      Query<Budget> query = _budgetsCollection
+          .where('type', isEqualTo: type.toString().split('.').last);
+      
+      if (isVacation != null) {
+        query = query.where('isVacation', isEqualTo: isVacation);
+      }
+      
+      final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Error getting budgets by type: $e');

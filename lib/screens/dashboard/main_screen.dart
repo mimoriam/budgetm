@@ -154,7 +154,7 @@ class _MainScreenState extends State<MainScreen> {
             screens: _buildScreens(),
             items: _navBarsItems(),
             confineToSafeArea: true,
-            backgroundColor: AppColors.bottomBarColor,
+            backgroundColor: vacationProvider.isVacationMode ? AppColors.aiGradientStart : AppColors.bottomBarColor,
             handleAndroidBackButtonPress: true,
             resizeToAvoidBottomInset: true,
             stateManagement: true,

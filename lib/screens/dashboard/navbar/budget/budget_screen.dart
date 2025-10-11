@@ -28,8 +28,6 @@ class _BudgetScreenState extends State<BudgetScreen>
   double _lastScrollOffset = 0.0;
 
   VacationProvider? _vacationProvider;
-  NavbarVisibilityProvider? _navbarVisibilityProvider;
-  bool _hasShownVacationDialog = false;
 
   @override
   void initState() {
@@ -39,78 +37,16 @@ class _BudgetScreenState extends State<BudgetScreen>
     _scrollController.addListener(_onScroll);
     _lastScrollOffset = 0.0;
 
-    // Initialize budget provider only if not in vacation mode
+    // Initialize budget provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final vacationProvider = Provider.of<VacationProvider>(
-        context,
-        listen: false,
-      );
-      if (!vacationProvider.isVacationMode) {
-        Provider.of<BudgetProvider>(context, listen: false).initialize();
-      }
+      Provider.of<BudgetProvider>(context, listen: false).initialize();
     });
-  }
-
-  void _showVacationModeDialog() {
-    // Diagnostic log to trace why/when this dialog is invoked
-    print(
-      'Budget: showing vacation dialog — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, isVacation=${_vacationProvider?.isVacationMode}',
-    );
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext ctx) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-          child: AlertDialog(
-            title: const Text('Vacation Mode Active'),
-            content: const Text('This screen is only for normal mode'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const MainScreen()),
-                    (Route<dynamic> route) => false,
-                  );
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   void _vacationListener() {
     if (!mounted) return;
-    final isVacation = _vacationProvider?.isVacationMode ?? false;
-
-    if (isVacation) {
-      // Rebuild to show vacation UI and avoid loading data while in vacation mode
-      setState(() {});
-    } else {
-      // When exiting vacation mode, initialize budget data and rebuild to show content
-      Provider.of<BudgetProvider>(context, listen: false).initialize();
-      setState(() {});
-    }
-  }
-
-  void _navbarListener() {
-    if (!mounted) return;
-    final currentIndex = _navbarVisibilityProvider?.currentIndex ?? 0;
-    // Show dialog only when Budget tab (index 1) becomes active and vacation mode is on
-    if (currentIndex == 1 &&
-        _vacationProvider?.isVacationMode == true &&
-        !_hasShownVacationDialog) {
-      print(
-        'Budget: navbar became active and vacation active — tabIndex=$currentIndex',
-      );
-      _hasShownVacationDialog = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showVacationModeDialog();
-      });
-    }
+    // When vacation mode changes, just rebuild to update the UI
+    setState(() {});
   }
 
   void _onScroll() {
@@ -134,7 +70,6 @@ class _BudgetScreenState extends State<BudgetScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _vacationProvider?.removeListener(_vacationListener);
-    _navbarVisibilityProvider?.removeListener(_navbarListener);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -149,47 +84,12 @@ class _BudgetScreenState extends State<BudgetScreen>
       _vacationProvider = newVacation;
       _vacationProvider?.addListener(_vacationListener);
     }
-
-    final newNavbar = Provider.of<NavbarVisibilityProvider>(context);
-    if (_navbarVisibilityProvider != newNavbar) {
-      _navbarVisibilityProvider?.removeListener(_navbarListener);
-      _navbarVisibilityProvider = newNavbar;
-      _navbarVisibilityProvider?.addListener(_navbarListener);
-    }
-
-    // If vacation mode is already active when dependencies change, show dialog once if Budget tab is active.
-    final tabIndex =
-        _navbarVisibilityProvider?.currentIndex ??
-        Provider.of<NavbarVisibilityProvider>(
-          context,
-          listen: false,
-        ).currentIndex;
-    if (_vacationProvider?.isVacationMode == true && !_hasShownVacationDialog) {
-      // Diagnostic log to record when the budget screen schedules the vacation dialog
-      print(
-        'Budget: dependencies detected vacation active — routeIsCurrent=${ModalRoute.of(context)?.isCurrent}, tabIndex=$tabIndex',
-      );
-      if (tabIndex == 1) {
-        _hasShownVacationDialog = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showVacationModeDialog();
-        });
-      }
-    } else if (_vacationProvider?.isVacationMode == false) {
-      _hasShownVacationDialog = false;
-    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      final isVacation = Provider.of<VacationProvider>(
-        context,
-        listen: false,
-      ).isVacationMode;
-      if (!isVacation) {
-        Provider.of<BudgetProvider>(context, listen: false).initialize();
-      }
+      Provider.of<BudgetProvider>(context, listen: false).initialize();
     }
   }
 
@@ -255,12 +155,17 @@ class _BudgetScreenState extends State<BudgetScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Budget',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Budget',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ],
               ),
               // Add button to create a new budget even when no budgets exist
               Container(
@@ -291,10 +196,11 @@ class _BudgetScreenState extends State<BudgetScreen>
                     ],
                   ),
                   onPressed: () async {
+                    final isVacationMode = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
                     final result =
                         await PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: const AddBudgetScreen(),
+                          screen: AddBudgetScreen(isVacationMode: isVacationMode),
                           withNavBar: false,
                           pageTransitionAnimation:
                               PageTransitionAnimation.cupertino,
@@ -885,9 +791,10 @@ class _BudgetScreenState extends State<BudgetScreen>
               icon: const Icon(Icons.add_circle_outline),
               color: AppColors.gradientEnd,
               onPressed: () async {
+                final isVacationMode = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
                 final result = await PersistentNavBarNavigator.pushNewScreen(
                   context,
-                  screen: const AddBudgetScreen(),
+                  screen: AddBudgetScreen(isVacationMode: isVacationMode),
                   withNavBar: false,
                   pageTransitionAnimation: PageTransitionAnimation.cupertino,
                 );
@@ -1091,10 +998,12 @@ class _BudgetScreenState extends State<BudgetScreen>
                           }
                         } else {
                           // If budget doesn't exist, create a new one
+                          final isVacation = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
                           await provider.addBudget(
                             data.category.id,
                             parsed,
                             provider.selectedBudgetType,
+                            isVacation: isVacation,
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

@@ -5,11 +5,13 @@ import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class BudgetProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService.instance;
-  final CurrencyProvider _currencyProvider; // New dependency
+  final CurrencyProvider _currencyProvider;
+  final VacationProvider _vacationProvider;
   
   // Selected budget type filter
   BudgetType _selectedBudgetType = BudgetType.monthly;
@@ -36,8 +38,13 @@ class BudgetProvider with ChangeNotifier {
   StreamSubscription<List<FirestoreTransaction>>? _transactionsSubscription;
   
   // Constructor
-  BudgetProvider({required CurrencyProvider currencyProvider}) 
-      : _currencyProvider = currencyProvider;
+  BudgetProvider({
+    required CurrencyProvider currencyProvider,
+    required VacationProvider vacationProvider,
+  })  : _currencyProvider = currencyProvider,
+        _vacationProvider = vacationProvider {
+    _vacationProvider.addListener(_onVacationModeChanged);
+  }
   
   // Getters
   BudgetType get selectedBudgetType => _selectedBudgetType;
@@ -181,7 +188,7 @@ class BudgetProvider with ChangeNotifier {
             t.categoryId == budget.categoryId &&
             t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
             t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))) &&
-            !t.isVacation) // Exclude vacation transactions
+            t.isVacation == budget.isVacation) // Match vacation status
         .fold(0.0, (sum, t) => sum + t.amount);
   }
   
@@ -193,7 +200,7 @@ class BudgetProvider with ChangeNotifier {
             t.categoryId == budget.categoryId &&
             t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
             t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))) &&
-            !t.isVacation) // Exclude vacation transactions
+            t.isVacation == budget.isVacation) // Match vacation status
         .toList();
   }
   
@@ -277,11 +284,11 @@ class BudgetProvider with ChangeNotifier {
       // Fetch categories
       await _fetchCategories();
       
-      // Load all budgets
-      _budgets = await _firestoreService.getAllBudgets();
+      // Load budgets based on current vacation mode
+      _budgets = await _firestoreService.getAllBudgets(isVacation: _vacationProvider.isVacationMode);
       
-      // Load all expense transactions
-      final allTransactions = await _firestoreService.getAllTransactions();
+      // Load all expense transactions based on current vacation mode
+      final allTransactions = await _firestoreService.getAllTransactions(isVacation: _vacationProvider.isVacationMode);
       _allTransactions = allTransactions.where((t) => t.type == 'expense').toList();
       
     } catch (e) {
@@ -290,6 +297,11 @@ class BudgetProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  // Listener for vacation mode changes
+  void _onVacationModeChanged() {
+    loadData();
   }
   
   Future<void> _fetchCategories() async {
@@ -460,7 +472,7 @@ class BudgetProvider with ChangeNotifier {
   }
 
   // Add a new budget
-  Future<void> addBudget(String categoryId, double limit, BudgetType type) async {
+  Future<void> addBudget(String categoryId, double limit, BudgetType type, {bool isVacation = false}) async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
       if (userId.isEmpty) {
@@ -468,7 +480,7 @@ class BudgetProvider with ChangeNotifier {
         throw Exception('User not authenticated');
       }
       
-      print('BudgetProvider.addBudget called: category=$categoryId limit=$limit type=$type');
+      print('BudgetProvider.addBudget called: category=$categoryId limit=$limit type=$type isVacation=$isVacation');
       final now = DateTime.now();
       int year;
       int period;
@@ -494,7 +506,7 @@ class BudgetProvider with ChangeNotifier {
           break;
       }
       
-      final budgetId = Budget.generateId(userId, categoryId, type, year, period);
+      final budgetId = Budget.generateId(userId, categoryId, type, year, period, isVacation);
       print('BudgetProvider.addBudget: generated budgetId=$budgetId');
       
       // Check for duplicate budget
@@ -532,7 +544,8 @@ class BudgetProvider with ChangeNotifier {
         startDate: dateRange['startDate']!,
         endDate: dateRange['endDate']!,
         userId: userId,
-        currency: _currencyProvider.selectedCurrencyCode, // New required field
+        currency: _currencyProvider.selectedCurrencyCode,
+        isVacation: isVacation, // New field
       );
       
       print('BudgetProvider.addBudget: calling FirestoreService.addBudget with ${newBudget.toString()}');
@@ -573,6 +586,7 @@ class BudgetProvider with ChangeNotifier {
   @override
   void dispose() {
     _transactionsSubscription?.cancel();
+    _vacationProvider.removeListener(_onVacationModeChanged);
     super.dispose();
   }
 }
