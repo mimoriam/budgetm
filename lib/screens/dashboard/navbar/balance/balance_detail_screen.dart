@@ -8,6 +8,8 @@ import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_det
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/utils/icon_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -175,6 +177,10 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
 
   Widget _buildTransactionCard(FirestoreTransaction transaction) {
     final isIncome = transaction.type == 'income';
+    
+    // Get the icon color from the transaction, fallback to default if null
+    final Color iconBackgroundColor = hexToColor(transaction.icon_color);
+    final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     return GestureDetector(
       onTap: () async {
@@ -226,12 +232,12 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: iconBackgroundColor,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                color: isIncome ? Colors.green : Colors.red,
+                color: iconForegroundColor,
               ),
             ),
             const SizedBox(width: 8),

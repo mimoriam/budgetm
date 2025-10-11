@@ -15,6 +15,7 @@ class FirestoreTransaction {
   final String? remind;
   final String? icon;
   final String? color;
+  final String? icon_color;
   final String? notes;
   final bool? paid;
   final bool isVacation;
@@ -34,6 +35,7 @@ class FirestoreTransaction {
     this.remind,
     this.icon,
     this.color,
+    this.icon_color,
     this.notes,
     this.paid,
     this.isVacation = false,
@@ -55,6 +57,7 @@ class FirestoreTransaction {
       'remind': remind,
       'icon': icon,
       'color': color,
+      'icon_color': icon_color,
       'notes': notes,
       'paid': paid,
       'isVacation': isVacation,
@@ -79,6 +82,7 @@ class FirestoreTransaction {
       remind: data['remind'],
       icon: data['icon'],
       color: data['color'],
+      icon_color: data['icon_color'],
       notes: data['notes'],
       // Default: expenses are considered paid unless explicitly set; others default to false
       paid: (data['paid'] as bool?) ?? (data['type'] == 'expense' ? true : false),
@@ -102,6 +106,7 @@ class FirestoreTransaction {
       'remind': remind,
       'icon': icon,
       'color': color,
+      'icon_color': icon_color,
       'notes': notes,
       'paid': paid,
       'isVacation': isVacation,
@@ -129,6 +134,7 @@ class FirestoreTransaction {
       remind: json['remind'],
       icon: json['icon'],
       color: json['color'],
+      icon_color: json['icon_color'],
       notes: json['notes'],
       paid: json['paid'],
       isVacation: json['isVacation'] ?? false,
@@ -151,6 +157,7 @@ class FirestoreTransaction {
     String? remind,
     String? icon,
     String? color,
+    String? icon_color,
     String? notes,
     bool? paid,
     bool? isVacation,
@@ -170,6 +177,7 @@ class FirestoreTransaction {
       remind: remind ?? this.remind,
       icon: icon ?? this.icon,
       color: color ?? this.color,
+      icon_color: icon_color ?? this.icon_color,
       notes: notes ?? this.notes,
       paid: paid ?? this.paid,
       isVacation: isVacation ?? this.isVacation,
@@ -178,7 +186,7 @@ class FirestoreTransaction {
 
   @override
   String toString() {
-    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, notes: $notes, paid: $paid, isVacation: $isVacation)';
+    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, icon_color: $icon_color, notes: $notes, paid: $paid, isVacation: $isVacation)';
   }
 
   @override
@@ -199,6 +207,7 @@ class FirestoreTransaction {
         other.remind == remind &&
         other.icon == icon &&
         other.color == color &&
+        other.icon_color == icon_color &&
         other.notes == notes &&
         other.paid == paid &&
         other.isVacation == isVacation;
@@ -208,7 +217,7 @@ class FirestoreTransaction {
   int get hashCode {
     return Object.hash(
       id, description, amount, type, date, categoryId, budgetId, goalId, accountId,
-      time, repeat, remind, icon, color, notes, paid, isVacation,
+      time, repeat, remind, icon, color, icon_color, notes, paid, isVacation,
     );
   }
 }

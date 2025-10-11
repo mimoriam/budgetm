@@ -26,6 +26,7 @@ import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/utils/appTheme.dart';
 import 'package:shimmer/shimmer.dart';
 
 // Data structure to hold all data for a specific month page
@@ -1156,6 +1157,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final transaction = transactionWithAccount.transaction;
     final account = transactionWithAccount.account;
     final uiTransaction = _convertToUiTransaction(transaction, context, transactionWithAccount.category);
+    
+    // Get the icon color from the transaction, fallback to default if null
+    final Color iconBackgroundColor = hexToColor(transaction.icon_color);
+    final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     return InkWell(
       onTap: () async {
@@ -1191,10 +1196,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100, // Default color
+                color: iconBackgroundColor,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: HugeIcon(icon: getIcon(transactionWithAccount.category?.icon), color: Colors.black87, size: 20),
+              child: HugeIcon(icon: getIcon(transactionWithAccount.category?.icon), color: iconForegroundColor, size: 20),
             ),
             const SizedBox(width: 8),
             Expanded(

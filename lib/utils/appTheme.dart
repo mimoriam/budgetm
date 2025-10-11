@@ -4,6 +4,58 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Converts a hex color string to a Color object.
+///
+/// Supports formats: #RRGGBB, #AARRGGBB, RRGGBB, AARRGGBB
+/// Returns Colors.grey.shade100 if the hex string is null, empty, or invalid.
+Color hexToColor(String? hexString) {
+  if (hexString == null || hexString.isEmpty) {
+    return Colors.grey.shade100;
+  }
+  
+  // Remove the leading # if present
+  String hex = hexString.replaceAll('#', '');
+  
+  // If the hex string is too short, pad it
+  if (hex.length == 6) {
+    hex = 'FF$hex'; // Add full opacity
+  } else if (hex.length == 3) {
+    hex = 'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}'; // Expand and add opacity
+  } else if (hex.length == 4) {
+    hex = '${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}'; // Expand
+  }
+  
+  // Validate the hex string
+  if (hex.length != 8 || !RegExp(r'^[0-9A-Fa-f]+$').hasMatch(hex)) {
+    return Colors.grey.shade100;
+  }
+  
+  try {
+    // Parse the hex string to an integer
+    final colorValue = int.parse(hex, radix: 16);
+    return Color(colorValue);
+  } catch (e) {
+    // If parsing fails, return the default color
+    return Colors.grey.shade100;
+  }
+}
+
+/// Determines if a color is light or dark to ensure good contrast.
+///
+/// Returns true if the color is light, false if it's dark.
+bool isColorLight(Color color) {
+  // Calculate the luminance of the color
+  double luminance = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255;
+  return luminance > 0.5;
+}
+
+/// Returns a contrasting color (black or white) based on the background color.
+///
+/// Ensures text/icons have good contrast against the background.
+Color getContrastingColor(Color backgroundColor) {
+  return isColorLight(backgroundColor) ? Colors.black87 : Colors.white;
+}
+
 class AppTheme {
   static final TextTheme _baseTextTheme = GoogleFonts.rubikTextTheme();
 

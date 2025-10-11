@@ -12,6 +12,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -300,6 +301,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   Widget _buildTransactionItem(BuildContext context, FirestoreTransaction txn) {
     final bool isIncome = txn.type == 'income';
+    
+    // Get the icon color from the transaction, fallback to default if null
+    final Color iconBackgroundColor = hexToColor(txn.icon_color);
+    final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     return InkWell(
       onTap: () async {
@@ -354,12 +359,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 Container(
                   // padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: iconBackgroundColor,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: HugeIcon(
                     icon: getIcon(iconId),
-                    color: Colors.black87,
+                    color: iconForegroundColor,
                     size: 18,
                   ),
                 ),

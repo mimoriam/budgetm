@@ -12,8 +12,10 @@ import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/utils/appTheme.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/models/goal.dart';
@@ -21,8 +23,9 @@ import 'package:budgetm/models/goal.dart';
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType transactionType;
   final DateTime? selectedDate;
+  final FirestoreTransaction? transaction; // Optional transaction for editing
 
-  const AddTransactionScreen({super.key, required this.transactionType, this.selectedDate});
+  const AddTransactionScreen({super.key, required this.transactionType, this.selectedDate, this.transaction});
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -39,11 +42,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String? _selectedCategoryId;
   String? _selectedGoalId;
   bool _hasAutoOpenedCategorySheet = false;
+  Color _selectedColor = Colors.grey.shade300;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
+    
+    // If editing a transaction, set the selected color from the transaction
+    if (widget.transaction != null) {
+      _selectedColor = hexToColor(widget.transaction!.icon_color);
+    }
+    
     _loadAccounts();
     _loadCategories();
   }
@@ -196,6 +206,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Handle error
       debugPrint('Error loading categories: $e');
     }
+  }
+
+  void _showColorPicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Pick a color'),
+          content: SingleChildScrollView(
+            child: BlockPicker(
+              pickerColor: _selectedColor,
+              onColorChanged: (Color color) {
+                setState(() {
+                  _selectedColor = color;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -684,7 +716,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 'Date',
                 FormBuilderDateTimePicker(
                   name: 'date',
-                  initialValue: widget.selectedDate ?? DateTime.now(),
+                  // MODIFIED: Clamp initialDate to prevent assertion failure
+                  initialValue: widget.selectedDate?.isBefore(DateTime.now()) ?? false
+                      ? DateTime.now()
+                      : widget.selectedDate ?? DateTime.now(),
                   inputType: InputType.date,
                   format: DateFormat('dd/MM/yyyy'),
                   style: const TextStyle(fontSize: 13),
@@ -791,33 +826,47 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       .toList(),
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildFormSection(
-                  context,
-                  'Color',
-                  FormBuilderDropdown(
-                    name: 'color',
-                    decoration: _inputDecoration(hintText: 'Select Color'),
-                    items: ['Red', 'Green', 'Blue']
-                        .map(
-                          (color) => DropdownMenuItem(
-                            value: color,
-                            child: Text(
-                              color,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Color',
+          GestureDetector(
+            onTap: _showColorPicker,
+            child: FormBuilderField(
+              name: 'color',
+              builder: (FormFieldState<dynamic> field) {
+                return InputDecorator(
+                  decoration: _inputDecoration(hintText: 'Select Color'),
+                  child: SizedBox(
+                    height: 20,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Select Color',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.lightGreyBackground,
+                          ),
+                        ),
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: _selectedColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade400),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
         const SizedBox(height: 8),
         _buildFormSection(
           context,
@@ -917,9 +966,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                widget.transactionType == TransactionType.income
-                    ? 'Plan an income'
-                    : 'Plan an expense',
+                widget.transaction != null
+                    ? (widget.transactionType == TransactionType.income
+                        ? 'Edit income'
+                        : 'Edit expense')
+                    : (widget.transactionType == TransactionType.income
+                        ? 'Plan an income'
+                        : 'Plan an expense'),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -1050,7 +1103,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ),
                     )
                   : Text(
-                      'Create',
+                      widget.transaction != null ? 'Update' : 'Create',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,
@@ -1161,7 +1214,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       // Create transaction
       final transaction = FirestoreTransaction(
-        id: '', // Will be generated by Firestore
+        id: widget.transaction?.id ?? '', // Use existing ID if editing
         description: '', // Default empty description
         amount: amount,
         type: widget.transactionType == TransactionType.income
@@ -1177,19 +1230,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         remind: formData['remind'] as String?,
         icon: formData['icon'] as String?,
         color: formData['color'] as String?,
+        icon_color: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
         notes: formData['notes'] as String?,
         paid: (formData['paid'] as bool? ?? true),
       );
 
-      // Insert transaction with vacation flag
+      // Insert or update transaction with vacation flag
       final isVacation = Provider.of<VacationProvider>(
         context,
         listen: false,
       ).isVacationMode;
-      await _firestoreService.createTransaction(
-        transaction,
-        isVacation: isVacation,
-      );
+      
+      if (widget.transaction != null) {
+        // Update existing transaction
+        await _firestoreService.updateTransactionObject(
+          widget.transaction!.id,
+          transaction,
+        );
+      } else {
+        // Create new transaction
+        await _firestoreService.createTransaction(
+          transaction,
+          isVacation: isVacation,
+        );
+      }
 
       // Update account balance
       final newBalance = widget.transactionType == TransactionType.income

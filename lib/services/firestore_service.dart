@@ -416,6 +416,15 @@ class FirestoreService {
       rethrow;
     }
   }
+  // Update transaction with a FirestoreTransaction object
+  Future<void> updateTransactionObject(String transactionId, FirestoreTransaction transaction) async {
+    try {
+      await _transactionsCollection.doc(transactionId).update(transaction.toJson());
+    } catch (e) {
+      print('Error updating transaction: $e');
+      rethrow;
+    }
+  }
 
   // Delete transaction
   Future<void> deleteTransaction(String id) async {

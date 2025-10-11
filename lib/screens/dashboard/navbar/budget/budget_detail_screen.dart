@@ -13,6 +13,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
+import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/utils/icon_utils.dart';
 import 'package:intl/intl.dart';
 
 // Helper function to convert Firestore transaction to UI transaction
@@ -306,6 +308,10 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final transaction = detailedTransaction.transaction;
     final accountName = detailedTransaction.accountName;
     final accountType = detailedTransaction.accountType;
+    
+    // Get the icon color from the transaction, fallback to default if null
+    final Color iconBackgroundColor = hexToColor(transaction.icon_color);
+    final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     return GestureDetector(
       onTap: () async {
@@ -338,10 +344,10 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: iconBackgroundColor,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.account_balance),
+              child: HugeIcon(icon: getIcon(widget.category.icon), color: iconForegroundColor, size: 20),
             ),
             const SizedBox(width: 8),
             Expanded(
