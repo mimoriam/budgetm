@@ -27,11 +27,17 @@ class _AuthGateState extends State<AuthGate> {
   Map<String, bool>? _cachedSetupStatus;
   bool? _cachedOnboardingStatus;
   bool _preferencesLoaded = false;
+  Future<bool>? _isInitializedFuture;
   
   @override
   void initState() {
     super.initState();
     _initPreferences();
+    
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      _isInitializedFuture = FirestoreService.instance.isUserInitialized(currentUser.uid);
+    }
   }
 
   Future<void> _initPreferences() async {
@@ -77,6 +83,7 @@ class _AuthGateState extends State<AuthGate> {
   void _resetCache() {
     _cachedAuthStatus = null;
     _cachedSetupStatus = null;
+    _isInitializedFuture = null;
   }
 
   @override
@@ -95,28 +102,7 @@ class _AuthGateState extends State<AuthGate> {
       return const OnboardingScreen();
     }
     
-    // For already authenticated users, check Firestore initialization status
-    if (_isUserAuthenticated()) {
-      final user = FirebaseAuth.instance.currentUser!;
-      return FutureBuilder<bool>(
-        future: FirestoreService.instance.isUserInitialized(user.uid),
-        builder: (context, initSnapshot) {
-          if (initSnapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final bool initialized = initSnapshot.data == true;
-          if (initialized) {
-            return const MainScreen();
-          }
-          // Not initialized yet: send user to first-time setup flow
-          return const ChooseThemeScreen();
-        },
-      );
-    }
-    
-    // If user is not authenticated, use StreamBuilder for real-time updates
+    // Use StreamBuilder for real-time authentication updates
     return StreamBuilder<User?>(
       stream: _authService.userChanges(),
       builder: (context, authSnapshot) {
@@ -129,14 +115,23 @@ class _AuthGateState extends State<AuthGate> {
         
         // If user is not logged in, navigate to LoginScreen
         if (!authSnapshot.hasData) {
+          // User logged out, reset the future
+          _isInitializedFuture = null;
+          _cachedAuthStatus = false;
           return const LoginScreen();
         }
         
         // If user is logged in, check Firestore initialization status via FutureBuilder
         _cachedAuthStatus = true;
         final user = authSnapshot.data!;
+        
+        // If future is not set or belongs to a different user, create a new one
+        if (_isInitializedFuture == null) {
+          _isInitializedFuture = FirestoreService.instance.isUserInitialized(user.uid);
+        }
+        
         return FutureBuilder<bool>(
-          future: FirestoreService.instance.isUserInitialized(user.uid),
+          future: _isInitializedFuture,
           builder: (context, initSnapshot) {
             if (initSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
