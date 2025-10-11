@@ -136,6 +136,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<FirestoreAccount> _allAccounts = [];
   List<Category> _allCategories = [];
   Set<int> _loadingIndices = {};
+  
+  // Completer to synchronize static data loading
+  late Completer<void> _staticDataCompleter;
 
   @override
   void initState() {
@@ -145,6 +148,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _contentScrollController = ScrollController();
     _pageController = PageController();
     _lastContentOffset = 0.0;
+    
+    // Initialize the completer for static data loading
+    _staticDataCompleter = Completer<void>();
 
     // Listen to vertical content scrolls to toggle navbar visibility.
     _contentScrollController.addListener(() {
@@ -191,8 +197,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _allCategories = categories;
         });
       }
+      
+      // Complete the completer to signal that static data is ready
+      if (!_staticDataCompleter.isCompleted) {
+        _staticDataCompleter.complete();
+      }
     } catch (e) {
       print('Error loading static data: $e');
+      
+      // Complete with error if static data loading fails
+      if (!_staticDataCompleter.isCompleted) {
+        _staticDataCompleter.completeError(e);
+      }
     }
   }
 
@@ -247,6 +263,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _refreshAccountData() async {
     final isVacationMode =
         Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+    
+    // Create a new completer since the previous one is already completed
+    _staticDataCompleter = Completer<void>();
     
     // Reload static data
     await _loadStaticData();
@@ -328,6 +347,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // New efficient data loading function that returns MonthPageData
   Future<MonthPageData> _loadDataForMonth(DateTime month, {required bool isVacation}) async {
     try {
+      // Wait for static data to be loaded before proceeding
+      await _staticDataCompleter.future;
+      
       final startOfMonth = DateTime(month.year, month.month, 1);
       final endOfMonth = DateTime(month.year, month.month + 1, 1);
       
@@ -340,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           isVacation: isVacation,
         ),
         // Load income and expenses for the month (only if not in vacation mode)
-        isVacation 
+        isVacation
           ? Future.value({'income': 0.0, 'expenses': 0.0})
           : _firestoreService.getIncomeAndExpensesForDateRange(
               startOfMonth,
