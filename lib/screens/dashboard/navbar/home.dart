@@ -162,8 +162,8 @@ class MonthPageDataManager {
       ) {
         print('DEBUG: Stream data received for month index $monthIndex - transactions: ${transactions.length}, tasks: ${tasks.length}');
         
-        // Sort transactions by date
-        transactions.sort((a, b) => a.date.compareTo(b.date));
+        // Sort transactions by date in descending order (newest first)
+        transactions.sort((a, b) => b.date.compareTo(a.date));
 
         // Create maps for accounts and categories
         final accountMap = {for (var account in accounts) account.id: account};
@@ -181,6 +181,9 @@ class MonthPageDataManager {
                 : null,
           );
         }).toList();
+        
+        // Sort transactions within each date group by time in descending order
+        transactionsWithAccounts.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
 
         // Calculate totals client-side
         double totalIncome = 0.0;
@@ -846,7 +849,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ..sort((a, b) {
         DateTime dateA = DateFormat('MMM d, yyyy').parse(a);
         DateTime dateB = DateFormat('MMM d, yyyy').parse(b);
-        return dateA.compareTo(dateB);
+        return dateB.compareTo(dateA); // Sort dates in descending order (newest first)
       });
 
     return Container(
