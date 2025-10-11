@@ -19,6 +19,7 @@ import 'package:budgetm/utils/appTheme.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/models/goal.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType transactionType;
@@ -43,15 +44,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String? _selectedGoalId;
   bool _hasAutoOpenedCategorySheet = false;
   Color _selectedColor = Colors.grey.shade300;
+  DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
     _firestoreService = FirestoreService.instance;
     
-    // If editing a transaction, set the selected color from the transaction
+    // If editing a transaction, set the selected color and date from the transaction
     if (widget.transaction != null) {
       _selectedColor = hexToColor(widget.transaction!.icon_color);
+      _selectedDate = widget.transaction!.date;
+    } else if (widget.selectedDate != null) {
+      _selectedDate = widget.selectedDate;
+    } else {
+      _selectedDate = DateTime.now();
     }
     
     _loadAccounts();
@@ -265,6 +272,151 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showPrettyCalendarPicker(BuildContext context) async {
+    // Initialize with the selected date or current date
+    DateTime initialDate = _selectedDate ?? DateTime.now();
+    
+    // Local, mutable state for the bottom sheet
+    DateTime tempSelected = initialDate;
+    DateTime focusedDay = initialDate;
+
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 8,
+              bottom: 8 + MediaQuery.of(ctx).viewPadding.bottom,
+            ),
+            child: StatefulBuilder(
+              builder: (ctx, setState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: const EdgeInsets.only(top: 6, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    // Title
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Select Date',
+                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryTextColorLight,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TableCalendar(
+                      firstDay: DateTime(2020, 1, 1),
+                      lastDay: DateTime(2100, 12, 31),
+                      focusedDay: focusedDay,
+                      startingDayOfWeek: StartingDayOfWeek.monday,
+                      calendarFormat: CalendarFormat.month,
+                      availableCalendarFormats: const {
+                        CalendarFormat.month: 'Month',
+                      },
+                      headerStyle: HeaderStyle(
+                        titleCentered: true,
+                        formatButtonVisible: false,
+                        titleTextStyle: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryTextColorLight,
+                            ) ??
+                            const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryTextColorLight,
+                            ),
+                        leftChevronIcon:
+                            const Icon(Icons.chevron_left, color: AppColors.gradientEnd),
+                        rightChevronIcon:
+                            const Icon(Icons.chevron_right, color: AppColors.gradientEnd),
+                      ),
+                      calendarStyle: CalendarStyle(
+                        selectedDecoration: const BoxDecoration(
+                          color: AppColors.gradientEnd,
+                          shape: BoxShape.circle,
+                        ),
+                        todayDecoration: BoxDecoration(
+                          color: AppColors.gradientStart.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                        ),
+                        weekendTextStyle:
+                            const TextStyle(color: AppColors.secondaryTextColorLight),
+                        defaultTextStyle:
+                            const TextStyle(color: AppColors.primaryTextColorLight),
+                        outsideDaysVisible: false,
+                      ),
+                      daysOfWeekStyle: const DaysOfWeekStyle(
+                        weekendStyle: TextStyle(color: AppColors.secondaryTextColorLight),
+                        weekdayStyle: TextStyle(color: AppColors.secondaryTextColorLight),
+                      ),
+                      selectedDayPredicate: (day) => isSameDay(day, tempSelected),
+                      onDaySelected: (selected, focused) {
+                        setState(() {
+                          tempSelected = selected;
+                          focusedDay = focused;
+                        });
+                      },
+                      onPageChanged: (focused) {
+                        focusedDay = focused;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedDate = tempSelected;
+                            });
+                            // Update the form field value
+                            _formKey.currentState?.patchValue({'date': tempSelected});
+                            Navigator.of(ctx).pop();
+                          },
+                          child: const Text('Apply'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      debugPrint('Error showing calendar picker: $e');
+    }
   }
 
   @override
@@ -714,19 +866,56 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               child: _buildFormSection(
                 context,
                 'Date',
-                FormBuilderDateTimePicker(
+                FormBuilderField<DateTime>(
                   name: 'date',
-                  // MODIFIED: Clamp initialDate to prevent assertion failure
-                  initialValue: widget.selectedDate?.isBefore(DateTime.now()) ?? false
-                      ? DateTime.now()
-                      : widget.selectedDate ?? DateTime.now(),
-                  inputType: InputType.date,
-                  format: DateFormat('dd/MM/yyyy'),
-                  style: const TextStyle(fontSize: 13),
-                  firstDate: DateTime.now(),
-                  decoration: _inputDecoration(
-                    suffixIcon: HugeIcons.strokeRoundedCalendar01,
+                  initialValue: _selectedDate,
+                  validator: FormBuilderValidators.required(
+                    errorText: 'Please select a date',
                   ),
+                  builder: (FormFieldState<DateTime?> field) {
+                    return GestureDetector(
+                      onTap: () => _showPrettyCalendarPicker(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10.0,
+                          horizontal: 16.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30.0),
+                          border: Border.all(
+                            color: field.hasError
+                                ? AppColors.errorColor
+                                : Colors.grey.shade300,
+                            width: field.hasError ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                field.value != null
+                                    ? DateFormat('dd/MM/yyyy').format(field.value!)
+                                    : 'Select Date',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: field.value != null
+                                      ? AppColors.primaryTextColorLight
+                                      : AppColors.lightGreyBackground,
+                                ),
+                              ),
+                            ),
+                            HugeIcon(
+                              icon: HugeIcons.strokeRoundedCalendar01,
+                              size: 18,
+                              color: Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -1152,7 +1341,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       // Calculate the transaction date with time
       // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
-      final date = formData['date'] as DateTime? ?? widget.selectedDate ?? DateTime.now();
+      final date = formData['date'] as DateTime? ?? _selectedDate ?? DateTime.now();
       final time = formData['time'] as DateTime?;
       final transactionDate = time != null
           ? DateTime(date.year, date.month, date.day, time.hour, time.minute)
