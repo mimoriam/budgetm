@@ -1,3 +1,4 @@
+
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
@@ -24,6 +25,48 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:shimmer/shimmer.dart';
+
+// Data structure to hold all data for a specific month page
+class MonthPageData {
+  final List<FirestoreTransaction> transactions;
+  final double totalIncome;
+  final double totalExpenses;
+  final List<TransactionWithAccount> transactionsWithAccounts;
+  final List<FirestoreTask> upcomingTasks;
+  final bool isLoading;
+  final String? error;
+
+  MonthPageData({
+    required this.transactions,
+    required this.totalIncome,
+    required this.totalExpenses,
+    required this.transactionsWithAccounts,
+    required this.upcomingTasks,
+    this.isLoading = false,
+    this.error,
+  });
+
+  // Create a loading state
+  factory MonthPageData.loading() => MonthPageData(
+    transactions: [],
+    totalIncome: 0.0,
+    totalExpenses: 0.0,
+    transactionsWithAccounts: [],
+    upcomingTasks: [],
+    isLoading: true,
+  );
+
+  // Create an error state
+  factory MonthPageData.error(String error) => MonthPageData(
+    transactions: [],
+    totalIncome: 0.0,
+    totalExpenses: 0.0,
+    transactionsWithAccounts: [],
+    upcomingTasks: [],
+    error: error,
+  );
+}
 
 // Data structure to hold a transaction with its associated account and category
 class TransactionWithAccount {
@@ -81,13 +124,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<FirestoreTask> _upcomingTasks = [];
   bool? _previousVacationMode;
   bool _isTogglingVacationMode = false;
-  bool _isLoading = false;
   
   double _lastContentOffset = 0.0;
   // Debounce timer to delay loads until after page settling
   Timer? _settleTimer;
   // Prevent duplicate loads for the same target month
   int? _loadingMonthIndex;
+  
+  // New variables for pre-loading
+  Map<int, MonthPageData> _pageDataMap = {};
+  List<FirestoreAccount> _allAccounts = [];
+  List<Category> _allCategories = [];
+  Set<int> _loadingIndices = {};
 
   @override
   void initState() {
@@ -112,54 +160,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     });
 
-    // Load data only after horizontal scroll fully settles (better UX, prevents thrashing)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_pageController.hasClients) return;
-      _pageController.position.isScrollingNotifier.addListener(() {
-        final isScrolling = _pageController.position.isScrollingNotifier.value;
-        if (!isScrolling) {
-          final page = _pageController.page;
-          if (page != null) {
-            final newIndex = page.round();
-            if (newIndex >= 0 &&
-                newIndex < _months.length &&
-                newIndex != _selectedMonthIndex) {
-              debugPrint('Home: scroll end -> month index $newIndex');
-              setState(() {
-                _selectedMonthIndex = newIndex;
-              });
-              _scrollToSelectedMonth();
-              final isVacationMode =
-                  Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-              debugPrint('Home: loading data for ${_months[newIndex]}');
-              _loadIncomeAndExpensesForMonth(
-                _months[newIndex],
-                isVacation: isVacationMode,
-              );
-              _loadTransactionsForMonth(
-                _months[newIndex],
-                isVacation: isVacationMode,
-              );
-              _loadUpcomingTasksForMonth(_months[newIndex]);
-            }
-          }
-        }
-      });
-    });
-
     _loadMonths();
 
     // Defer data loads until after build so we can read VacationProvider from context.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isVacationMode =
-          Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-      _previousVacationMode = isVacationMode;
-      _loadIncomeAndExpenses(isVacation: isVacationMode);
-      _loadCurrentMonthTransactions(isVacation: isVacationMode);
-      _loadUpcomingTasks();
+      _loadStaticData().then((_) {
+        final isVacationMode =
+            Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+        _previousVacationMode = isVacationMode;
+        
+        // Load the current month data using the new unified loading method
+        _loadDataForCurrentMonth(isVacation: isVacationMode);
+        
+        // Preload surrounding months after current month is loaded
+        _preloadSurroundingMonths(_selectedMonthIndex);
+      });
     });
 
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  // New function to load static data once
+  Future<void> _loadStaticData() async {
+    try {
+      final accounts = await _firestoreService.getAllAccounts();
+      final categories = await _firestoreService.getAllCategories();
+      if (mounted) {
+        setState(() {
+          _allAccounts = accounts;
+          _allCategories = categories;
+        });
+      }
+    } catch (e) {
+      print('Error loading static data: $e');
+    }
   }
 
   @override
@@ -199,23 +233,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _refreshData() async {
     final isVacationMode =
         Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-    await Future.wait([
-      _loadIncomeAndExpensesForMonth(
-        _months[_selectedMonthIndex],
-        isVacation: isVacationMode,
-      ),
-      _loadTransactionsForMonth(
-        _months[_selectedMonthIndex],
-        isVacation: isVacationMode,
-      ),
-    ]);
+    
+    // Clear the cache for the current month to force refresh
+    if (_pageDataMap.containsKey(_selectedMonthIndex)) {
+      setState(() {
+        _pageDataMap.remove(_selectedMonthIndex);
+      });
+    }
+    
+    await _loadDataForCurrentMonth(isVacation: isVacationMode);
   }
 
   Future<void> _refreshAccountData() async {
     final isVacationMode =
         Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-    await _loadIncomeAndExpenses(isVacation: isVacationMode);
-    // Add any other account-specific data loading if necessary
+    
+    // Reload static data
+    await _loadStaticData();
+    
+    // Clear all cached data to force refresh with new account data
+    setState(() {
+      _pageDataMap.clear();
+    });
+    
+    // Reload current month
+    await _loadDataForCurrentMonth(isVacation: isVacationMode);
   }
 
   Future<void> _loadMonths() async {
@@ -264,116 +306,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-
-  Future<void> _loadIncomeAndExpenses({required bool isVacation}) async {
-    try {
-      if (isVacation) {
-        // For vacation mode: fetch all transactions marked as vacation (across all dates)
-        // and treat income as 0 while summing expenses.
-        final start = DateTime(1970);
-        final end = DateTime.now().add(const Duration(days: 365 * 200));
-        final transactions = await _firestoreService.getTransactionsForDateRange(
-          start,
-          end,
-          isVacation: true,
-        );
-        double expenseSum = 0.0;
-        for (var t in transactions) {
-          if (t.type != 'income') {
-            expenseSum += t.amount;
-          }
-        }
-        setState(() {
-          _totalIncome = 0.0;
-          _totalExpenses = expenseSum;
-        });
-      } else {
-        final now = DateTime.now();
-        final startOfMonth = DateTime(now.year, now.month, 1);
-        final endOfMonth = DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1));
-    
-        // Get income and expense totals using Firestore helper method
-        final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
-          startOfMonth,
-          endOfMonth,
-          isVacation: isVacation,
-        );
-    
-        setState(() {
-          _totalIncome = totals['income'] ?? 0.0;
-          _totalExpenses = totals['expenses'] ?? 0.0;
-        });
-      }
-    } catch (e) {
-      print('Error loading income and expenses: $e');
-      setState(() {
-        _totalIncome = 0.0;
-        _totalExpenses = 0.0;
-      });
-    }
-  }
-
-  Future<void> _loadCurrentMonthTransactions({required bool isVacation}) async {
-    try {
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 1);
-  
-      // Get transactions for current month
-      final transactions = await _firestoreService.getTransactionsForDateRange(
-        startOfMonth,
-        endOfMonth,
-        isVacation: isVacation,
-      );
-      transactions.sort((a, b) => a.date.compareTo(b.date));
-  
-      // Load all accounts for mapping
-      final accounts = await _firestoreService.getAllAccounts();
-      final accountMap = {for (var account in accounts) account.id: account};
-  
-      // Load all categories for mapping
-      final categories = await _firestoreService.getAllCategories();
-      final categoryMap = {
-        for (var category in categories) category.id: category,
-      };
-  
-      // Create TransactionWithAccount objects
-      final transactionsWithAccounts = transactions.map((transaction) {
-        return TransactionWithAccount(
-          transaction: transaction,
-          account: transaction.accountId != null
-              ? accountMap[transaction.accountId]
-              : null,
-          category: transaction.categoryId != null
-              ? categoryMap[transaction.categoryId]
-              : null,
-        );
-      }).toList();
-  
-      setState(() {
-        _transactions = transactions;
-        _transactionsWithAccounts = transactionsWithAccounts;
-      });
-    } catch (e) {
-      print('Error loading current month transactions: $e');
-    }
-  }
-
-  Future<void> _loadUpcomingTasks() async {
-    try {
-      final now = DateTime.now();
-      final endOfMonth = DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1));
-  
-      // Get upcoming tasks using Firestore helper method
-      final tasks = await _firestoreService.getUpcomingTasksForDateRange(now, endOfMonth);
-  
-      setState(() {
-        _upcomingTasks = tasks;
-      });
-    } catch (e) {
-      print('Error loading upcoming tasks: $e');
-    }
-  }
+  // These methods are now deprecated - we use the unified _loadDataForMonth approach
+  // Keeping them for reference but they're no longer called
   
   void _toggleVacationModeWithDebounce() {
     setState(() {
@@ -391,58 +325,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _loadIncomeAndExpensesForMonth(
-    DateTime month, {
-    required bool isVacation,
-  }) async {
-    try {
-      final startOfMonth = DateTime(month.year, month.month, 1);
-      final endOfMonth = DateTime(month.year, month.month + 1, 0).add(const Duration(days: 1));
-  
-      // Get income and expense totals using Firestore helper method
-      final totals = await _firestoreService.getIncomeAndExpensesForDateRange(
-        startOfMonth,
-        endOfMonth,
-        isVacation: isVacation,
-      );
-  
-      setState(() {
-        _totalIncome = totals['income'] ?? 0.0;
-        _totalExpenses = totals['expenses'] ?? 0.0;
-      });
-    } catch (e) {
-      print('Error loading income and expenses for month: $e');
-      setState(() {
-        _totalIncome = 0.0;
-        _totalExpenses = 0.0;
-      });
-    }
-  }
-
-  Future<void> _loadTransactionsForMonth(DateTime month,
-      {required bool isVacation}) async {
+  // New efficient data loading function that returns MonthPageData
+  Future<MonthPageData> _loadDataForMonth(DateTime month, {required bool isVacation}) async {
     try {
       final startOfMonth = DateTime(month.year, month.month, 1);
       final endOfMonth = DateTime(month.year, month.month + 1, 1);
-  
-      // Get transactions for the specified month
-      final transactions = await _firestoreService.getTransactionsForDateRange(
-        startOfMonth,
-        endOfMonth,
-        isVacation: isVacation,
-      );
+      
+      // Load all data concurrently for better performance
+      final results = await Future.wait([
+        // Load transactions for the month
+        _firestoreService.getTransactionsForDateRange(
+          startOfMonth,
+          endOfMonth,
+          isVacation: isVacation,
+        ),
+        // Load income and expenses for the month (only if not in vacation mode)
+        isVacation 
+          ? Future.value({'income': 0.0, 'expenses': 0.0})
+          : _firestoreService.getIncomeAndExpensesForDateRange(
+              startOfMonth,
+              endOfMonth,
+              isVacation: isVacation,
+            ),
+        // Load upcoming tasks for the month
+        _firestoreService.getUpcomingTasksForDateRange(startOfMonth, endOfMonth),
+      ]);
+      
+      final transactions = results[0] as List<FirestoreTransaction>;
+      final totals = results[1] as Map<String, double>;
+      final tasks = results[2] as List<FirestoreTask>;
+      
+      // Sort transactions by date
       transactions.sort((a, b) => a.date.compareTo(b.date));
-  
-      // Load all accounts for mapping
-      final accounts = await _firestoreService.getAllAccounts();
-      final accountMap = {for (var account in accounts) account.id: account};
-  
-      // Load all categories for mapping
-      final categories = await _firestoreService.getAllCategories();
-      final categoryMap = {
-        for (var category in categories) category.id: category,
-      };
-  
+      
+      // Create maps for accounts and categories (already loaded once)
+      final accountMap = {for (var account in _allAccounts) account.id: account};
+      final categoryMap = {for (var category in _allCategories) category.id: category};
+      
       // Create TransactionWithAccount objects
       final transactionsWithAccounts = transactions.map((transaction) {
         return TransactionWithAccount(
@@ -455,29 +374,127 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               : null,
         );
       }).toList();
-  
-      setState(() {
-        _transactions = transactions;
-        _transactionsWithAccounts = transactionsWithAccounts;
-      });
+      
+      return MonthPageData(
+        transactions: transactions,
+        totalIncome: totals['income'] ?? 0.0,
+        totalExpenses: totals['expenses'] ?? 0.0,
+        transactionsWithAccounts: transactionsWithAccounts,
+        upcomingTasks: tasks,
+      );
     } catch (e) {
-      print('Error loading transactions for month: $e');
+      print('Error loading data for month: $e');
+      return MonthPageData.error('Failed to load data');
     }
   }
 
-  Future<void> _loadUpcomingTasksForMonth(DateTime month) async {
-    try {
-      final startOfMonth = DateTime(month.year, month.month, 1);
-      final endOfMonth = DateTime(month.year, month.month + 1, 0).add(const Duration(days: 1));
-
-      // Get upcoming tasks for the specified month using Firestore helper method
-      final tasks = await _firestoreService.getUpcomingTasksForDateRange(startOfMonth, endOfMonth);
-
+  // Function to load data for the current month and update the display
+  Future<void> _loadDataForCurrentMonth({required bool isVacation}) async {
+    if (_months.isEmpty || _selectedMonthIndex < 0 || _selectedMonthIndex >= _months.length) {
+      return;
+    }
+    
+    final month = _months[_selectedMonthIndex];
+    
+    // Check if data is already in cache
+    if (_pageDataMap.containsKey(_selectedMonthIndex)) {
+      final data = _pageDataMap[_selectedMonthIndex]!;
+      if (!data.isLoading && data.error == null) {
+        // Update the display with cached data
+        if (mounted) {
+          setState(() {
+            _transactions = data.transactions;
+            _totalIncome = data.totalIncome;
+            _totalExpenses = data.totalExpenses;
+            _transactionsWithAccounts = data.transactionsWithAccounts;
+            _upcomingTasks = data.upcomingTasks;
+          });
+        }
+        return;
+      }
+    }
+    
+    // Set loading state without updating the UI (let shimmer handle the visual loading)
+    if (!_pageDataMap.containsKey(_selectedMonthIndex)) {
+      _pageDataMap[_selectedMonthIndex] = MonthPageData.loading();
+    }
+    
+    final data = await _loadDataForMonth(month, isVacation: isVacation);
+    
+    if (mounted) {
       setState(() {
-        _upcomingTasks = tasks;
+        _pageDataMap[_selectedMonthIndex] = data;
+        _transactions = data.transactions;
+        _totalIncome = data.totalIncome;
+        _totalExpenses = data.totalExpenses;
+        _transactionsWithAccounts = data.transactionsWithAccounts;
+        _upcomingTasks = data.upcomingTasks;
       });
-    } catch (e) {
-      print('Error loading upcoming tasks for month: $e');
+    }
+  }
+
+  // Function to pre-load data for surrounding months
+  void _preloadSurroundingMonths(int currentIndex) {
+    final isVacationMode = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+    
+    // Always load 2 months behind and 2 months ahead for seamless swiping
+    List<int> indicesToPreload = [];
+    for (int i = -2; i <= 2; i++) {
+      if (i != 0 && currentIndex + i >= 0 && currentIndex + i < _months.length) {
+        indicesToPreload.add(currentIndex + i);
+      }
+    }
+    
+    // Start loading data for each index
+    for (int index in indicesToPreload) {
+      if (!_pageDataMap.containsKey(index) && !_loadingIndices.contains(index)) {
+        _loadingIndices.add(index);
+        
+        // Add loading state
+        _pageDataMap[index] = MonthPageData.loading();
+        
+        // Load data in background
+        _loadDataForMonth(_months[index], isVacation: isVacationMode)
+          .then((data) {
+            if (mounted) {
+              setState(() {
+                _pageDataMap[index] = data;
+                _loadingIndices.remove(index);
+              });
+            }
+          })
+          .catchError((error) {
+            if (mounted) {
+              setState(() {
+                _pageDataMap[index] = MonthPageData.error(error.toString());
+                _loadingIndices.remove(index);
+              });
+            }
+          });
+      }
+    }
+    
+    // Evict data that is outside the preload window (keep 3 months on each side)
+    _evictDistantMonths(currentIndex);
+  }
+  
+  // Function to evict data for months that are too far from current
+  void _evictDistantMonths(int currentIndex) {
+    Set<int> indicesToEvict = {};
+    
+    for (int index in _pageDataMap.keys) {
+      // If the index is more than 4 months away, evict it (keep a wider cache)
+      if ((index - currentIndex).abs() > 4) {
+        indicesToEvict.add(index);
+      }
+    }
+    
+    if (indicesToEvict.isNotEmpty) {
+      setState(() {
+        for (int index in indicesToEvict) {
+          _pageDataMap.remove(index);
+        }
+      });
     }
   }
 
@@ -499,9 +516,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // SystemChrome.setSystemUIOverlayStyle(
-    //   SystemUiOverlayStyle(statusBarColor: Colors.red, statusBarIconBrightness: Brightness.dark),
-    // );
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
 
@@ -535,17 +549,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Check for account-specific refresh
     else if (homeScreenProvider.shouldRefreshAccounts) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final isVacationMode = vacationProvider.isVacationMode;
         await _refreshAccountData(); // Refresh account-related data
-        // Re-filter transactions for the currently selected month after account changes
-        if (_months.isNotEmpty &&
-            _selectedMonthIndex >= 0 &&
-            _selectedMonthIndex < _months.length) {
-          await _loadTransactionsForMonth(
-            _months[_selectedMonthIndex],
-            isVacation: isVacationMode,
-          );
-        }
         // Mark refresh as complete
         homeScreenProvider.completeRefresh();
       });
@@ -595,7 +599,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         onPageChanged: (index) {
                           // Debounce loads to fire only after page settle/animation completion
                           _settleTimer?.cancel();
-                          _settleTimer = Timer(const Duration(milliseconds: 250), () async {
+                          _settleTimer = Timer(const Duration(milliseconds: 150), () async {
                             if (!mounted) return;
                             if (index < 0 || index >= _months.length) return;
     
@@ -612,25 +616,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     
                             final isVacationMode =
                                 Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-                            debugPrint('Home: debounced load for ${_months[index]}');
     
-                            try {
-                              // When in vacation mode, the total vacation balance is calculated globally.
-                              // Prevent per-month income/expense recalculation from overriding that.
-                              final futures = <Future>[];
-                              if (!isVacationMode) {
-                                futures.add(_loadIncomeAndExpensesForMonth(_months[index], isVacation: isVacationMode));
-                              }
-                              // Still load transactions and upcoming tasks for the selected month.
-                              futures.add(_loadTransactionsForMonth(_months[index], isVacation: isVacationMode));
-                              futures.add(_loadUpcomingTasksForMonth(_months[index]));
-    
-                              await Future.wait(futures);
-                            } finally {
-                              if (mounted) {
-                                _loadingMonthIndex = null;
-                              }
-                            }
+                            // Load data for the selected month (will use cache if available)
+                            await _loadDataForCurrentMonth(isVacation: isVacationMode);
+                            
+                            // Preload surrounding months in background
+                            _preloadSurroundingMonths(index);
+                            
+                            _loadingMonthIndex = null;
                           });
                         },
                         itemBuilder: (context, index) {
@@ -643,15 +636,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               );
             },
           ),
-          if (_isLoading)
-            Positioned.fill(
-              child: Stack(
-                children: const [
-                  ModalBarrier(dismissible: false, color: Colors.black45),
-                  Center(child: CircularProgressIndicator()),
-                ],
-              ),
-            ),
         ],
       ),
     );
@@ -924,11 +908,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildTransactionSectionContent(int monthIndex) {
     final currencyProvider = context.watch<CurrencyProvider>();
-
-    // Pure renderer: data loads are handled centrally on scroll end via PageController listener
-
+    
+    // Check if we have preloaded data for this month
+    if (_pageDataMap.containsKey(monthIndex)) {
+      final monthData = _pageDataMap[monthIndex]!;
+      
+      if (monthData.isLoading) {
+        return _buildLoadingState();
+      }
+      
+      if (monthData.error != null) {
+        return _buildErrorState(monthData.error!);
+      }
+      
+      return _buildContentWithData(monthData, currencyProvider);
+    }
+    
+    // If no preloaded data, load it now but show shimmer immediately
+    if (!_loadingIndices.contains(monthIndex)) {
+      // Add to loading indices to prevent duplicate loads
+      _loadingIndices.add(monthIndex);
+      
+      // Add loading state
+      _pageDataMap[monthIndex] = MonthPageData.loading();
+      
+      // Load data in background
+      _loadDataForMonth(_months[monthIndex], isVacation: Provider.of<VacationProvider>(context, listen: false).isVacationMode)
+        .then((data) {
+          if (mounted) {
+            setState(() {
+              _pageDataMap[monthIndex] = data;
+              _loadingIndices.remove(monthIndex);
+            });
+          }
+        })
+        .catchError((error) {
+          if (mounted) {
+            setState(() {
+              _pageDataMap[monthIndex] = MonthPageData.error(error.toString());
+              _loadingIndices.remove(monthIndex);
+            });
+          }
+        });
+    }
+    
+    // Always show shimmer while loading
+    return _buildLoadingState();
+  }
+  
+  Widget _buildContentWithData(MonthPageData data, CurrencyProvider currencyProvider) {
     // If there are no transactions for the selected period, show an empty state.
-    if (_transactionsWithAccounts.isEmpty) {
+    if (data.transactionsWithAccounts.isEmpty) {
       return Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -949,7 +979,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     Map<String, List<TransactionWithAccount>> groupedTransactions = {};
-    for (var tx in _transactionsWithAccounts) {
+    for (var tx in data.transactionsWithAccounts) {
       String dateKey = DateFormat('MMM d, yyyy').format(tx.transaction.date);
       if (groupedTransactions[dateKey] == null) {
         groupedTransactions[dateKey] = [];
@@ -1003,7 +1033,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       );
                     }),
                     const SizedBox(height: 16),
-                    _buildUpcomingTasksSection(),
+                    _buildUpcomingTasksSectionWithData(data.upcomingTasks, currencyProvider),
                     const SizedBox(height: 70), // To avoid FAB overlap
                     // Fills remaining space when content is short
                     const SizedBox(height: 0),
@@ -1013,6 +1043,229 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           );
         },
+      ),
+    );
+  }
+  
+  Widget _buildLoadingState() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(
+          children: [
+            // Shimmer for date header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Shimmer.fromColors(
+                baseColor: Colors.grey.shade300,
+                highlightColor: Colors.grey.shade100,
+                child: Container(
+                  height: 12,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+            // Shimmer for transaction items
+            ...List.generate(5, (index) => _buildTransactionShimmer()),
+            const SizedBox(height: 16),
+            // Shimmer for upcoming tasks section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey.shade300,
+                    highlightColor: Colors.grey.shade100,
+                    child: Container(
+                      height: 18,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTaskShimmer(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTransactionShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+        ),
+        child: Row(
+          children: [
+            // Icon placeholder
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Text placeholders
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 15,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    height: 12,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Amount placeholder
+            Container(
+              height: 15,
+              width: 60,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTaskShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+        ),
+        child: Row(
+          children: [
+            // Icon placeholder
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Text placeholders
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 15,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    height: 12,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Amount placeholder
+            Container(
+              height: 15,
+              width: 60,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildErrorState(String error) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading data',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1051,13 +1304,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return InkWell(
       onTap: () async {
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) =>
-        //         ExpenseDetailScreen(transaction: uiTransaction),
-        //   ),
-        // );
         final result = await PersistentNavBarNavigator.pushNewScreen(
           context,
           screen: ExpenseDetailScreen(transaction: uiTransaction),
@@ -1151,6 +1397,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return const SizedBox(height: 1);
     }
 
+    return _buildUpcomingTasksSectionWithData(_upcomingTasks, currencyProvider);
+  }
+  
+  Widget _buildUpcomingTasksSectionWithData(List<FirestoreTask> tasks, CurrencyProvider currencyProvider) {
+    if (tasks.isEmpty) {
+      // Return a minimal height widget so the parent Column does not collapse
+      return const SizedBox(height: 1);
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -1161,7 +1416,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          ..._upcomingTasks.map((task) => _buildTaskItem(task, currencyProvider)),
+          ...tasks.map((task) => _buildTaskItem(task, currencyProvider)),
         ],
       ),
     );
