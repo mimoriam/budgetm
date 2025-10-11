@@ -442,14 +442,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       value: vacationProvider.isVacationMode,
                       onChanged: (value) async {
                         if (value) {
-                          // Present VacationDialog as a non-dismissible modal bottom sheet.
-                          await showModalBottomSheet(
-                            context: context,
-                            isDismissible: false,
-                            enableDrag: false,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) => const VacationDialog(),
-                          );
+                          // Trigger the check and dialog flow from the provider.
+                          await Provider.of<VacationProvider>(context, listen: false)
+                              .checkAndShowVacationDialog(context);
                         } else {
                           // Deactivate vacation mode immediately.
                           await Provider.of<VacationProvider>(context, listen: false)

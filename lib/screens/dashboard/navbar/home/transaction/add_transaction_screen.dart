@@ -86,23 +86,27 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       // Default behavior: Get all accounts
       final allAccounts = await _firestoreService.getAllAccounts();
-      final nonDefaultAccounts = allAccounts
+      // Filter out vacation accounts when in normal mode
+      final normalModeAccounts = allAccounts
+          .where((account) => account.isVacationAccount != true)
+          .toList();
+      final nonDefaultAccounts = normalModeAccounts
           .where((account) => !(account.isDefault ?? false))
           .toList();
-      final defaultAccount = allAccounts.cast<FirestoreAccount?>().firstWhere(
+      final defaultAccount = normalModeAccounts.cast<FirestoreAccount?>().firstWhere(
         (account) => account?.isDefault ?? false,
         orElse: () => null,
       );
 
       setState(() {
         if (nonDefaultAccounts.isNotEmpty) {
-          // If user has created accounts, show all accounts including the default one.
-          _accounts = allAccounts;
+          // If user has created accounts, show all normal accounts including the default one.
+          _accounts = normalModeAccounts;
           if (defaultAccount != null) {
             _selectedAccountId =
                 defaultAccount.id; // Auto-select the default account
-          } else if (allAccounts.isNotEmpty) {
-            _selectedAccountId = allAccounts.first.id;
+          } else if (normalModeAccounts.isNotEmpty) {
+            _selectedAccountId = normalModeAccounts.first.id;
           }
         } else if (defaultAccount != null) {
           // If only the default account exists, use it but don't show it in the dropdown.

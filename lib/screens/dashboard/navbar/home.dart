@@ -730,14 +730,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       // If vacation mode is active, deactivate it.
                       await Provider.of<VacationProvider>(context, listen: false).setVacationMode(false);
                     } else {
-                      // If vacation mode is inactive, open the selection dialog.
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (BuildContext context) {
-                          return const VacationDialog();
-                        },
-                      );
+                      // If vacation mode is inactive, trigger the check and dialog flow.
+                      await Provider.of<VacationProvider>(context, listen: false)
+                          .checkAndShowVacationDialog(context);
                     }
                   },
                   isActive: vacationProvider.isVacationMode,

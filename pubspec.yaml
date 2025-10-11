@@ -42,10 +42,10 @@ dependencies:
   flutter_launcher_icons: ^0.14.4
   flutter_colorpicker: ^1.1.0
   fl_chart: ^1.1.1
-  table_calendar: ^3.1.2
+  table_calendar: ^3.2.0
   flutter_rating_bar: ^4.0.1
   google_fonts: ^6.3.2
-  hugeicons: ^1.1.0
+  hugeicons: ^1.1.1
   intl: ^0.20.2
   iconly: ^1.0.1
   image_picker: ^1.2.0

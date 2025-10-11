@@ -7,6 +7,7 @@ class PrettyBottomSheet<T> extends StatelessWidget {
   final T selectedItem;
   final String Function(T) getDisplayName;
   final Widget Function(T)? getLeading;
+  final Widget? actionButton;
 
   const PrettyBottomSheet({
     super.key,
@@ -15,6 +16,7 @@ class PrettyBottomSheet<T> extends StatelessWidget {
     required this.selectedItem,
     required this.getDisplayName,
     this.getLeading,
+    this.actionButton,
   });
 
   @override
@@ -43,13 +45,19 @@ class PrettyBottomSheet<T> extends StatelessWidget {
           // Title
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryTextColorLight,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryTextColorLight,
+                  ),
+                ),
+                if (actionButton != null) actionButton!,
+              ],
             ),
           ),
           // const Divider(height: 1),
