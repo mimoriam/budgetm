@@ -59,7 +59,7 @@ class _AuthGateState extends State<AuthGate> {
 
   Map<String, bool> _checkSetupStatus() {
     return _cachedSetupStatus ?? {'themeChosen': false, 'currencyChosen': false};
- }
+  }
 
   // Check if user is authenticated without triggering loading indicators
   bool _isUserAuthenticated() {
@@ -95,26 +95,25 @@ class _AuthGateState extends State<AuthGate> {
       return const OnboardingScreen();
     }
     
-    // For already authenticated users, try to navigate directly without loading indicators
+    // For already authenticated users, check Firestore initialization status
     if (_isUserAuthenticated()) {
-      final setupStatus = _checkSetupStatus();
-      final bool themeChosen = setupStatus['themeChosen']!;
-      final bool currencyChosen = setupStatus['currencyChosen']!;
-      
-      // If setup is complete, navigate directly to MainScreen
-      if (themeChosen && currencyChosen) {
-        return const MainScreen();
-      }
-      
-      // Incomplete setup flows
-      if (!themeChosen) {
-        return const ChooseThemeScreen();
-      } else if (!currencyChosen) {
-        return const SelectCurrencyScreen();
-      } else {
-        // Setup is complete, go to MainScreen
-        return const MainScreen();
-      }
+      final user = FirebaseAuth.instance.currentUser!;
+      return FutureBuilder<bool>(
+        future: FirestoreService.instance.isUserInitialized(user.uid),
+        builder: (context, initSnapshot) {
+          if (initSnapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final bool initialized = initSnapshot.data == true;
+          if (initialized) {
+            return const MainScreen();
+          }
+          // Not initialized yet: send user to first-time setup flow
+          return const ChooseThemeScreen();
+        },
+      );
     }
     
     // If user is not authenticated, use StreamBuilder for real-time updates
