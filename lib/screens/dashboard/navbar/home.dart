@@ -311,6 +311,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (_selectedMonthIndex == -1) {
           _selectedMonthIndex = _months.length - 13;
         }
+        
+        // Update the selected date in HomeScreenProvider
+        if (_selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length) {
+          final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+          homeScreenProvider.setSelectedDate(_months[_selectedMonthIndex]);
+        }
       });
     }
 
@@ -448,15 +454,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         controller: _pageController,
                         itemCount: _months.length,
                         onPageChanged: (index) {
-                          if (!mounted) return;
-                          if (index < 0 || index >= _months.length) return;
+                         if (!mounted) return;
+                         if (index < 0 || index >= _months.length) return;
 
-                          setState(() {
-                            _selectedMonthIndex = index;
-                          });
-                          _scrollToSelectedMonth();
+                         setState(() {
+                           _selectedMonthIndex = index;
+                         });
+                         
+                         // Update the selected date in HomeScreenProvider
+                         final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+                         homeScreenProvider.setSelectedDate(_months[index]);
+                         
+                         _scrollToSelectedMonth();
 
-                          // Pre-load adjacent months
+                         // Pre-load adjacent months
                           final isVacation = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
                           print('DEBUG: Pre-loading adjacent months for index $index');
                           if (index + 1 < _months.length) {

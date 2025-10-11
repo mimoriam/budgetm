@@ -238,10 +238,12 @@ class _MainScreenState extends State<MainScreen> {
               color: Colors.red,
               onPressed: () async {
                 _toggleFabMenu();
+                final homeScreenProvider = context.read<HomeScreenProvider>();
                 final result = await PersistentNavBarNavigator.pushNewScreen(
                   context,
-                  screen: const AddTransactionScreen(
+                  screen: AddTransactionScreen(
                     transactionType: TransactionType.expense,
+                    selectedDate: homeScreenProvider.selectedDate,
                   ),
                   withNavBar: false,
                   pageTransitionAnimation: PageTransitionAnimation.cupertino,
@@ -269,10 +271,12 @@ class _MainScreenState extends State<MainScreen> {
             color: Colors.green,
             onPressed: () async {
               _toggleFabMenu();
+              final homeScreenProvider = context.read<HomeScreenProvider>();
               final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
-                screen: const AddTransactionScreen(
+                screen: AddTransactionScreen(
                   transactionType: TransactionType.income,
+                  selectedDate: homeScreenProvider.selectedDate,
                 ),
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
@@ -298,10 +302,12 @@ class _MainScreenState extends State<MainScreen> {
             color: Colors.red,
             onPressed: () async {
               _toggleFabMenu();
+              final homeScreenProvider = context.read<HomeScreenProvider>();
               final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
-                screen: const AddTransactionScreen(
+                screen: AddTransactionScreen(
                   transactionType: TransactionType.expense,
+                  selectedDate: homeScreenProvider.selectedDate,
                 ),
                 withNavBar: false,
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,

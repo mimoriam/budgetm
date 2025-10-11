@@ -20,8 +20,9 @@ import 'package:budgetm/models/goal.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType transactionType;
+  final DateTime? selectedDate;
 
-  const AddTransactionScreen({super.key, required this.transactionType});
+  const AddTransactionScreen({super.key, required this.transactionType, this.selectedDate});
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -683,7 +684,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 'Date',
                 FormBuilderDateTimePicker(
                   name: 'date',
-                  initialValue: DateTime.now(),
+                  initialValue: widget.selectedDate ?? DateTime.now(),
                   inputType: InputType.date,
                   format: DateFormat('dd/MM/yyyy'),
                   style: const TextStyle(fontSize: 13),
@@ -1098,7 +1099,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       // Calculate the transaction date with time
       // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
-      final date = formData['date'] as DateTime? ?? DateTime.now();
+      final date = formData['date'] as DateTime? ?? widget.selectedDate ?? DateTime.now();
       final time = formData['time'] as DateTime?;
       final transactionDate = time != null
           ? DateTime(date.year, date.month, date.day, time.hour, time.minute)

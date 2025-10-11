@@ -5,11 +5,13 @@ class HomeScreenProvider with ChangeNotifier {
   bool _shouldRefreshAccounts = false;
   bool _shouldRefreshTransactions = false;
   DateTime? _transactionDate;
+  DateTime? _selectedDate;
 
   bool get shouldRefresh => _shouldRefresh;
   bool get shouldRefreshAccounts => _shouldRefreshAccounts;
   bool get shouldRefreshTransactions => _shouldRefreshTransactions;
   DateTime? get transactionDate => _transactionDate;
+  DateTime? get selectedDate => _selectedDate;
 
   void triggerRefresh({DateTime? transactionDate}) {
     _shouldRefresh = true;
@@ -24,6 +26,11 @@ class HomeScreenProvider with ChangeNotifier {
 
   void triggerTransactionsRefresh() {
     _shouldRefreshTransactions = true;
+    notifyListeners();
+  }
+
+  void setSelectedDate(DateTime? date) {
+    _selectedDate = date;
     notifyListeners();
   }
 
