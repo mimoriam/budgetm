@@ -198,7 +198,7 @@ class _MainScreenState extends State<MainScreen> {
                       child: FloatingActionButton(
                         onPressed: _toggleFabMenu,
                         elevation: 1,
-                        backgroundColor: AppColors.gradientEnd,
+                        backgroundColor: vacationProvider.isVacationMode ? AppColors.aiGradientStart : AppColors.gradientEnd,
                         shape: const CircleBorder(),
                         child: Icon(
                           _isFabMenuOpen ? Icons.close : Icons.add,
