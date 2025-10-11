@@ -475,6 +475,26 @@ class FirestoreService {
     }
   }
 
+  // Stream transactions for a date range (optionally filtered by vacation mode)
+  Stream<List<FirestoreTransaction>> streamTransactionsForDateRange(
+    DateTime startDate,
+    DateTime endDate, {
+    bool isVacation = false,
+  }) {
+    try {
+      return _transactionsCollection
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .where('isVacation', isEqualTo: isVacation)
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming transactions for date range: $e');
+      return Stream.empty();
+    }
+  }
+
   // Calculate total amount of transactions for a specific account
   Future<double> getTransactionsAmountForAccount(String accountId) async {
     double totalAmount = 0.0;
@@ -881,6 +901,25 @@ class FirestoreService {
           .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
     } catch (e) {
       print('Error streaming tasks: $e');
+      return Stream.empty();
+    }
+  }
+
+  // Stream upcoming tasks for a date range (real-time updates)
+  Stream<List<FirestoreTask>> streamUpcomingTasksForDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    try {
+      return _tasksCollection
+          .where('dueDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('dueDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .where('isCompleted', isEqualTo: false)
+          .orderBy('dueDate', descending: false)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming upcoming tasks for date range: $e');
       return Stream.empty();
     }
   }
