@@ -56,7 +56,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _selectedColor = hexToColor(widget.transaction!.icon_color);
       _selectedDate = widget.transaction!.date;
     } else if (widget.selectedDate != null) {
-      _selectedDate = widget.selectedDate;
+      // Check if the selected date is in the same month and year as the current date
+      final now = DateTime.now();
+      final selectedDate = widget.selectedDate!;
+      
+      if (selectedDate.year == now.year && selectedDate.month == now.month) {
+        // If it's the current month, use today's date instead of the 1st of the month
+        _selectedDate = now;
+      } else {
+        // For past or future months, use the selected date as is
+        _selectedDate = selectedDate;
+      }
     } else {
       _selectedDate = DateTime.now();
     }

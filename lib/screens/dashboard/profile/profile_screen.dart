@@ -225,6 +225,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Row(
                 children: [
+                  // IconButton(
+                  //   icon: const Icon(Icons.sync_outlined, color: Colors.black),
+                  //   onPressed: () {
+                  //     // TODO: Implement sync functionality
+                  //   },
+                  // ),
+                  // const SizedBox(width: 16),
+                  Text(
+                    'Profile',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
@@ -247,21 +262,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         size: 14,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Profile',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.sync_outlined, color: Colors.black),
-                    onPressed: () {
-                      // TODO: Implement sync functionality
-                    },
                   ),
                 ],
               ),
