@@ -174,7 +174,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         };
       } else {
         final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-        final finalBalance = account.balance + transactionsAmount;
+        // Use account.balance directly as it's the single source of truth from Firestore
+        final finalBalance = account.balance;
         return {
           'account': account,
           'transactionsAmount': transactionsAmount,

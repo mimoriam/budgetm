@@ -6,6 +6,7 @@ class FirestoreAccount {
   final String name;
   final String accountType;
   final double balance;
+  final double initialBalance;
   final String? description;
   final String? color;
   final String? icon;
@@ -33,6 +34,7 @@ class FirestoreAccount {
     required this.name,
     required this.accountType,
     required this.balance,
+    this.initialBalance = 0.0,
     this.description,
     this.color,
     this.icon,
@@ -55,6 +57,7 @@ class FirestoreAccount {
       'name': name,
       'accountType': accountType,
       'balance': balance,
+      'initialBalance': initialBalance,
       'description': description,
       'color': color,
       'icon': icon,
@@ -85,6 +88,7 @@ class FirestoreAccount {
       name: data['name'] ?? '',
       accountType: data['accountType'] ?? '',
       balance: (data['balance'] as num?)?.toDouble() ?? 0.0,
+      initialBalance: (data['initialBalance'] as num?)?.toDouble() ?? 0.0,
       description: data['description'],
       color: data['color'],
       icon: data['icon'],
@@ -141,6 +145,7 @@ class FirestoreAccount {
       name: json['name'] ?? '',
       accountType: json['accountType'] ?? '',
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
+      initialBalance: (json['initialBalance'] as num?)?.toDouble() ?? 0.0,
       description: json['description'],
       color: json['color'],
       icon: json['icon'],
@@ -164,6 +169,7 @@ class FirestoreAccount {
     String? name,
     String? accountType,
     double? balance,
+    double? initialBalance,
     String? description,
     String? color,
     String? icon,
@@ -184,6 +190,7 @@ class FirestoreAccount {
       name: name ?? this.name,
       accountType: accountType ?? this.accountType,
       balance: balance ?? this.balance,
+      initialBalance: initialBalance ?? this.initialBalance,
       description: description ?? this.description,
       color: color ?? this.color,
       icon: icon ?? this.icon,
@@ -208,6 +215,7 @@ class FirestoreAccount {
         'name: $name, '
         'accountType: $accountType, '
         'balance: $balance, '
+        'initialBalance: $initialBalance, '
         'description: $description, '
         'color: $color, '
         'icon: $icon, '
@@ -233,6 +241,7 @@ class FirestoreAccount {
         other.name == name &&
         other.accountType == accountType &&
         other.balance == balance &&
+        other.initialBalance == initialBalance &&
         other.description == description &&
         other.color == color &&
         other.icon == icon &&
@@ -256,6 +265,7 @@ class FirestoreAccount {
       name,
       accountType,
       balance,
+      initialBalance,
       description,
       color,
       icon,

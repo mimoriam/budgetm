@@ -540,6 +540,20 @@ class FirestoreService {
     }
   }
 
+  // Stream transactions for a specific account (real-time updates)
+  Stream<List<FirestoreTransaction>> getTransactionsForAccountStream(String accountId) {
+    try {
+      return _transactionsCollection
+          .where('accountId', isEqualTo: accountId)
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming transactions for account: $e');
+      return Stream.empty();
+    }
+  }
+
   // ================ CATEGORY OPERATIONS ================
 
   // Create a new category
@@ -1100,6 +1114,7 @@ class FirestoreService {
         name: accountName,
         accountType: 'Cash', // Default to Cash account
         balance: 0.0,
+        initialBalance: 0.0,
         description: 'Default $currency account',
         color: 'green',
         icon: 'account_balance_wallet',
@@ -1129,6 +1144,7 @@ class FirestoreService {
             name: 'None',
             accountType: 'Cash',
             balance: 0.0,
+            initialBalance: 0.0,
             description: 'Default $currencyCode account',
             color: 'green',
             icon: 'account_balance_wallet',
@@ -1329,6 +1345,7 @@ class FirestoreService {
         name: 'None',
         accountType: 'Cash',
         balance: 0.0,
+        initialBalance: 0.0,
         description: 'Default $currency account',
         color: 'green',
         icon: 'account_balance_wallet',
