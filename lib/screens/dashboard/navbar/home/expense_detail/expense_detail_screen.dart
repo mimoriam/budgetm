@@ -98,6 +98,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   Future<void> _togglePaidStatus() async {
     if (_isUpdating) return;
 
+    final bool wasPaid = _isPaid; // Store the original state for potential rollback
+    
     setState(() {
       _isUpdating = true;
     });
@@ -124,9 +126,28 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       });
     } catch (e) {
       print('Error toggling paid status: $e');
+      
+      // Restore the original state in case of error
+      if (wasPaid != _isPaid) {
+        setState(() {
+          _isPaid = wasPaid;
+        });
+      }
+      
       setState(() {
         _isUpdating = false;
       });
+      
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update payment status: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -230,31 +251,31 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 24),
-                        Divider(color: Colors.grey.shade300),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Column(
                           children: [
-                            Text(
-                              'STATUS',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: AppColors.secondaryTextColorLight,
-                                    fontWeight: FontWeight.bold,
+                            
+                            Center(
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  color: _isPaid ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+                                ),
+                                child: Text(
+                                  _isPaid ? 'PAID' : 'UNPAID',
+                                  key: const Key('expense-status-chip'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
+                                ),
+                              ),
                             ),
-                            Text(
-                              _isPaid ? 'PAID' : 'UNPAID',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: _isPaid ? Colors.green : Colors.red,
-                                  ),
-                            ),
+                            const SizedBox(height: 16),
+                            Divider(color: Colors.grey.shade300),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Divider(color: Colors.grey.shade300),
                         const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -310,27 +331,46 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: OutlinedButton(
-                                onPressed: _isUpdating ? null : _togglePaidStatus,
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30.0),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                child: OutlinedButton(
+                                  onPressed: _isUpdating ? null : _togglePaidStatus,
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30.0),
+                                    ),
+                                    side: BorderSide(
+                                      color: _isPaid ? Colors.red : Colors.green,
+                                      width: 1.5,
+                                    ),
                                   ),
-                                  side: const BorderSide(
-                                    color: Colors.black,
-                                    width: 1.5,
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: _isUpdating
+                                        ? const SizedBox(
+                                            key: ValueKey('loading'),
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                Colors.grey,
+                                              ),
+                                            ),
+                                          )
+                                        : Text(
+                                            key: ValueKey(_isPaid ? 'paid' : 'unpaid'),
+                                            _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelLarge
+                                                ?.copyWith(
+                                                  color: _isPaid ? Colors.red : Colors.green,
+                                                  fontSize: 14,
+                                                ),
+                                          ),
                                   ),
-                                ),
-                                child: Text(
-                                  _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelLarge
-                                      ?.copyWith(
-                                        color: Colors.black,
-                                        fontSize: 14,
-                                      ),
                                 ),
                               ),
                             ),
