@@ -15,6 +15,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/utils/account_icon_utils.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
@@ -495,239 +496,229 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: _accounts.isEmpty ? 1 : 1,
-                            child: _buildFormSection(
-                              context,
-                              'Category',
-                              FormBuilderField<String>(
-                                name: 'category',
-                                initialValue: _selectedCategoryId,
-                                validator: FormBuilderValidators.required(
-                                  errorText: 'Please select a category',
-                                ),
-                                builder: (FormFieldState<String?> field) {
-                                  Category? selectedCategory;
-                                  if (_categories.isNotEmpty) {
-                                    selectedCategory = _categories.firstWhere(
-                                      (cat) => cat.id == _selectedCategoryId,
-                                      orElse: () => _categories.first,
+                      // Category field (full width)
+                      _buildFormSection(
+                        context,
+                        'Category',
+                        FormBuilderField<String>(
+                          name: 'category',
+                          initialValue: _selectedCategoryId,
+                          validator: FormBuilderValidators.required(
+                            errorText: 'Please select a category',
+                          ),
+                          builder: (FormFieldState<String?> field) {
+                            Category? selectedCategory;
+                            if (_categories.isNotEmpty) {
+                              selectedCategory = _categories.firstWhere(
+                                (cat) => cat.id == _selectedCategoryId,
+                                orElse: () => _categories.first,
+                              );
+                            }
+
+                            return GestureDetector(
+                              onTap: () async {
+                                if (_categories.isEmpty) {
+                                  return;
+                                }
+                                final result =
+                                    await _showPrettySelectionBottomSheet<
+                                      Category
+                                    >(
+                                      title: 'Select Category',
+                                      items: _categories,
+                                      selectedItem:
+                                          selectedCategory ??
+                                          _categories.first,
+                                      getDisplayName: (category) =>
+                                          category.name ??
+                                          'Unnamed Category',
+                                      getLeading: (category) => HugeIcon(
+                                        icon: getIcon(category.icon),
+                                        color: AppColors
+                                            .primaryTextColorLight,
+                                      ),
                                     );
-                                  }
 
-                                  return GestureDetector(
-                                    onTap: () async {
-                                      if (_categories.isEmpty) {
-                                        return;
-                                      }
-                                      final result =
-                                          await _showPrettySelectionBottomSheet<
-                                            Category
-                                          >(
-                                            title: 'Select Category',
-                                            items: _categories,
-                                            selectedItem:
-                                                selectedCategory ??
-                                                _categories.first,
-                                            getDisplayName: (category) =>
-                                                category.name ??
-                                                'Unnamed Category',
-                                            getLeading: (category) => HugeIcon(
-                                              icon: getIcon(category.icon),
-                                              color: AppColors
-                                                  .primaryTextColorLight,
-                                            ),
-                                          );
-
-                                      if (result != null) {
-                                        setState(() {
-                                          _selectedCategoryId = result.id;
-                                        });
-                                        field.didChange(result.id);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 16.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(
-                                          30.0,
-                                        ),
-                                        border: Border.all(
-                                          color: field.hasError
-                                              ? AppColors.errorColor
-                                              : Colors.grey.shade300,
-                                          width: field.hasError ? 1.5 : 1.0,
-                                        ),
-                                      ),
+                                if (result != null) {
+                                  setState(() {
+                                    _selectedCategoryId = result.id;
+                                  });
+                                  field.didChange(result.id);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10.0,
+                                  horizontal: 16.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(
+                                    30.0,
+                                  ),
+                                  border: Border.all(
+                                    color: field.hasError
+                                        ? AppColors.errorColor
+                                        : Colors.grey.shade300,
+                                    width: field.hasError ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
                                       child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Expanded(
-                                            child: Row(
-                                              children: [
-                                                HugeIcon(
-                                                  icon: getIcon(
-                                                    selectedCategory?.icon,
-                                                  ),
-                                                  size: 18,
-                                                  color:
-                                                      selectedCategory != null
-                                                      ? AppColors
-                                                            .primaryTextColorLight
-                                                      : AppColors
-                                                            .lightGreyBackground,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Flexible(
-                                                  child: Text(
-                                                    selectedCategory?.name ??
-                                                        'Select',
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      color:
-                                                          selectedCategory !=
-                                                              null
-                                                          ? AppColors
-                                                                .primaryTextColorLight
-                                                          : AppColors
-                                                                .lightGreyBackground,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                          HugeIcon(
+                                            icon: getIcon(
+                                              selectedCategory?.icon,
                                             ),
+                                            size: 18,
+                                            color:
+                                                selectedCategory != null
+                                                ? AppColors
+                                                      .primaryTextColorLight
+                                                : AppColors
+                                                      .lightGreyBackground,
                                           ),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Colors.grey.shade600,
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              selectedCategory?.name ??
+                                                  'Select',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color:
+                                                    selectedCategory !=
+                                                        null
+                                                    ? AppColors
+                                                          .primaryTextColorLight
+                                                    : AppColors
+                                                          .lightGreyBackground,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          if (_accounts.isNotEmpty) ...[
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildFormSection(
-                                context,
-                                'Account',
-                                FormBuilderField<String>(
-                                  name: 'account',
-                                  initialValue: _selectedAccountId,
-                                  validator: FormBuilderValidators.required(
-                                    errorText: 'Please select an account',
-                                  ),
-                                  builder: (FormFieldState<String?> field) {
-                                    // Only show dropdown if there are user-created accounts
-                                    if (_accounts.isNotEmpty) {
-                                      return GestureDetector(
-                                        onTap: () async {
-                                          final selectedAccount = _accounts
-                                              .firstWhere(
-                                                (acc) =>
-                                                    acc.id ==
-                                                    _selectedAccountId,
-                                                orElse: () => _accounts.first,
-                                              );
-
-                                          final result =
-                                              await _showPrettySelectionBottomSheet<
-                                                FirestoreAccount
-                                              >(
-                                                title: 'Select Account',
-                                                items: _accounts,
-                                                selectedItem: selectedAccount,
-                                                getDisplayName: (account) =>
-                                                    account.name,
-                                              );
-
-                                          if (result != null) {
-                                            setState(() {
-                                              _selectedAccountId = result.id;
-                                            });
-                                            field.didChange(result.id);
-                                          }
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 10.0,
-                                            horizontal: 16.0,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              30.0,
-                                            ),
-                                            border: Border.all(
-                                              color: field.hasError
-                                                  ? AppColors.errorColor
-                                                  : Colors.grey.shade300,
-                                              width: field.hasError ? 1.5 : 1.0,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  _selectedAccountId != null
-                                                      ? (_accounts
-                                                            .firstWhere(
-                                                              (acc) =>
-                                                                  acc.id ==
-                                                                  _selectedAccountId,
-                                                              orElse: () =>
-                                                                  _accounts
-                                                                      .first,
-                                                            )
-                                                            .name)
-                                                      : 'Select',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    color:
-                                                        _selectedAccountId !=
-                                                            null
-                                                        ? AppColors
-                                                              .primaryTextColorLight
-                                                        : AppColors
-                                                              .lightGreyBackground,
-                                                  ),
-                                                ),
-                                              ),
-                                              Icon(
-                                                Icons.arrow_drop_down,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      // If _accounts is empty, it means either only the default account exists or no accounts exist.
-                                      // In either case, we don't show a dropdown.
-                                      // The _selectedAccountId is already set to the default account if it exists.
-                                      return const SizedBox.shrink();
-                                    }
-                                  },
+                                    Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
-                        ],
+                            );
+                          },
+                        ),
                       ),
+                      const SizedBox(height: 10),
+                      // Account field (full width)
+                      if (_accounts.isNotEmpty)
+                        _buildFormSection(
+                          context,
+                          'Account',
+                          FormBuilderField<String>(
+                            name: 'account',
+                            initialValue: _selectedAccountId,
+                            validator: FormBuilderValidators.required(
+                              errorText: 'Please select an account',
+                            ),
+                            builder: (FormFieldState<String?> field) {
+                              final selectedAccount = _accounts
+                                  .firstWhere(
+                                    (acc) =>
+                                        acc.id ==
+                                        _selectedAccountId,
+                                    orElse: () => _accounts.first,
+                                  );
+                              
+                              return GestureDetector(
+                                onTap: () async {
+                                  final result =
+                                      await _showPrettySelectionBottomSheet<
+                                        FirestoreAccount
+                                      >(
+                                        title: 'Select Account',
+                                        items: _accounts,
+                                        selectedItem: selectedAccount,
+                                        getDisplayName: (account) =>
+                                            account.name,
+                                        getLeading: (account) => HugeIcon(
+                                          icon: getAccountIcon(account.accountType)[0][0],
+                                          color: AppColors.primaryTextColorLight,
+                                          size: 20,
+                                        ),
+                                      );
+
+                                  if (result != null) {
+                                    setState(() {
+                                      _selectedAccountId = result.id;
+                                    });
+                                    field.didChange(result.id);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10.0,
+                                    horizontal: 16.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(
+                                      30.0,
+                                    ),
+                                    border: Border.all(
+                                      color: field.hasError
+                                          ? AppColors.errorColor
+                                          : Colors.grey.shade300,
+                                      width: field.hasError ? 1.5 : 1.0,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            HugeIcon(
+                                              icon: getAccountIcon(selectedAccount.accountType)[0][0],
+                                              size: 18,
+                                              color: _selectedAccountId != null
+                                                  ? AppColors.primaryTextColorLight
+                                                  : AppColors.lightGreyBackground,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Flexible(
+                                              child: Text(
+                                                _selectedAccountId != null
+                                                    ? selectedAccount.name
+                                                    : 'Select',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color:
+                                                      _selectedAccountId != null
+                                                      ? AppColors.primaryTextColorLight
+                                                      : AppColors.lightGreyBackground,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_drop_down,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       const SizedBox(height: 10),
                       if (widget.transactionType == TransactionType.income)
                         StreamBuilder<List<FirestoreGoal>>(

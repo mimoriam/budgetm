@@ -11,9 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'dart:async';
- 
+
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
+import 'package:budgetm/utils/account_icon_utils.dart';
 
 class BalanceScreen extends StatefulWidget {
   const BalanceScreen({super.key});
@@ -265,7 +267,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                     return _buildAccountCard(
                                      context: context,
                                      account: account,
-                                     icon: Icons.account_balance,
+                                     icon: getAccountIcon(account.accountType)[0][0],
                                      iconColor: Colors.black,
                                      iconBackgroundColor: Colors.grey.shade200,
                                      accountName: account.name,
@@ -539,7 +541,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   Widget _buildAccountCard({
     required BuildContext context,
     required FirestoreAccount account,
-    required IconData icon,
+    required dynamic icon,
     required Color iconColor,
     required Color iconBackgroundColor,
     required String accountName,
@@ -589,7 +591,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 color: iconBackgroundColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, size: 24, color: iconColor),
+              child: HugeIcon(icon: icon, size: 24, color: iconColor),
             ),
             const SizedBox(width: 12),
             Expanded(
