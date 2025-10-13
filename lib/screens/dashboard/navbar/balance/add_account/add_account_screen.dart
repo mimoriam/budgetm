@@ -15,7 +15,7 @@ import 'package:budgetm/utils/account_icon_utils.dart';
 class AddAccountScreen extends StatefulWidget {
   final bool isCreatingVacationAccount;
   const AddAccountScreen({super.key, this.isCreatingVacationAccount = false});
- 
+
   @override
   State<AddAccountScreen> createState() => _AddAccountScreenState();
 }
@@ -44,7 +44,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       });
     }
   }
-  
+
   @override
   void dispose() {
     _amountFocusNode.dispose();
@@ -123,11 +123,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     } else {
       setState(() {
         _selectedAccountType = result as String;
-        _formKey.currentState?.patchValue({'account_type': _selectedAccountType});
+        _formKey.currentState?.patchValue({
+          'account_type': _selectedAccountType,
+        });
       });
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Listener(
@@ -183,24 +185,36 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(30.0),
-                                      border: Border.all(color: Colors.grey.shade300),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Row(
                                           children: [
                                             Builder(
                                               builder: (context) {
-                                                final icons = getAccountIcon(_selectedAccountType);
-                                                final iconData = (icons.isNotEmpty && icons.first.isNotEmpty)
+                                                final icons = getAccountIcon(
+                                                  _selectedAccountType,
+                                                );
+                                                final iconData =
+                                                    (icons.isNotEmpty &&
+                                                        icons.first.isNotEmpty)
                                                     ? icons.first.first
-                                                    : HugeIcons.strokeRoundedCash01;
+                                                    : HugeIcons
+                                                          .strokeRoundedCash01;
                                                 return HugeIcon(
                                                   icon: iconData,
-                                                  color: _selectedAccountType != null
-                                                      ? AppColors.primaryTextColorLight
-                                                      : AppColors.lightGreyBackground,
+                                                  color:
+                                                      _selectedAccountType !=
+                                                          null
+                                                      ? AppColors
+                                                            .primaryTextColorLight
+                                                      : AppColors
+                                                            .lightGreyBackground,
                                                   size: 16,
                                                 );
                                               },
@@ -210,9 +224,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                               _selectedAccountType ?? 'Credit',
                                               style: TextStyle(
                                                 fontSize: 13,
-                                                color: _selectedAccountType != null
-                                                    ? AppColors.primaryTextColorLight
-                                                    : AppColors.lightGreyBackground,
+                                                color:
+                                                    _selectedAccountType != null
+                                                    ? AppColors
+                                                          .primaryTextColorLight
+                                                    : AppColors
+                                                          .lightGreyBackground,
                                               ),
                                             ),
                                           ],
@@ -229,44 +246,66 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30.0),
-                                        border: Border.all(color: Colors.grey.shade300),
+                                        borderRadius: BorderRadius.circular(
+                                          30.0,
+                                        ),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Row(
                                             children: [
                                               Builder(
                                                 builder: (context) {
-                                                  final icons = getAccountIcon(_selectedAccountType);
-                                                  final iconData = (icons.isNotEmpty && icons.first.isNotEmpty)
+                                                  final icons = getAccountIcon(
+                                                    _selectedAccountType,
+                                                  );
+                                                  final iconData =
+                                                      (icons.isNotEmpty &&
+                                                          icons
+                                                              .first
+                                                              .isNotEmpty)
                                                       ? icons.first.first
-                                                      : HugeIcons.strokeRoundedCash01;
+                                                      : HugeIcons
+                                                            .strokeRoundedCash01;
                                                   return HugeIcon(
                                                     icon: iconData,
-                                                    color: _selectedAccountType != null
-                                                        ? AppColors.primaryTextColorLight
-                                                        : AppColors.lightGreyBackground,
+                                                    color:
+                                                        _selectedAccountType !=
+                                                            null
+                                                        ? AppColors
+                                                              .primaryTextColorLight
+                                                        : AppColors
+                                                              .lightGreyBackground,
                                                     size: 16,
                                                   );
                                                 },
                                               ),
                                               const SizedBox(width: 8),
                                               Text(
-                                                _selectedAccountType ?? 'Select Account Type',
+                                                _selectedAccountType ??
+                                                    'Select Account Type',
                                                 style: TextStyle(
                                                   fontSize: 13,
-                                                  color: _selectedAccountType != null
-                                                      ? AppColors.primaryTextColorLight
-                                                      : AppColors.lightGreyBackground,
+                                                  color:
+                                                      _selectedAccountType !=
+                                                          null
+                                                      ? AppColors
+                                                            .primaryTextColorLight
+                                                      : AppColors
+                                                            .lightGreyBackground,
                                                 ),
                                               ),
                                             ],
                                           ),
                                           const Icon(
                                             Icons.arrow_drop_down,
-                                            color: AppColors.secondaryTextColorLight,
+                                            color: AppColors
+                                                .secondaryTextColorLight,
                                           ),
                                         ],
                                       ),
@@ -278,7 +317,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                               child: AbsorbPointer(
                                 child: FormBuilderTextField(
                                   name: 'account_type',
-                                  initialValue: widget.isCreatingVacationAccount ? 'Credit' : _selectedAccountType,
+                                  initialValue: widget.isCreatingVacationAccount
+                                      ? 'Credit'
+                                      : _selectedAccountType,
                                   validator: FormBuilderValidators.required(
                                     errorText: 'Account type is required',
                                   ),
@@ -326,11 +367,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     return Container(
       padding: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.gradientStart, AppColors.gradientEnd2],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: widget.isCreatingVacationAccount
+            ? null
+            : const LinearGradient(
+                colors: [AppColors.gradientStart, AppColors.gradientEnd2],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        color: widget.isCreatingVacationAccount ? AppColors.aiGradientStart : null,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -353,12 +397,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     child: Container(
                       width: 36,
                       height: 36,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.gradientStart,
-                            AppColors.gradientEnd,
+                            widget.isCreatingVacationAccount ? AppColors.aiGradientStart : AppColors.gradientStart,
+                            widget.isCreatingVacationAccount ? const Color.fromARGB(255, 154, 185, 235) : AppColors.gradientEnd,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -382,8 +426,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
-            _buildToggleChips(),
+            if (!widget.isCreatingVacationAccount) const SizedBox(height: 10),
+            // Hide account type selection toggle for vacation accounts
+            if (!widget.isCreatingVacationAccount) _buildToggleChips(),
           ],
         ),
       ),
@@ -512,6 +557,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   }
 
   Widget _buildCreditLimitOrBalanceField() {
+    // Hide credit limit field for vacation accounts
+    if (widget.isCreatingVacationAccount) {
+      return const SizedBox.shrink();
+    }
+
     return _buildFormSection(
       context,
       _isCreditSelected ? 'Credit Limit' : 'Transaction Limit',
@@ -627,7 +677,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           final accountType = values['account_type'] as String;
 
                           // Determine creditLimit or balanceLimit based on _isCreditSelected
-                          final creditLimitValue = _isCreditSelected
+                          // For vacation accounts, creditLimit should always be null (unlimited)
+                          final creditLimitValue =
+                              widget.isCreatingVacationAccount
+                              ? null
+                              : _isCreditSelected
                               ? double.tryParse(
                                   values['credit_limit']?.toString() ?? '',
                                 )
@@ -658,7 +712,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           final newAccount = FirestoreAccount(
                             id: '', // Will be generated by Firestore
                             name: name,
-                            accountType: accountType,
+                            accountType: widget.isCreatingVacationAccount
+                                ? 'Credit'
+                                : accountType,
                             balance: balance,
                             currency: 'USD', // Placeholder
                             creditLimit: creditLimitValue,
@@ -667,22 +723,6 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             isDefault: false,
                             isVacationAccount: widget.isCreatingVacationAccount,
                           );
-
-                          // Prevent duplicate account names
-                          final nameExists = await _firestoreService
-                              .doesAccountNameExist(name);
-                          if (nameExists) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'An account with this name already exists. Please choose a different name.',
-                                  ),
-                                ),
-                              );
-                            }
-                            return;
-                          }
 
                           final accountId = await _firestoreService
                               .createAccount(newAccount);

@@ -615,6 +615,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                         color: AppColors.secondaryTextColorLight,
                       ),
                     )
+                  // else if (account.isVacationAccount == true)
+                    // Text(
+                    //   'Credit Limit: Unlimited',
+                    //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    //     color: AppColors.secondaryTextColorLight,
+                    //     fontStyle: FontStyle.italic,
+                    //   ),
+                    // )
                   else if (balanceLimit != null)
                     Text(
                       'Balance Limit: $currencySymbol${balanceLimit.toStringAsFixed(2)}',

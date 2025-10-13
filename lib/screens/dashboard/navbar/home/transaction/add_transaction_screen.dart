@@ -1387,8 +1387,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       // Check for credit limit on credit accounts
+      // Skip credit limit check for vacation accounts (unlimited credit)
       if (selectedAccount.creditLimit != null &&
-          widget.transactionType == TransactionType.expense) {
+          widget.transactionType == TransactionType.expense &&
+          selectedAccount.isVacationAccount != true) {
         final newBalance = selectedAccount.balance - amount;
         if (newBalance.abs() > selectedAccount.creditLimit!) {
           if (mounted) {

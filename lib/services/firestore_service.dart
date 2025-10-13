@@ -629,12 +629,48 @@ class FirestoreService {
   // Create a new account
   Future<String> createAccount(FirestoreAccount account) async {
     try {
+      // Server-side validation for all accounts
+      
+      // 1. Name must be unique across all existing accounts
+      if (account.name.isNotEmpty) {
+        final nameExists = await doesAccountNameExist(account.name);
+        if (nameExists) {
+          throw Exception('An account with this name already exists. Please choose a different name.');
+        }
+      } else {
+        throw Exception('Account name is required');
+      }
+      
+      // 2. Server-side validation for vacation accounts
+      if (account.isVacationAccount == true) {
+        // Enforce that vacation accounts must have accountType = "Credit"
+        if (account.accountType != 'Credit') {
+          throw Exception('Vacation accounts must have account type set to "Credit"');
+        }
+        
+        // Enforce that vacation accounts must have isVacationAccount = true
+        if (account.isVacationAccount != true) {
+          throw Exception('Vacation accounts must have isVacationAccount flag set to true');
+        }
+      }
+      
       // Use a raw map write so we can ensure createdAt is set to server timestamp for new accounts
       final accountsRef = _firestore
           .collection('users')
           .doc(_userId!)
           .collection('accounts');
       final data = account.toJson() as Map<String, Object?>;
+      
+      // Apply vacation mode specific rules
+      if (account.isVacationAccount == true) {
+        // Force accountType to "Credit" regardless of what client sent
+        data['accountType'] = 'Credit';
+        // Set creditLimit to null to represent unlimited credit
+        data['creditLimit'] = null;
+        // Ensure isVacationAccount is true
+        data['isVacationAccount'] = true;
+      }
+      
       if (data['createdAt'] == null) {
         data['createdAt'] = FieldValue.serverTimestamp();
       }

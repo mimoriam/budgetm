@@ -523,7 +523,7 @@ class _MonthPageViewState extends State<MonthPageView> {
                 // Show end of list message
                 if (provider.hasReachedEnd && index == sortedKeys.length) {
                   return Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(32.0),
                     child: Center(
                       child: Text(
                         'No more transactions',
@@ -534,6 +534,7 @@ class _MonthPageViewState extends State<MonthPageView> {
                       ),
                     ),
                   );
+                  
                 }
                 
                 // Show transaction items grouped by date
