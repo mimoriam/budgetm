@@ -80,24 +80,17 @@ class VacationProvider with ChangeNotifier {
       if (!context.mounted) return;
 
       if (vacationAccounts.isEmpty) {
-        // Show a dialog with options to create an account or cancel
-        final bool? didRequestCreation = await showDialog<bool>(
+        // Show a bottom sheet with options to create an account or cancel
+        final bool? didRequestCreation = await showModalBottomSheet<bool>(
           context: context,
-          barrierDismissible: true,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
+          ),
           builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Vacation Mode'),
-              content: const Text('No vacation accounts created yet.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Create Account'),
-                ),
-              ],
+            return _NoVacationAccountSheet(
+              onCreateAccount: () => Navigator.of(context).pop(true),
+              onCancel: () => Navigator.of(context).pop(false),
             );
           },
         );
@@ -135,5 +128,84 @@ class VacationProvider with ChangeNotifier {
         navbarProvider.setNavBarVisibility(true);
       }
     }
+  }
+}
+
+// A reusable bottom sheet widget for when no vacation account exists.
+class _NoVacationAccountSheet extends StatelessWidget {
+  const _NoVacationAccountSheet({
+    required this.onCreateAccount,
+    required this.onCancel,
+  });
+
+  final VoidCallback onCreateAccount;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Top draggable handle
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Title
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Vacation Mode',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          // Content
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'No vacation accounts created yet. Create one to start tracking your vacation spending.',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Primary Action
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: ElevatedButton(
+              onPressed: onCreateAccount,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
+              child: const Text('Create Vacation Account'),
+            ),
+          ),
+          SizedBox(height: 32,),
+          // Secondary Action
+          // Padding(
+          //   padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 24.0),
+          //   child: TextButton(
+          //     onPressed: onCancel,
+          //     style: TextButton.styleFrom(
+          //       minimumSize: const Size(double.infinity, 48),
+          //     ),
+          //     child: const Text('Cancel'),
+          //   ),
+          // ),
+        ],
+      ),
+    );
   }
 }
