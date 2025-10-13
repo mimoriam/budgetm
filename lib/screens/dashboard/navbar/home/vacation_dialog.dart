@@ -47,27 +47,38 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                     child: const Text('No vacation accounts available.'),
                   )
                 : PrettyBottomSheet<FirestoreAccount>(
-                    title: 'Vacation Mode',
-                    items: vacationAccounts,
-                    selectedItem: vacationAccounts.first,
-                    getDisplayName: (a) => a.name,
-                    actionButton: IconButton(
-                      icon: const Icon(Icons.add_circle, size: 30),
-                      onPressed: () async {
-                        Navigator.of(context).pop(); // Close the current dialog
-                        await PersistentNavBarNavigator.pushNewScreen(
-                          context,
-                          screen: const AddAccountScreen(isCreatingVacationAccount: true),
-                          withNavBar: false,
-                          pageTransitionAnimation: PageTransitionAnimation.cupertino,
-                        );
-                        // Re-show the dialog after returning to refresh the list
-                        if (context.mounted) {
-                           await showVacationDialog(context, isMandatory: isMandatory);
-                        }
-                      },
-                    ),
-                  ),
+                   title: 'Vacation Mode',
+                   items: vacationAccounts,
+                   selectedItem: vacationAccounts.first,
+                   getDisplayName: (a) => a.name,
+                   getLeading: (a) => Row(
+                     mainAxisSize: MainAxisSize.min,
+                     children: [
+                       Icon(
+                         Icons.credit_card,
+                         color: Theme.of(context).iconTheme.color,
+                         size: 20,
+                       ),
+                       const SizedBox(width: 8),
+                     ],
+                   ),
+                   actionButton: IconButton(
+                     icon: const Icon(Icons.add_circle, size: 30),
+                     onPressed: () async {
+                       Navigator.of(context).pop(); // Close the current dialog
+                       await PersistentNavBarNavigator.pushNewScreen(
+                         context,
+                         screen: const AddAccountScreen(isCreatingVacationAccount: true),
+                         withNavBar: false,
+                         pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                       );
+                       // Re-show the dialog after returning to refresh the list
+                       if (context.mounted) {
+                          await showVacationDialog(context, isMandatory: isMandatory);
+                       }
+                     },
+                   ),
+                 ),
           ),
         ),
       );
