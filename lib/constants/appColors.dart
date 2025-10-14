@@ -16,6 +16,9 @@ class AppColors {
   static const expenseBackground = Color(0xFFFDE8E8);
   static const scaffoldBackground = Color(0xFFF9FAFB);
   static const aiGradientStart = Color(0xFFCADCFA);
+  static const vacationGradientStart = Color(0xFFCADCFA);
+  static const vacationGradientEnd = Color(0xFFAAC9F8);
+  static const vacationColor = Color(0xFF6A9CFD);
   static const bottomBarColor = Color(0xFFE4Ec9C);
   static const lightBackgroundColor = Color(0xFFFFFFFF);
   static const darkBackgroundColor = Color(0xFF121212);

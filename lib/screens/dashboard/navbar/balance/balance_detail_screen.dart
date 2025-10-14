@@ -268,6 +268,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                                 _currencyFormat.format(widget.account.initialBalance),
                                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   color: Colors.black,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -291,6 +292,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                                 _currencyFormat.format(currentBalance),
                                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   color: currentBalance >= 0 ? Colors.black : Colors.red[300],
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

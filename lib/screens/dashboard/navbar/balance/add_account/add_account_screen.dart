@@ -810,7 +810,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.isCreatingVacationAccount
-                    ? AppColors.aiGradientStart
+                    ? AppColors.vacationColor
                     : AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
