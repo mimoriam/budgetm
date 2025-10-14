@@ -1644,37 +1644,74 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       stream: _selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length
           ? _pageDataManager.getStreamForMonth(_selectedMonthIndex, _months[_selectedMonthIndex], isVacation)
           : Stream.value(MonthPageData.loading()),
-      builder: (context, snapshot) {
-        final totalIncome = snapshot.data?.totalIncome ?? 0.0;
-        final totalExpenses = snapshot.data?.totalExpenses ?? 0.0;
+      builder: (context, monthSnapshot) {
+        final totalIncome = monthSnapshot.data?.totalIncome ?? 0.0;
+        final totalExpenses = monthSnapshot.data?.totalExpenses ?? 0.0;
         
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Row(
-            children: [
-              if (!vacationProvider.isVacationMode)
-                Expanded(
-                  child: _buildInfoCard(
-                    'Income',
-                    '+ ${currencyProvider.currencySymbol}${(totalIncome * currencyProvider.conversionRate).toStringAsFixed(2)}',
-                    Colors.green,
-                    HugeIcons.strokeRoundedChartUp,
-                    AppColors.incomeBackground,
+        // Get vacation accounts to find the active one
+        return StreamBuilder<List<FirestoreAccount>>(
+          stream: _firestoreService.streamAccounts(),
+          builder: (context, accountsSnapshot) {
+            double totalBudget = 0.0;
+            
+            if (accountsSnapshot.hasData && vacationProvider.activeVacationAccountId != null) {
+              final vacationAccounts = accountsSnapshot.data!
+                  .where((account) => account.isVacationAccount == true)
+                  .toList();
+              
+              final activeVacationAccount = vacationAccounts
+                  .where((account) => account.id == vacationProvider.activeVacationAccountId)
+                  .firstOrNull;
+              
+              if (activeVacationAccount != null) {
+                totalBudget = activeVacationAccount.initialBalance;
+              }
+            }
+            
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Row(
+                children: [
+                  // Total Budget card - only shown in vacation mode
+                  if (vacationProvider.isVacationMode)
+                    Expanded(
+                      child: _buildInfoCard(
+                        'Total Budget',
+                        '${currencyProvider.currencySymbol}${(totalBudget * currencyProvider.conversionRate).toStringAsFixed(2)}',
+                        Colors.blue,
+                        HugeIcons.strokeRoundedWallet01,
+                        Colors.blue.shade50,
+                      ),
+                    ),
+                  if (vacationProvider.isVacationMode)
+                    const SizedBox(width: 12),
+                  // Income card - only shown in normal mode
+                  if (!vacationProvider.isVacationMode)
+                    Expanded(
+                      child: _buildInfoCard(
+                        'Income',
+                        '+ ${currencyProvider.currencySymbol}${(totalIncome * currencyProvider.conversionRate).toStringAsFixed(2)}',
+                        Colors.green,
+                        HugeIcons.strokeRoundedChartUp,
+                        AppColors.incomeBackground,
+                      ),
+                    ),
+                  if (!vacationProvider.isVacationMode)
+                    const SizedBox(width: 12),
+                  // Expense card - shown in both modes
+                  Expanded(
+                    child: _buildInfoCard(
+                      'Expense',
+                      '- ${currencyProvider.currencySymbol}${(totalExpenses * currencyProvider.conversionRate).toStringAsFixed(2)}',
+                      Colors.red,
+                      HugeIcons.strokeRoundedChartDown,
+                      AppColors.expenseBackground,
+                    ),
                   ),
-                ),
-              if (!vacationProvider.isVacationMode)
-                const SizedBox(width: 12),
-              Expanded(
-                child: _buildInfoCard(
-                  'Expense',
-                  '- ${currencyProvider.currencySymbol}${(totalExpenses * currencyProvider.conversionRate).toStringAsFixed(2)}',
-                  Colors.red,
-                  HugeIcons.strokeRoundedChartDown,
-                  AppColors.expenseBackground,
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          }
         );
       }
     );
