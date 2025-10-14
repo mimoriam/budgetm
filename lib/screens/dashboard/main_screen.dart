@@ -196,12 +196,35 @@ class _MainScreenState extends State<MainScreen> {
                       width: 40,
                       height: 40,
                       child: FloatingActionButton(
-                        onPressed: _toggleFabMenu,
+                        onPressed: vacationProvider.isVacationMode ? () async {
+                          final homeScreenProvider = context.read<HomeScreenProvider>();
+                          final result = await PersistentNavBarNavigator.pushNewScreen(
+                            context,
+                            screen: AddTransactionScreen(
+                              transactionType: TransactionType.expense,
+                              selectedDate: homeScreenProvider.selectedDate,
+                            ),
+                            withNavBar: false,
+                            pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                          );
+
+                          // If the transaction was successfully added, trigger a refresh of the home screen
+                          if (result == true) {
+                            if (mounted) {
+                              final homeScreenProvider = context.read<HomeScreenProvider>();
+                              homeScreenProvider.triggerRefresh();
+                              
+                              // Also refresh the budget provider
+                              final budgetProvider = context.read<BudgetProvider>();
+                              budgetProvider.initialize();
+                            }
+                          }
+                        } : _toggleFabMenu,
                         elevation: 1,
                         backgroundColor: vacationProvider.isVacationMode ? AppColors.aiGradientStart : AppColors.gradientEnd,
                         shape: const CircleBorder(),
                         child: Icon(
-                          _isFabMenuOpen ? Icons.close : Icons.add,
+                          vacationProvider.isVacationMode ? Icons.add : (_isFabMenuOpen ? Icons.close : Icons.add),
                           color: Colors.white,
                         ),
                       ),
@@ -218,6 +241,11 @@ class _MainScreenState extends State<MainScreen> {
   List<Widget> _buildFabMenuItemsForCurrentScreen(
     VacationProvider vacationProvider,
   ) {
+    // Return empty list if in vacation mode
+    if (vacationProvider.isVacationMode) {
+      return [];
+    }
+    
     switch (_controller.index) {
       case 0: // Home
         if (vacationProvider.isAiMode) {

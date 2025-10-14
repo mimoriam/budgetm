@@ -457,6 +457,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
               color: transaction.paid == true ? Colors.green : Colors.grey,
               size: 20,
             ),
+            SizedBox(width: 2),
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
