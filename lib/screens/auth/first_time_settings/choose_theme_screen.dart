@@ -134,7 +134,8 @@ class _ChooseThemeScreenState extends State<ChooseThemeScreen> {
                             ),
                             const SizedBox(height: 16),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 ThemeBox(
                                   icon: Icons.light_mode_outlined,
@@ -146,16 +147,16 @@ class _ChooseThemeScreenState extends State<ChooseThemeScreen> {
                                     });
                                   },
                                 ),
-                                ThemeBox(
-                                  icon: Icons.dark_mode_outlined,
-                                  label: 'Dark',
-                                  isSelected: _selectedTheme == ThemeMode.dark,
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedTheme = ThemeMode.dark;
-                                    });
-                                  },
-                                ),
+                                // ThemeBox(
+                                //   icon: Icons.dark_mode_outlined,
+                                //   label: 'Dark',
+                                //   isSelected: _selectedTheme == ThemeMode.dark,
+                                //   onTap: () {
+                                //     setState(() {
+                                //       _selectedTheme = ThemeMode.dark;
+                                //     });
+                                //   },
+                                // ),
                               ],
                             ),
                             const SizedBox(height: 30),

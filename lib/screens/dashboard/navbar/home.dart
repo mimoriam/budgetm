@@ -1459,7 +1459,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           screen: const ProfileScreen(),
                           withNavBar: false,
                           pageTransitionAnimation:
-                              PageTransitionAnimation.cupertino,
+                              PageTransitionAnimation.slideRight,
                         );
                       },
                       child: const CircleAvatar(

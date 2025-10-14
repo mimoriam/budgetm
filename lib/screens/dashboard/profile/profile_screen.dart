@@ -256,10 +256,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           end: Alignment.bottomRight,
                         ),
                       ),
-                      child: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedArrowLeft01,
+                      child: const Icon(
+                        Icons.close,
                         color: Colors.white,
-                        size: 14,
+                        size: 20,
                       ),
                     ),
                   ),
@@ -267,9 +267,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const CircleAvatar(
+            CircleAvatar(
               radius: 40,
-              backgroundImage: AssetImage('images/backgrounds/onboarding1.png'),
+              backgroundImage: _getProfileImage(),
             ),
             const SizedBox(height: 12),
             StreamBuilder<User?>(
@@ -298,12 +298,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             return StatefulBuilder(
                               builder: (context, setState) {
                                 return AlertDialog(
-                                  title: const Text('Edit display name'),
-                                  content: TextField(
-                                    controller: _controller,
-                                    autofocus: true,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Enter display name',
+                                  title: Center(
+                                    child: const Text('Edit display name'),
+                                  ),
+                                  content: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                    child: TextField(
+                                      controller: _controller,
+                                      autofocus: true,
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter display name',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8.0),
+                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                          vertical: 12.0,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                   actions: [
@@ -313,7 +325,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       },
                                       child: const Text('Cancel'),
                                     ),
-                                    TextButton(
+                                    ElevatedButton(
                                       onPressed: isSaving
                                           ? null
                                           : () async {
@@ -401,7 +413,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-                  
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.edit,
+                      size: 18,
+                      color: Colors.black54,
+                    ),
                   ],
                 );
               },
@@ -504,5 +521,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       onTap: onTap,
     );
+  }
+
+  // Helper method to get the appropriate profile image
+  ImageProvider _getProfileImage() {
+    final user = FirebaseAuth.instance.currentUser;
+    
+    // Check if user is logged in via Google and has a photo URL
+    if (user != null &&
+        user.providerData.any((p) => p.providerId == 'google.com') &&
+        user.photoURL != null) {
+      return NetworkImage(user.photoURL!);
+    }
+    
+    // Fall back to the default asset image
+    return const AssetImage('images/backgrounds/onboarding1.png');
   }
 }
