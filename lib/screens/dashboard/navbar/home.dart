@@ -23,6 +23,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/utils/icon_utils.dart';
@@ -1441,140 +1442,178 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final currencyProvider = context.watch<CurrencyProvider>();
     final statusBarHeight = MediaQuery.of(context).padding.top;
     final isVacation = vacationProvider.isVacationMode;
-    
-    return StreamBuilder<MonthPageData>(
-      stream: _selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length
-          ? _pageDataManager.getStreamForMonth(_selectedMonthIndex, _months[_selectedMonthIndex], isVacation)
-          : Stream.value(MonthPageData.loading()),
-      builder: (context, snapshot) {
-        final totalIncome = snapshot.data?.totalIncome ?? 0.0;
-        final totalExpenses = snapshot.data?.totalExpenses ?? 0.0;
 
-        return Container(
-          height:
-              statusBarHeight +
-              80, // Match the toolbarHeight from SliverAppBar plus status bar height
-          padding: EdgeInsets.only(
-            top: 20,
-            left: 10,
-            right: 6,
-          ), // Match the padding from SliverAppBar plus status bar height
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        PersistentNavBarNavigator.pushNewScreen(
-                          context,
-                          screen: const ProfileScreen(),
-                          withNavBar: false,
-                          pageTransitionAnimation:
-                              PageTransitionAnimation.slideRight,
-                        );
-                      },
-                      child: const CircleAvatar(
-                        radius: 22,
-                        backgroundImage: AssetImage(
-                          'images/backgrounds/onboarding1.png',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+    return StreamBuilder<List<FirestoreAccount>>(
+        stream: _firestoreService.streamAccounts(),
+        builder: (context, accountsSnapshot) {
+          double totalBudget = 0.0;
+
+          if (accountsSnapshot.hasData &&
+              vacationProvider.activeVacationAccountId != null) {
+            final vacationAccounts = accountsSnapshot.data!
+                .where((account) => account.isVacationAccount == true)
+                .toList();
+
+            final activeVacationAccount = vacationAccounts
+                .where((account) =>
+                    account.id == vacationProvider.activeVacationAccountId)
+                .firstOrNull;
+
+            if (activeVacationAccount != null) {
+              totalBudget = activeVacationAccount.initialBalance;
+            }
+          }
+
+          return StreamBuilder<MonthPageData>(
+              stream:
+                  _selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length
+                      ? _pageDataManager.getStreamForMonth(
+                          _selectedMonthIndex, _months[_selectedMonthIndex], isVacation)
+                      : Stream.value(MonthPageData.loading()),
+              builder: (context, snapshot) {
+                final totalIncome = snapshot.data?.totalIncome ?? 0.0;
+                final totalExpenses = snapshot.data?.totalExpenses ?? 0.0;
+
+                return Container(
+                  height: statusBarHeight +
+                      80, // Match the toolbarHeight from SliverAppBar plus status bar height
+                  padding: EdgeInsets.only(
+                    top: 20,
+                    left: 10,
+                    right: 6,
+                  ), // Match the padding from SliverAppBar plus status bar height
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          _selectedMonthIndex < _months.length && _selectedMonthIndex >= 0 ? DateFormat('MMMM').format(_months[_selectedMonthIndex]) : 'Balance',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                PersistentNavBarNavigator.pushNewScreen(
+                                  context,
+                                  screen: const ProfileScreen(),
+                                  withNavBar: false,
+                                  pageTransitionAnimation:
+                                      PageTransitionAnimation.slideRight,
+                                );
+                              },
+                              child: const CircleAvatar(
+                                radius: 22,
+                                backgroundImage: AssetImage(
+                                  'images/backgrounds/onboarding1.png',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _selectedMonthIndex < _months.length &&
+                                          _selectedMonthIndex >= 0
+                                      ? DateFormat('MMMM')
+                                          .format(_months[_selectedMonthIndex])
+                                      : 'Balance',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  vacationProvider.isVacationMode
+                                      ? '${currencyProvider.currencySymbol} ${((totalBudget - totalExpenses) * currencyProvider.conversionRate).toStringAsFixed(2)}'
+                                      : '${currencyProvider.currencySymbol} ${((totalIncome - totalExpenses) * currencyProvider.conversionRate).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 22,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          vacationProvider.isVacationMode
-                              ? '${currencyProvider.currencySymbol} ${( -totalExpenses * currencyProvider.conversionRate).toStringAsFixed(2)}'
-                              : '${currencyProvider.currencySymbol} ${((totalIncome - totalExpenses) * currencyProvider.conversionRate).toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildAppBarButton(
+                              HugeIcons.strokeRoundedAirplaneMode,
+                              onPressed: () async {
+                                final vacationProvider =
+                                    Provider.of<VacationProvider>(context,
+                                        listen: false);
+                                final currentVacationMode =
+                                    vacationProvider.isVacationMode;
+
+                                if (currentVacationMode) {
+                                  await vacationProvider.setVacationMode(false);
+                                } else {
+                                  await vacationProvider
+                                      .checkAndShowVacationDialog(context);
+                                }
+
+                                // It's crucial to read the new state *after* the async operations.
+                                final newVacationMode =
+                                    vacationProvider.isVacationMode;
+
+                                // Only proceed if the mode actually changed.
+                                if (newVacationMode != currentVacationMode) {
+                                  // NOW, we trigger the rebuild and data refresh.
+                                  setState(() {
+                                    // Reset all providers and clear the entire page cache to force a full refresh.
+                                    for (final provider
+                                        in _monthProviders.values) {
+                                      provider.reset();
+                                    }
+
+                                    // Recreate the MonthPageDataManager to force stream re-creation
+                                    final vacationProvider =
+                                        Provider.of<VacationProvider>(context,
+                                            listen: false);
+                                    _pageDataManager =
+                                        MonthPageDataManager(vacationProvider);
+                                  });
+                                }
+                              },
+                              isActive: vacationProvider.isVacationMode,
+                            ),
+                            _buildAppBarButton(
+                              HugeIcons.strokeRoundedAnalytics02,
+                              onPressed: () {
+                                PersistentNavBarNavigator.pushNewScreen(
+                                  context,
+                                  screen: const AnalyticsScreen(),
+                                  withNavBar: false,
+                                  pageTransitionAnimation:
+                                      PageTransitionAnimation.cupertino,
+                                );
+                              },
+                            ),
+                            _buildAppBarButton(
+                              HugeIcons.strokeRoundedStar,
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return const FeedbackModal();
+                                  },
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildAppBarButton(
-                      HugeIcons.strokeRoundedAirplaneMode,
-                      onPressed: () async {
-                        final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
-                        final currentVacationMode = vacationProvider.isVacationMode;
-
-                        if (currentVacationMode) {
-                          await vacationProvider.setVacationMode(false);
-                        } else {
-                          await vacationProvider.checkAndShowVacationDialog(context);
-                        }
-
-                        // It's crucial to read the new state *after* the async operations.
-                        final newVacationMode = vacationProvider.isVacationMode;
-
-                        // Only proceed if the mode actually changed.
-                        if (newVacationMode != currentVacationMode) {
-                          // NOW, we trigger the rebuild and data refresh.
-                          setState(() {
-                            // Reset all providers and clear the entire page cache to force a full refresh.
-                            for (final provider in _monthProviders.values) {
-                              provider.reset();
-                            }
-                            
-                            // Recreate the MonthPageDataManager to force stream re-creation
-                            final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
-                            _pageDataManager = MonthPageDataManager(vacationProvider);
-                          });
-                        }
-                      },
-                      isActive: vacationProvider.isVacationMode,
-                    ),
-                    _buildAppBarButton(
-                      HugeIcons.strokeRoundedAnalytics02,
-                      onPressed: () {
-                        PersistentNavBarNavigator.pushNewScreen(
-                          context,
-                          screen: const AnalyticsScreen(),
-                          withNavBar: false,
-                          pageTransitionAnimation:
-                              PageTransitionAnimation.cupertino,
-                        );
-                      },
-                    ),
-                    _buildAppBarButton(
-                      HugeIcons.strokeRoundedStar,
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return const FeedbackModal();
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-    );
+                  ),
+                );
+              });
+        });
   }
 
   Widget _buildAppBarButton(
