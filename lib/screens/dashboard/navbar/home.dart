@@ -1045,7 +1045,7 @@ class _MonthPageViewState extends State<MonthPageView> {
         if (result == true) {
           widget.dataManager.invalidateMonth(
             widget.monthIndex,
-            widget.isVacation,
+            null,
           );
           // Re-initialize provider with fresh data
           widget.dataManager

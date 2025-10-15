@@ -819,9 +819,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                     context,
                     listen: false,
                   ).initialize();
-                }
-              },
-            ),
+                  }
+                },
+              ),
           ],
         ),
         const SizedBox(height: 4),
@@ -850,6 +850,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     final progress = hasLimit ? (spent / limit).clamp(0.0, 1.0) : 0.0;
     final isOverBudget = hasLimit && spent > limit;
     final remaining = limit - spent;
+    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
 
     return GestureDetector(
       onTap: () {
@@ -955,9 +956,10 @@ class _BudgetScreenState extends State<BudgetScreen>
                 ),
 
                 // Edit button stays at the end of the row
-                IconButton(
-                  icon: Icon(Icons.edit, color: Colors.grey.shade600),
-                  onPressed: () async {
+                if (!vacationProvider.isVacationMode)
+                  IconButton(
+                    icon: Icon(Icons.edit, color: Colors.grey.shade600),
+                    onPressed: () async {
                     final controller = TextEditingController(
                       text: hasLimit ? limit.toStringAsFixed(2) : '',
                     );

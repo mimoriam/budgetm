@@ -174,13 +174,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           .where((account) => (account.isVacationAccount == true))
           .map((account) {
             final totalExpenses = expenseSums[account.id] ?? 0.0;
-            // For vacation accounts the final balance should represent the negative
-            // sum of expenses (not account.balance - totalExpenses).
-            final finalBalance = -totalExpenses;
+            // For vacation accounts the final balance should be initial balance minus expenses
+            final finalBalance = account.initialBalance - totalExpenses;
             return {
               'account': account,
               'transactionsAmount':
-                  -totalExpenses, // keep sign for consistency (expenses as negative)
+                  account.initialBalance - totalExpenses, // keep sign for consistency
               'finalBalance': finalBalance,
             };
           })

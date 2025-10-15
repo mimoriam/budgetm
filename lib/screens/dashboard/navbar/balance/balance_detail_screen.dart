@@ -441,7 +441,10 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
               builder: (context) => ExpenseDetailScreen(transaction: uiTransaction),
             ),
           );
-          // No need to manually refresh as StreamBuilder will handle updates automatically
+          // Check if result is true (indicating a change was made)
+          if (result == true) {
+            Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
+          }
         }
       },
       child: Container(
