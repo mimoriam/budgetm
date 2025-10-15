@@ -31,8 +31,8 @@ class FirestoreService {
         .doc(_userId!)
         .collection('transactions')
         .withConverter<FirestoreTransaction>(
-          fromFirestore: (snapshot, _) => FirestoreTransaction.fromFirestore(snapshot),
-          toFirestore: (transaction, _) => transaction.toJson(),
+          fromFirestore: (snapshot, _) => FirestoreTransaction.fromFirestore(snapshot.data()!, snapshot.id),
+          toFirestore: (transaction, _) => transaction.toJson() as Map<String, Object?>,
         );
   }
 
@@ -350,6 +350,73 @@ class FirestoreService {
     }
   }
 
+  // Create linked vacation expense transaction with a normal account transaction
+  Future<Map<String, String>> createLinkedVacationExpense({
+    required FirestoreTransaction vacationTransaction,
+    required FirestoreTransaction normalTransaction,
+  }) async {
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        // 1. Get new document references for both transactions (no writes yet)
+        final vacationRef = _transactionsCollection.doc();
+        final normalRef = _transactionsCollection.doc();
+
+        // 2. Create the final transaction objects with linked IDs (pure local computation)
+        final finalVacationTransaction = vacationTransaction.copyWith(
+          id: vacationRef.id,
+          isVacation: true,
+          linkedTransactionId: normalRef.id,
+        );
+
+        final finalNormalTransaction = normalTransaction.copyWith(
+          id: normalRef.id,
+          isVacation: false,
+          linkedTransactionId: vacationRef.id,
+        );
+
+        // 3. READS: Fetch the vacation and normal account documents BEFORE any writes
+        final vacationAccountRef = _accountsCollection.doc(finalVacationTransaction.accountId);
+        final normalAccountRef = _accountsCollection.doc(finalNormalTransaction.accountId);
+
+        final vacationAccountSnapshot = await transaction.get(vacationAccountRef);
+        final normalAccountSnapshot = await transaction.get(normalAccountRef);
+
+        if (!vacationAccountSnapshot.exists) {
+          throw Exception('Vacation account does not exist');
+        }
+        if (!normalAccountSnapshot.exists) {
+          throw Exception('Normal account does not exist');
+        }
+
+        // 4. Compute new balances
+        final vacationAccount = vacationAccountSnapshot.data()!;
+        final normalAccount = normalAccountSnapshot.data()!;
+        final amount = vacationTransaction.amount;
+
+        // For expenses, subtract from both account balances
+        final newVacationBalance = vacationAccount.balance - amount;
+        final newNormalBalance = normalAccount.balance - amount;
+
+        // 5. WRITES: Create both transaction documents
+        transaction.set(vacationRef, finalVacationTransaction);
+        transaction.set(normalRef, finalNormalTransaction);
+
+        // 6. WRITES: Update both account balances
+        transaction.update(vacationAccountRef, {'balance': newVacationBalance});
+        transaction.update(normalAccountRef, {'balance': newNormalBalance});
+
+        // 7. Return both IDs
+        return {
+          'vacationTransactionId': vacationRef.id,
+          'normalTransactionId': normalRef.id,
+        };
+      });
+    } catch (e) {
+      print('Error creating linked vacation expense: $e');
+      rethrow;
+    }
+  }
+
   // Get transaction by ID
   Future<FirestoreTransaction?> getTransactionById(String id) async {
     try {
@@ -439,36 +506,123 @@ class FirestoreService {
         }
         final transactionData = transactionSnapshot.data()!;
         final accountId = transactionData.accountId;
+        final linkedTransactionId = transactionData.linkedTransactionId;
 
-        DocumentReference<FirestoreAccount>? accountDocRef;
-        DocumentSnapshot<FirestoreAccount>? accountSnapshot;
-        if (accountId != null && accountId.isNotEmpty) {
-          accountDocRef = _accountsCollection.doc(accountId);
-          accountSnapshot = await transaction.get(accountDocRef);
-        }
+        // Handle linked transaction cascade deletion
+        if (linkedTransactionId != null && linkedTransactionId.isNotEmpty) {
+          // Get the linked transaction (READ)
+          final linkedTransactionRef = _transactionsCollection.doc(linkedTransactionId);
+          final linkedTransactionSnapshot = await transaction.get(linkedTransactionRef);
+          
+          if (!linkedTransactionSnapshot.exists) {
+            throw Exception("Linked transaction does not exist!");
+          }
+          final linkedTransactionData = linkedTransactionSnapshot.data()!;
 
-        // If no account is linked or account doesn't exist, delete the transaction
-        if (accountId == null || accountId.isEmpty || accountSnapshot == null || !accountSnapshot.exists) {
+          // READS: Pre-fetch both accounts (original and linked) BEFORE any writes
+          DocumentReference<FirestoreAccount>? accountDocRef1;
+          DocumentSnapshot<FirestoreAccount>? accountSnap1;
+          if (accountId != null && accountId.isNotEmpty) {
+            accountDocRef1 = _accountsCollection.doc(accountId);
+            accountSnap1 = await transaction.get(accountDocRef1);
+          }
+
+          final String? linkedAccountId = linkedTransactionData.accountId;
+          DocumentReference<FirestoreAccount>? accountDocRef2;
+          DocumentSnapshot<FirestoreAccount>? accountSnap2;
+          if (linkedAccountId != null && linkedAccountId.isNotEmpty) {
+            accountDocRef2 = _accountsCollection.doc(linkedAccountId);
+            accountSnap2 = await transaction.get(accountDocRef2);
+          }
+
+          // WRITES: Update account balances (reverse both transactions) AFTER all reads
+          if (accountDocRef1 != null && accountSnap1 != null && accountSnap1.exists) {
+            final double currentBalance1 = accountSnap1.data()!.balance;
+            final double transactionAmount1 = transactionData.amount;
+            final String transactionType1 = transactionData.type;
+            final double newBalance1 = (transactionType1 == 'income')
+                ? currentBalance1 - transactionAmount1
+                : currentBalance1 + transactionAmount1;
+            transaction.update(accountDocRef1, {'balance': newBalance1});
+          }
+
+          if (accountDocRef2 != null && accountSnap2 != null && accountSnap2.exists) {
+            final double currentBalance2 = accountSnap2.data()!.balance;
+            final double transactionAmount2 = linkedTransactionData.amount;
+            final String transactionType2 = linkedTransactionData.type;
+            final double newBalance2 = (transactionType2 == 'income')
+                ? currentBalance2 - transactionAmount2
+                : currentBalance2 + transactionAmount2;
+            transaction.update(accountDocRef2, {'balance': newBalance2});
+          }
+
+          // WRITES: Delete both transaction documents
           transaction.delete(transactionDocRef);
-          return;
+          transaction.delete(linkedTransactionRef);
+        } else {
+          // Single transaction deletion (existing logic)
+          DocumentReference<FirestoreAccount>? accountDocRef;
+          DocumentSnapshot<FirestoreAccount>? accountSnapshot;
+          if (accountId != null && accountId.isNotEmpty) {
+            accountDocRef = _accountsCollection.doc(accountId);
+            accountSnapshot = await transaction.get(accountDocRef);
+          }
+
+          // If no account is linked or account doesn't exist, delete the transaction
+          if (accountId == null || accountId.isEmpty || accountSnapshot == null || !accountSnapshot.exists) {
+            transaction.delete(transactionDocRef);
+            return;
+          }
+
+          // Update account balance
+          final currentBalance = accountSnapshot.data()!.balance;
+          final transactionAmount = transactionData.amount;
+          final transactionType = transactionData.type;
+
+          final newBalance = (transactionType == 'income') ? currentBalance - transactionAmount : currentBalance + transactionAmount;
+
+          transaction.update(accountDocRef!, {'balance': newBalance});
+
+          // Finally delete the transaction
+          transaction.delete(transactionDocRef);
         }
-
-        // Update account balance
-        final currentBalance = accountSnapshot.data()!.balance;
-        final transactionAmount = transactionData.amount;
-        final transactionType = transactionData.type;
-
-        final newBalance = (transactionType == 'income') ? currentBalance - transactionAmount : currentBalance + transactionAmount;
-
-        transaction.update(accountDocRef!, {'balance': newBalance});
-
-        // Finally delete the transaction
-        transaction.delete(transactionDocRef);
       });
     } catch (e) {
       print('Error deleting transaction: $e');
       rethrow;
     }
+  }
+
+  // Helper method to process account balance reversal for a transaction
+  Future<void> _processAccountBalanceReversal(
+    Transaction transaction,
+    FirestoreTransaction transactionData,
+    String? accountId,
+  ) async {
+    if (accountId == null || accountId.isEmpty) {
+      return;
+    }
+
+    final accountDocRef = _accountsCollection.doc(accountId);
+    final accountSnapshot = await transaction.get(accountDocRef);
+
+    if (!accountSnapshot.exists) {
+      return;
+    }
+
+    // Update account balance (reverse the original transaction)
+    final currentBalance = accountSnapshot.data()!.balance;
+    final transactionAmount = transactionData.amount;
+    final transactionType = transactionData.type;
+
+    // For deletion, we reverse the original balance change
+    // Income: subtract the amount (since original added it)
+    // Expense: add the amount (since original subtracted it)
+    final newBalance = (transactionType == 'income')
+        ? currentBalance - transactionAmount
+        : currentBalance + transactionAmount;
+
+    transaction.update(accountDocRef, {'balance': newBalance});
   }
 
   // Stream transactions (real-time updates)

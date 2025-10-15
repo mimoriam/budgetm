@@ -46,6 +46,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   bool _hasAutoOpenedCategorySheet = false;
   Color _selectedColor = Colors.grey.shade300;
   DateTime? _selectedDate;
+  List<FirestoreAccount> _normalAccounts = [];
+  String? _selectedNormalAccountId;
 
   @override
   void initState() {
@@ -78,33 +80,57 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _loadAccounts() async {
     try {
-      // When vacation mode is active, show only vacation accounts and allow selection.
+      // When vacation mode is active, handle accounts differently
       final vacationProvider =
           Provider.of<VacationProvider>(context, listen: false);
       if (vacationProvider.isVacationMode) {
-        // Load all accounts then filter to vacation accounts.
+        // Load all accounts once
         final allAccounts = await _firestoreService.getAllAccounts();
         final vacationAccounts = allAccounts
             .where((account) => account.isVacationAccount == true)
             .toList();
+        
+        // Populate normal accounts list
+        final normalAccounts = allAccounts
+            .where((account) => account.isVacationAccount != true)
+            .toList();
 
         if (vacationAccounts.isNotEmpty) {
           final activeId = vacationProvider.activeVacationAccountId;
-          String? selectedId;
+          String? selectedVacationId;
           if (activeId != null &&
               vacationAccounts.any((acc) => acc.id == activeId)) {
-            selectedId = activeId;
+            selectedVacationId = activeId;
           } else {
-            selectedId = vacationAccounts.first.id;
+            selectedVacationId = vacationAccounts.first.id;
+          }
+
+          // Select default normal account
+          String? selectedNormalId;
+          final defaultNormalAccount = normalAccounts.cast<FirestoreAccount?>().firstWhere(
+            (account) => account?.isDefault ?? false,
+            orElse: () => null,
+          );
+          
+          if (defaultNormalAccount != null) {
+            selectedNormalId = defaultNormalAccount.id;
+          } else if (normalAccounts.isNotEmpty) {
+            selectedNormalId = normalAccounts.first.id;
           }
 
           setState(() {
-            // Populate selector with vacation accounts and default to activeVacationAccountId (if any).
+            // Store vacation account for internal use (not shown in UI)
             _accounts = vacationAccounts;
-            _selectedAccountId = selectedId;
+            _selectedAccountId = selectedVacationId;
+            // Populate normal accounts list for UI selection
+            _normalAccounts = normalAccounts;
+            _selectedNormalAccountId = selectedNormalId;
           });
 
-          _formKey.currentState?.patchValue({'account': _selectedAccountId});
+          // Patch normal account form field (not account field)
+          if (_selectedNormalAccountId != null) {
+            _formKey.currentState?.patchValue({'normalAccount': _selectedNormalAccountId});
+          }
           return;
         } else {
           // No vacation accounts found — fall back to normal loading below.
@@ -146,6 +172,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           _accounts = [];
           _selectedAccountId = null;
         }
+        // Clear normal accounts in normal mode
+        _normalAccounts = [];
+        _selectedNormalAccountId = null;
       });
 
       if (_selectedAccountId != null) {
@@ -614,8 +643,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // Account field (full width)
-                      if (_accounts.isNotEmpty)
+                      // Account field (full width) - only shown in normal mode
+                      if (_accounts.isNotEmpty && !Provider.of<VacationProvider>(context).isVacationMode)
                         _buildFormSection(
                           context,
                           'Account',
@@ -700,6 +729,115 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                                   fontSize: 13,
                                                   color:
                                                       _selectedAccountId != null
+                                                      ? AppColors.primaryTextColorLight
+                                                      : AppColors.lightGreyBackground,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_drop_down,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      // Paid From Account field - only shown in vacation mode for expenses
+                      if (Provider.of<VacationProvider>(context).isVacationMode &&
+                          widget.transactionType == TransactionType.expense)
+                        _buildFormSection(
+                          context,
+                          'Paid From Account',
+                          FormBuilderField<String>(
+                            name: 'normalAccount',
+                            initialValue: _selectedNormalAccountId,
+                            validator: FormBuilderValidators.required(
+                              errorText: 'Please select an account to pay from',
+                            ),
+                            builder: (FormFieldState<String?> field) {
+                              FirestoreAccount? selectedAccount;
+                              if (_normalAccounts.isNotEmpty) {
+                                selectedAccount = _normalAccounts.firstWhere(
+                                  (acc) => acc.id == _selectedNormalAccountId,
+                                  orElse: () => _normalAccounts.first,
+                                );
+                              }
+
+                              return GestureDetector(
+                                onTap: () async {
+                                  if (_normalAccounts.isEmpty) {
+                                    return;
+                                  }
+                                  final result =
+                                      await _showPrettySelectionBottomSheet<
+                                        FirestoreAccount
+                                      >(
+                                        title: 'Select Account',
+                                        items: _normalAccounts,
+                                        selectedItem: selectedAccount ?? _normalAccounts.first,
+                                        getDisplayName: (account) =>
+                                            account.name,
+                                        getLeading: (account) => HugeIcon(
+                                          icon: getAccountIcon(account.accountType)[0][0],
+                                          color: AppColors.primaryTextColorLight,
+                                          size: 20,
+                                        ),
+                                      );
+
+                                  if (result != null) {
+                                    setState(() {
+                                      _selectedNormalAccountId = result.id;
+                                    });
+                                    field.didChange(result.id);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10.0,
+                                    horizontal: 16.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(
+                                      30.0,
+                                    ),
+                                    border: Border.all(
+                                      color: field.hasError
+                                          ? AppColors.errorColor
+                                          : Colors.grey.shade300,
+                                      width: field.hasError ? 1.5 : 1.0,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            HugeIcon(
+                                              icon: getAccountIcon(selectedAccount?.accountType ?? 'cash')[0][0],
+                                              size: 18,
+                                              color: _selectedNormalAccountId != null
+                                                  ? AppColors.primaryTextColorLight
+                                                  : AppColors.lightGreyBackground,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Flexible(
+                                              child: Text(
+                                                _selectedNormalAccountId != null && selectedAccount != null
+                                                    ? selectedAccount.name
+                                                    : 'Select',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color:
+                                                      _selectedNormalAccountId != null
                                                       ? AppColors.primaryTextColorLight
                                                       : AppColors.lightGreyBackground,
                                                 ),
@@ -1318,6 +1456,122 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       final formData = _formKey.currentState!.value;
 
+      // Calculate the transaction date with time
+      // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
+      final date = formData['date'] as DateTime? ?? _selectedDate ?? DateTime.now();
+      final time = formData['time'] as DateTime?;
+      final transactionDate = time != null
+          ? DateTime(date.year, date.month, date.day, time.hour, time.minute)
+          : date;
+
+      // Parse amount
+      final amount = double.parse(formData['amount'] as String);
+
+      // Selected goal (optional, only for income)
+      final String? selectedGoalId = formData['goal'] as String?;
+
+      // Check if we're in vacation mode
+      final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+      final isVacationMode = vacationProvider.isVacationMode;
+
+      // Special handling for vacation mode expenses
+      if (isVacationMode && widget.transactionType == TransactionType.expense) {
+        // Validate required fields for vacation expense
+        if (_selectedAccountId == null) {
+          throw Exception('No active vacation account selected');
+        }
+        if (_selectedNormalAccountId == null) {
+          throw Exception('No normal account selected to pay from');
+        }
+
+        // Get the selected normal account
+        final normalAccount = await _firestoreService.getAccountById(_selectedNormalAccountId!);
+        if (normalAccount == null) {
+          throw Exception('Selected normal account not found');
+        }
+
+        // Check credit limit on normal account (not vacation account which has unlimited credit)
+        if (normalAccount.creditLimit != null) {
+          final newBalance = normalAccount.balance - amount;
+          if (newBalance.abs() > normalAccount.creditLimit!) {
+            if (mounted) {
+              setState(() {
+                _isSaving = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'This transaction exceeds the credit limit for the selected normal account.',
+                  ),
+                ),
+              );
+            } else {
+              _isSaving = false;
+            }
+            return;
+          }
+        }
+
+        // Create the vacation transaction
+        final vacationTransaction = FirestoreTransaction(
+          id: '', // Will be set by the service
+          description: '', // Default empty description
+          amount: amount,
+          type: 'expense',
+          date: transactionDate,
+          categoryId: _selectedCategoryId,
+          budgetId: null,
+          goalId: null,
+          accountId: _selectedAccountId, // Vacation account
+          time: (formData['time'] as DateTime?)?.toIso8601String(),
+          repeat: formData['repeat'] as String?,
+          remind: formData['remind'] as String?,
+          icon: formData['icon'] as String?,
+          color: formData['color'] as String?,
+          icon_color: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
+          notes: formData['notes'] as String?,
+          paid: (formData['paid'] as bool? ?? true),
+          isVacation: true,
+        );
+
+        // Create the normal transaction
+        final normalTransaction = FirestoreTransaction(
+          id: '', // Will be set by the service
+          description: '', // Default empty description
+          amount: amount,
+          type: 'expense',
+          date: transactionDate,
+          categoryId: _selectedCategoryId,
+          budgetId: null,
+          goalId: null,
+          accountId: _selectedNormalAccountId, // Normal account
+          time: (formData['time'] as DateTime?)?.toIso8601String(),
+          repeat: formData['repeat'] as String?,
+          remind: formData['remind'] as String?,
+          icon: formData['icon'] as String?,
+          color: formData['color'] as String?,
+          icon_color: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
+          notes: formData['notes'] as String?,
+          paid: (formData['paid'] as bool? ?? true),
+          isVacation: false,
+        );
+
+        // Create the linked transactions
+        await _firestoreService.createLinkedVacationExpense(
+          vacationTransaction: vacationTransaction,
+          normalTransaction: normalTransaction,
+        );
+
+        if (mounted) {
+          Provider.of<HomeScreenProvider>(
+            context,
+            listen: false,
+          ).triggerRefresh(transactionDate: transactionDate);
+          Navigator.of(context).pop(true); // Pass true to indicate success
+        }
+        return;
+      }
+
       // Get the selected account - need to fetch all accounts if _accounts is empty (default account case)
       FirestoreAccount selectedAccount;
       if (_accounts.isNotEmpty) {
@@ -1339,20 +1593,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         }
         selectedAccount = fetchedAccount;
       }
-
-      // Calculate the transaction date with time
-      // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
-      final date = formData['date'] as DateTime? ?? _selectedDate ?? DateTime.now();
-      final time = formData['time'] as DateTime?;
-      final transactionDate = time != null
-          ? DateTime(date.year, date.month, date.day, time.hour, time.minute)
-          : date;
-
-      // Parse amount
-      final amount = double.parse(formData['amount'] as String);
-
-      // Selected goal (optional, only for income)
-      final String? selectedGoalId = formData['goal'] as String?;
 
       // Enforce account transaction limit if present
       if (selectedAccount.transactionLimit != null) {
@@ -1447,7 +1687,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         );
       }
 
-      // Update account balance
+      // Update account balance (skip for vacation expenses as it's handled in createLinkedVacationExpense)
       final newBalance = widget.transactionType == TransactionType.income
           ? selectedAccount.balance + amount
           : selectedAccount.balance - amount;

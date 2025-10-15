@@ -19,6 +19,7 @@ class FirestoreTransaction {
   final String? notes;
   final bool? paid;
   final bool isVacation;
+  final String? linkedTransactionId;
 
   FirestoreTransaction({
     required this.id,
@@ -39,6 +40,7 @@ class FirestoreTransaction {
     this.notes,
     this.paid,
     this.isVacation = false,
+    this.linkedTransactionId,
   });
 
   // Convert FirestoreTransaction to JSON for Firestore
@@ -61,32 +63,37 @@ class FirestoreTransaction {
       'notes': notes,
       'paid': paid,
       'isVacation': isVacation,
+      'linkedTransactionId': linkedTransactionId,
     };
   }
 
-  // Create FirestoreTransaction from Firestore document
-  factory FirestoreTransaction.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  // Create FirestoreTransaction from Firestore data (type-safe for Map<String, Object?>)
+  factory FirestoreTransaction.fromFirestore(Map<String, Object?> data, String id) {
     return FirestoreTransaction(
-      id: doc.id,
-      description: data['description'] ?? '',
+      id: id,
+      description: (data['description'] as String?) ?? '',
       amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
-      type: data['type'] ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      categoryId: data['categoryId'],
-      budgetId: data['budgetId'],
-      goalId: data['goalId'],
-      accountId: data['accountId'],
-      time: data['time'],
-      repeat: data['repeat'],
-      remind: data['remind'],
-      icon: data['icon'],
-      color: data['color'],
-      icon_color: data['icon_color'],
-      notes: data['notes'],
+      type: (data['type'] as String?) ?? '',
+      date: data['date'] is Timestamp
+          ? (data['date'] as Timestamp).toDate()
+          : data['date'] is DateTime
+              ? (data['date'] as DateTime)
+              : DateTime.now(),
+      categoryId: data['categoryId'] as String?,
+      budgetId: data['budgetId'] as String?,
+      goalId: data['goalId'] as String?,
+      accountId: data['accountId'] as String?,
+      time: data['time'] as String?,
+      repeat: data['repeat'] as String?,
+      remind: data['remind'] as String?,
+      icon: data['icon'] as String?,
+      color: data['color'] as String?,
+      icon_color: data['icon_color'] as String?,
+      notes: data['notes'] as String?,
       // Default: expenses are considered paid unless explicitly set; others default to false
-      paid: (data['paid'] as bool?) ?? (data['type'] == 'expense' ? true : false),
-      isVacation: data['isVacation'] ?? false,
+      paid: (data['paid'] as bool?) ?? ((data['type'] as String?) == 'expense' ? true : false),
+      isVacation: (data['isVacation'] as bool?) ?? false,
+      linkedTransactionId: data['linkedTransactionId'] as String?,
     );
   }
 
@@ -110,6 +117,7 @@ class FirestoreTransaction {
       'notes': notes,
       'paid': paid,
       'isVacation': isVacation,
+      'linkedTransactionId': linkedTransactionId,
     };
   }
 
@@ -138,6 +146,7 @@ class FirestoreTransaction {
       notes: json['notes'],
       paid: json['paid'],
       isVacation: json['isVacation'] ?? false,
+      linkedTransactionId: json['linkedTransactionId'],
     );
   }
 
@@ -161,6 +170,7 @@ class FirestoreTransaction {
     String? notes,
     bool? paid,
     bool? isVacation,
+    String? linkedTransactionId,
   }) {
     return FirestoreTransaction(
       id: id ?? this.id,
@@ -181,12 +191,13 @@ class FirestoreTransaction {
       notes: notes ?? this.notes,
       paid: paid ?? this.paid,
       isVacation: isVacation ?? this.isVacation,
+      linkedTransactionId: linkedTransactionId ?? this.linkedTransactionId,
     );
   }
 
   @override
   String toString() {
-    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, icon_color: $icon_color, notes: $notes, paid: $paid, isVacation: $isVacation)';
+    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, icon_color: $icon_color, notes: $notes, paid: $paid, isVacation: $isVacation, linkedTransactionId: $linkedTransactionId)';
   }
 
   @override
@@ -210,7 +221,8 @@ class FirestoreTransaction {
         other.icon_color == icon_color &&
         other.notes == notes &&
         other.paid == paid &&
-        other.isVacation == isVacation;
+        other.isVacation == isVacation &&
+        other.linkedTransactionId == linkedTransactionId;
   }
  
   @override
@@ -218,6 +230,7 @@ class FirestoreTransaction {
     return Object.hash(
       id, description, amount, type, date, categoryId, budgetId, goalId, accountId,
       time, repeat, remind, icon, color, icon_color, notes, paid, isVacation,
+      linkedTransactionId,
     );
   }
 }
