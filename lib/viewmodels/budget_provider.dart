@@ -285,7 +285,11 @@ class BudgetProvider with ChangeNotifier {
       await _fetchCategories();
       
       // Load budgets based on current vacation mode
-      _budgets = await _firestoreService.getAllBudgets(isVacation: _vacationProvider.isVacationMode);
+      if (_vacationProvider.isVacationMode) {
+        _budgets = await _firestoreService.getAllVacationBudgets();
+      } else {
+        _budgets = await _firestoreService.getAllBudgets(isVacation: false);
+      }
       
       // Load all expense transactions based on current vacation mode
       final allTransactions = await _firestoreService.getAllTransactions(isVacation: _vacationProvider.isVacationMode);

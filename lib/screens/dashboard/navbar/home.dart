@@ -235,6 +235,7 @@ class MonthPageProvider extends ChangeNotifier {
 // Data manager for handling and caching month-specific data streams.
 class MonthPageDataManager {
   final FirestoreService _firestoreService = FirestoreService.instance;
+  final VacationProvider _vacationProvider;
 
   // Streams for data that is constant across all months.
   // shareReplay(maxSize: 1) caches the last emitted value and shares it with new subscribers,
@@ -245,17 +246,20 @@ class MonthPageDataManager {
   // A cache to hold the data stream for each month index and vacation mode combination.
   final Map<String, Stream<MonthPageData>> _pageStreamCache = {};
 
-  MonthPageDataManager() {
+  MonthPageDataManager(this._vacationProvider) {
     // Initialize the shared streams immediately.
     _allAccountsStream = _firestoreService.streamAccounts().shareReplay(maxSize: 1);
     _allCategoriesStream = _firestoreService.streamCategories().shareReplay(maxSize: 1);
   }
 
   Stream<MonthPageData> getStreamForMonth(int monthIndex, DateTime month, bool isVacation) {
-    // Create a composite key that includes both monthIndex and isVacation status
-    final cacheKey = '$monthIndex-$isVacation';
+    // Get the active vacation account ID when in vacation mode
+    final activeVacationAccountId = isVacation ? _vacationProvider.activeVacationAccountId : null;
     
-    // If a stream for this month and vacation mode combination is already in the cache, return it.
+    // Create a composite key that includes monthIndex, isVacation status, and accountId
+    final cacheKey = '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}';
+    
+    // If a stream for this specific combination is already in the cache, return it.
     if (_pageStreamCache.containsKey(cacheKey)) {
       return _pageStreamCache[cacheKey]!;
     }
@@ -265,7 +269,12 @@ class MonthPageDataManager {
     final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
 
     final stream = Rx.combineLatest4(
-      _firestoreService.streamTransactionsForDateRange(startOfMonth, endOfMonth, isVacation: isVacation),
+      _firestoreService.streamTransactionsForDateRange(
+        startOfMonth,
+        endOfMonth,
+        isVacation: isVacation,
+        accountId: activeVacationAccountId,
+      ),
       _firestoreService.streamUpcomingTasksForDateRange(startOfMonth, endOfMonth),
       _allAccountsStream, // <-- Use the shared/replayed stream
       _allCategoriesStream, // <-- Use the shared/replayed stream
@@ -1085,7 +1094,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late ScrollController _monthScrollController;
   late PageController _pageController;
   late FirestoreService _firestoreService;
-  MonthPageDataManager _pageDataManager = MonthPageDataManager();
+  late MonthPageDataManager _pageDataManager;
   List<DateTime> _months = [];
   int _selectedMonthIndex = 0;
   
@@ -1103,6 +1112,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _monthScrollController = ScrollController();
     _pageController = PageController();
     _lastContentOffset = 0.0;
+
+    // Initialize MonthPageDataManager with VacationProvider
+    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+    _pageDataManager = MonthPageDataManager(vacationProvider);
 
     _loadMonths();
     WidgetsBinding.instance.addObserver(this);
@@ -1524,7 +1537,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             }
                             
                             // Recreate the MonthPageDataManager to force stream re-creation
-                            _pageDataManager = MonthPageDataManager();
+                            final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+                            _pageDataManager = MonthPageDataManager(vacationProvider);
                           });
                         }
                       },

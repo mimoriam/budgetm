@@ -95,6 +95,86 @@ class FirestoreService {
     }
   }
 
+  // Create vacation budgets for all expense categories
+  Future<void> createVacationBudgetsForAllExpenseCategories({
+    required String currency,
+    BudgetType type = BudgetType.monthly
+  }) async {
+    try {
+      // Get all expense categories
+      final expenseCategories = await getCategoriesByType('expense');
+      print('createVacationBudgetsForAllExpenseCategories: expenseCategories=${expenseCategories.length}');
+      
+      // Get current date to determine year and period
+      final now = DateTime.now();
+      final year = now.year;
+      int period;
+      
+      switch (type) {
+        case BudgetType.weekly:
+          final weekOfMonth = Budget.getWeekOfMonth(now);
+          final encoded = (now.month * 10) + weekOfMonth;
+          period = encoded;
+          break;
+        case BudgetType.monthly:
+          period = now.month;
+          break;
+        case BudgetType.yearly:
+          period = 1; // For yearly, period is always 1
+          break;
+      }
+      print('createVacationBudgetsForAllExpenseCategories: type=$type year=$year period=$period currency=$currency');
+      
+      // Get existing vacation budgets for the current period to avoid duplicates
+      final existingVacationBudgets = await getBudgetsByType(type, isVacation: true);
+      final existingBudgetCategoryIds = existingVacationBudgets
+          .where((budget) => budget.year == year && budget.period == period)
+          .map((budget) => budget.categoryId)
+          .toSet();
+      print('createVacationBudgetsForAllExpenseCategories: existingVacationBudgets=${existingVacationBudgets.length} existingCategoryIds=${existingBudgetCategoryIds.length}');
+      
+      // Get current user ID
+      if (_userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Create budgets for expense categories that don't have vacation budgets yet
+      for (final category in expenseCategories) {
+        if (!existingBudgetCategoryIds.contains(category.id)) {
+          // Generate a unique ID for the budget
+          final budgetId = Budget.generateId(_userId!, category.id, type, year, period, true);
+          
+          // Get date range for the budget
+          final dateRange = Budget.getDateRange(type, year, period);
+          
+          // Create the new budget with limit = 0.0 and isVacation = true
+          final newBudget = Budget(
+            id: budgetId,
+            categoryId: category.id,
+            limit: 0.0,
+            type: type,
+            year: year,
+            period: period,
+            startDate: dateRange['startDate']!,
+            endDate: dateRange['endDate']!,
+            userId: _userId!,
+            currency: currency,
+            isVacation: true,
+          );
+          
+          // Add the budget to Firestore
+          await addBudget(newBudget);
+          print('Created vacation budget for category: ${category.name}');
+        }
+      }
+      
+      print('Successfully created vacation budgets for all expense categories');
+    } catch (e) {
+      print('Error creating vacation budgets for all expense categories: $e');
+      rethrow;
+    }
+  }
+
   // Stream budgets (real-time) - for a specific budget type
   Stream<List<Budget>> streamBudgets({BudgetType? type, bool? isVacation}) {
     try {
@@ -130,6 +210,19 @@ class FirestoreService {
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Error getting all budgets: $e');
+      return [];
+    }
+  }
+
+  // Get all vacation budgets for all time
+  Future<List<Budget>> getAllVacationBudgets() async {
+    try {
+      final querySnapshot = await _budgetsCollection
+          .where('isVacation', isEqualTo: true)
+          .get();
+      return querySnapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('Error getting all vacation budgets: $e');
       return [];
     }
   }
@@ -638,17 +731,25 @@ class FirestoreService {
     }
   }
 
-  // Stream transactions for a date range (optionally filtered by vacation mode)
+  // Stream transactions for a date range (optionally filtered by vacation mode and accountId)
   Stream<List<FirestoreTransaction>> streamTransactionsForDateRange(
     DateTime startDate,
     DateTime endDate, {
+    String? accountId,
     bool isVacation = false,
   }) {
     try {
-      return _transactionsCollection
+      Query<FirestoreTransaction> query = _transactionsCollection
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-          .where('isVacation', isEqualTo: isVacation)
+          .where('isVacation', isEqualTo: isVacation);
+      
+      // Add accountId filter if provided
+      if (accountId != null) {
+        query = query.where('accountId', isEqualTo: accountId);
+      }
+      
+      return query
           .orderBy('date', descending: true)
           .snapshots()
           .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
@@ -748,14 +849,27 @@ class FirestoreService {
   // Get categories by type
   Future<List<Category>> getCategoriesByType(String type) async {
     try {
-      final querySnapshot = await _categoriesCollection
+      print('getCategoriesByType: type=$type -> attempting where+orderBy(displayOrder)');
+      final query = _categoriesCollection
           .where('type', isEqualTo: type)
-          .orderBy('displayOrder')
-          .get();
-      return querySnapshot.docs.map((doc) => doc.data()).toList();
+          .orderBy('displayOrder');
+      final querySnapshot = await query.get();
+      final results = querySnapshot.docs.map((doc) => doc.data()).toList();
+      print('getCategoriesByType: fetched ${results.length} categories with ordered query');
+      return results;
     } catch (e) {
-      print('Error getting categories by type: $e');
-      return [];
+      print('getCategoriesByType: ordered query failed: $e; retrying without orderBy');
+      try {
+        final fallbackSnapshot = await _categoriesCollection
+            .where('type', isEqualTo: type)
+            .get();
+        final fallbackResults = fallbackSnapshot.docs.map((doc) => doc.data()).toList();
+        print('getCategoriesByType: fetched ${fallbackResults.length} categories with fallback query');
+        return fallbackResults;
+      } catch (e2) {
+        print('getCategoriesByType: fallback query failed: $e2');
+        return [];
+      }
     }
   }
 

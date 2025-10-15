@@ -263,50 +263,66 @@ class _BudgetScreenState extends State<BudgetScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Builder(
-            builder: (ctx) {
-              // Diagnostic: log selected type and displayed period to help debug UI updates
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                print(
-                  'BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}',
-                );
-              });
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildTypeChip(
-                    context,
-                    'Weekly',
-                    BudgetType.weekly,
-                    provider.selectedBudgetType == BudgetType.weekly,
-                    () => provider.changeBudgetType(BudgetType.weekly),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildTypeChip(
-                    context,
-                    'Monthly',
-                    BudgetType.monthly,
-                    provider.selectedBudgetType == BudgetType.monthly,
-                    () => provider.changeBudgetType(BudgetType.monthly),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildTypeChip(
-                    context,
-                    'Yearly',
-                    BudgetType.yearly,
-                    provider.selectedBudgetType == BudgetType.yearly,
-                    () => provider.changeBudgetType(BudgetType.yearly),
-                  ),
-                ],
+          Consumer<VacationProvider>(
+            builder: (context, vacationProvider, child) {
+              // Hide the budget type chips when vacation mode is active
+              if (vacationProvider.isVacationMode) {
+                return const SizedBox(height: 12); // Maintain vertical spacing
+              }
+              return Builder(
+                builder: (ctx) {
+                  // Diagnostic: log selected type and displayed period to help debug UI updates
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    print(
+                      'BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}',
+                    );
+                  });
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildTypeChip(
+                        context,
+                        'Weekly',
+                        BudgetType.weekly,
+                        provider.selectedBudgetType == BudgetType.weekly,
+                        () => provider.changeBudgetType(BudgetType.weekly),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildTypeChip(
+                        context,
+                        'Monthly',
+                        BudgetType.monthly,
+                        provider.selectedBudgetType == BudgetType.monthly,
+                        () => provider.changeBudgetType(BudgetType.monthly),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildTypeChip(
+                        context,
+                        'Yearly',
+                        BudgetType.yearly,
+                        provider.selectedBudgetType == BudgetType.yearly,
+                        () => provider.changeBudgetType(BudgetType.yearly),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),
           // const SizedBox(height: 12),
-          PeriodSelector(
-            periodText: provider.currentPeriodDisplay,
-            onPrevious: onPrevious,
-            onNext: onNext,
-            onQuickJump: onQuickJump,
+          Consumer<VacationProvider>(
+            builder: (context, vacationProvider, child) {
+              // Hide the period selector when vacation mode is active
+              if (vacationProvider.isVacationMode) {
+                return const SizedBox.shrink();
+              }
+              return PeriodSelector(
+                periodText: provider.currentPeriodDisplay,
+                onPrevious: onPrevious,
+                onNext: onNext,
+                onQuickJump: onQuickJump,
+              );
+            },
           ),
         ],
       ),

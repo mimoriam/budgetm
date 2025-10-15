@@ -2,7 +2,9 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
+import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -735,7 +737,37 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           );
 
                           final accountId = await _firestoreService
-                              .createAccount(newAccount);
+                             .createAccount(newAccount);
+
+                          // Create vacation budgets for all expense categories if this is a vacation account
+                          if (widget.isCreatingVacationAccount == true && newAccount.isVacationAccount == true) {
+                            try {
+                              // Get the selected currency from CurrencyProvider
+                              String selectedCurrencyCode = 'USD';
+                              try {
+                                final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                                selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+                              } catch (e) {
+                                print('AddAccountScreen: CurrencyProvider not available, defaulting to USD: $e');
+                              }
+                              
+                              // Create vacation budgets for all expense categories
+                              await _firestoreService.createVacationBudgetsForAllExpenseCategories(
+                                currency: selectedCurrencyCode,
+                                type: BudgetType.monthly,
+                              );
+                            } catch (e) {
+                              // Show error message but don't block the UI flow
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to create vacation budgets: $e'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              }
+                            }
+                          }
 
                           // Check if 'include_in_total' is enabled and create initial balance transaction
                           // final includeInTotal =
