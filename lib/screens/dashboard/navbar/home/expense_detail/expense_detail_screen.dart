@@ -2,10 +2,12 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
+import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +29,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   late bool _isPaid;
   bool _hasChanges = false;
   late Future<Map<String, dynamic>> _dataFuture;
+  FirestoreTransaction? _firestoreTransaction;
 
   @override
   void initState() {
@@ -42,6 +45,10 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   Future<Map<String, dynamic>> _fetchAllData() async {
     try {
       final futures = <Future>[];
+      
+      // Fetch the full FirestoreTransaction to get vacation mode and notes
+      final firestoreTxnFuture = _firestoreService.getTransactionById(widget.transaction.id);
+      futures.add(firestoreTxnFuture);
       
       // Fetch category data
       final categoryFuture = widget.transaction.categoryId != null
@@ -63,17 +70,40 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       
       final results = await Future.wait(futures);
       
+      final firestoreTxn = results[0] as FirestoreTransaction?;
+      _firestoreTransaction = firestoreTxn;
+      
+      // Fetch vacation account if this is a vacation transaction and has a linked transaction
+      FirestoreAccount? vacationAccount;
+      if (firestoreTxn != null && firestoreTxn.isVacation && firestoreTxn.linkedTransactionId != null) {
+        // For vacation transactions, we need to find the linked normal transaction to get the vacation account
+        final linkedTxn = await _firestoreService.getTransactionById(firestoreTxn.linkedTransactionId!);
+        if (linkedTxn != null && linkedTxn.accountId != null) {
+          vacationAccount = await _firestoreService.getAccountById(linkedTxn.accountId!);
+        }
+      } else if (firestoreTxn != null && !firestoreTxn.isVacation && firestoreTxn.linkedTransactionId != null) {
+        // For normal transactions linked to vacation, fetch the vacation transaction to get the vacation account
+        final vacationTxn = await _firestoreService.getTransactionById(firestoreTxn.linkedTransactionId!);
+        if (vacationTxn != null && vacationTxn.accountId != null) {
+          vacationAccount = await _firestoreService.getAccountById(vacationTxn.accountId!);
+        }
+      }
+      
       return {
-        'category': results[0] as Category?,
-        'account': results[1] as FirestoreAccount?,
-        'goalName': results[2] as String?,
+        'firestoreTransaction': firestoreTxn,
+        'category': results[1] as Category?,
+        'account': results[2] as FirestoreAccount?,
+        'goalName': results[3] as String?,
+        'vacationAccount': vacationAccount,
       };
     } catch (e) {
       print('Error fetching data: $e');
       return {
+        'firestoreTransaction': null,
         'category': null,
         'account': null,
         'goalName': null,
+        'vacationAccount': null,
       };
     }
   }
@@ -202,6 +232,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   final category = snapshot.data?['category'] as Category?;
                   final account = snapshot.data?['account'] as FirestoreAccount?;
                   final goalName = snapshot.data?['goalName'] as String?;
+                  final firestoreTransaction = snapshot.data?['firestoreTransaction'] as FirestoreTransaction?;
+                  final vacationAccount = snapshot.data?['vacationAccount'] as FirestoreAccount?;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -222,14 +254,24 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     ?.copyWith(fontSize: 32),
                               ),
                               const SizedBox(height: 8),
+                              // Primary account display - changes based on vacation mode
                               if (account != null && !(account.isDefault ?? false))
-                                Text(
-                                  "${account.name} - ${account.accountType}",
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color:
-                                            AppColors.secondaryTextColorLight,
-                                      ),
+                                Consumer<VacationProvider>(
+                                  builder: (context, vacationProvider, child) {
+                                    // Determine which account to show as primary
+                                    final isVacationMode = vacationProvider.isVacationMode;
+                                    final showVacationAsPrimary = isVacationMode && vacationAccount != null;
+                                    final primaryAccount = showVacationAsPrimary ? vacationAccount : account;
+                                    
+                                    return Text(
+                                      "${primaryAccount!.name} - ${primaryAccount.accountType}",
+                                      style: Theme.of(context).textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color:
+                                                AppColors.secondaryTextColorLight,
+                                          ),
+                                    );
+                                  },
                                 ),
                             ],
                           ),
@@ -290,7 +332,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             ),
                             Text(
                               DateFormat(
-                                'MMMM d, yyyy',
+                                'MMMM d, yyyy, hh:mm a',
                               ).format(widget.transaction.date).toUpperCase(),
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
@@ -327,6 +369,96 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Divider(color: Colors.grey.shade300),
                             ],
                           ),
+                        
+                        // Account Information (secondary account display)
+                        if (vacationAccount != null)
+                          Consumer<VacationProvider>(
+                            builder: (context, vacationProvider, child) {
+                              // Determine which account to show as secondary
+                              final isVacationMode = vacationProvider.isVacationMode;
+                              final showNormalAsSecondary = isVacationMode && account != null;
+                              final secondaryAccount = showNormalAsSecondary ? account : vacationAccount;
+                              
+                              return Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'ACCOUNT',
+                                        style: Theme.of(context).textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.secondaryTextColorLight,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      Flexible(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              secondaryAccount!.name,
+                                              style: Theme.of(context).textTheme.bodyMedium
+                                                  ?.copyWith(fontWeight: FontWeight.bold),
+                                              textAlign: TextAlign.right,
+                                            ),
+                                            if (secondaryAccount.accountType.isNotEmpty)
+                                              Text(
+                                                secondaryAccount.accountType,
+                                                style: Theme.of(context).textTheme.bodySmall
+                                                    ?.copyWith(color: Colors.grey.shade600),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Divider(color: Colors.grey.shade300),
+                                ],
+                              );
+                            },
+                          ),
+                        
+                        // Transaction Notes
+                        if (firestoreTransaction?.notes != null && firestoreTransaction!.notes!.isNotEmpty)
+                          Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'NOTES',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.secondaryTextColorLight,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: Text(
+                                        firestoreTransaction.notes!,
+                                        style: Theme.of(context).textTheme.bodyMedium
+                                            ?.copyWith(color: Colors.black87),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(color: Colors.grey.shade300),
+                            ],
+                          ),
+                        
                         const SizedBox(height: 40),
                         Row(
                           children: [
