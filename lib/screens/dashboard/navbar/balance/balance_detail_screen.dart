@@ -129,8 +129,8 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                     onPressed: _selectDateRange,
                   ),
                   IconButton(
-                    icon: Icon(Icons.delete_forever, color: widget.accountsCount == 1 ? Colors.grey : Colors.red),
-                    onPressed: widget.accountsCount == 1 ? null : () => _showDeleteConfirmationDialog(),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete04, color: Colors.red, size: 24),
+                    onPressed: () => _showDeleteConfirmationDialog(),
                   ),
                 ],
               ),
