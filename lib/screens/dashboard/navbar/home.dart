@@ -1523,7 +1523,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           context,
           listen: false,
         ).isVacationMode;
-        _pageDataManager.invalidateMonth(_selectedMonthIndex, isVacation);
+        _pageDataManager.invalidateMonth(_selectedMonthIndex, null);
 
         // Reset the provider for the current month
         if (_monthProviders.containsKey(_selectedMonthIndex)) {
@@ -1560,7 +1560,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           listen: false,
         ).isVacationMode;
         for (final monthIndex in _monthProviders.keys) {
-          _pageDataManager.invalidateMonth(monthIndex, isVacation);
+          _pageDataManager.invalidateMonth(monthIndex);
           _monthProviders[monthIndex]!.reset();
         }
         homeScreenProvider.completeRefresh();
