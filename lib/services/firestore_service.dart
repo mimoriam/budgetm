@@ -739,6 +739,8 @@ class FirestoreService {
     bool isVacation = false,
   }) {
     try {
+      print('DEBUG: streamTransactionsForDateRange - startDate=$startDate, endDate=$endDate, isVacation=$isVacation, accountId=$accountId');
+      
       Query<FirestoreTransaction> query = _transactionsCollection
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
@@ -747,12 +749,22 @@ class FirestoreService {
       // Add accountId filter if provided
       if (accountId != null) {
         query = query.where('accountId', isEqualTo: accountId);
+        print('DEBUG: Applied accountId filter: $accountId');
       }
       
       return query
           .orderBy('date', descending: true)
           .snapshots()
-          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+          .map((snapshot) {
+            final transactions = snapshot.docs.map((doc) => doc.data()).toList();
+            print('DEBUG: Fetched ${transactions.length} transactions for isVacation=$isVacation, accountId=$accountId');
+            // Log transaction IDs for debugging
+            if (transactions.isNotEmpty) {
+              final txIds = transactions.map((tx) => '${tx.id}(acc:${tx.accountId})').take(5).join(', ');
+              print('DEBUG: Sample transaction IDs: $txIds${transactions.length > 5 ? '...' : ''}');
+            }
+            return transactions;
+          });
     } catch (e) {
       print('Error streaming transactions for date range: $e');
       return Stream.empty();

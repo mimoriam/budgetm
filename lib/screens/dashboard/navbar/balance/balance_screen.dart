@@ -376,15 +376,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           // Vacation Accounts section (only in normal mode)
                           if (!isVacationMode) ...[
                             const SizedBox(height: 24),
-                            _buildSectionHeader('VACATION ACCOUNTS'),
+                            _buildSectionHeader('VACATION'),
                             const SizedBox(height: 12),
                             if (vacationAccounts.isEmpty)
-                              Text(
-                                'No vacation accounts',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: AppColors.secondaryTextColorLight,
-                                    ),
+                              Center(
+                                child: Text(
+                                  'No vacation accounts',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: AppColors.secondaryTextColorLight,
+                                      ),
+                                ),
                               )
                             else
                               ...vacationAccounts.map(

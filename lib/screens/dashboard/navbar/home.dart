@@ -288,10 +288,16 @@ class MonthPageDataManager {
     final cacheKey =
         '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}';
 
+    print('DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId');
+    print('DEBUG: Cache key: $cacheKey');
+
     // If a stream for this specific combination is already in the cache, return it.
     if (_pageStreamCache.containsKey(cacheKey)) {
+      print('DEBUG: Using cached stream for key: $cacheKey');
       return _pageStreamCache[cacheKey]!;
     }
+    
+    print('DEBUG: Creating new stream for key: $cacheKey');
 
     // If not cached, create a new stream for the month.
     final startOfMonth = DateTime(month.year, month.month, 1);
@@ -385,17 +391,54 @@ class MonthPageDataManager {
 
   // Method to invalidate cache for a specific month and vacation mode combination
   void invalidateMonth(int monthIndex, [bool? isVacation]) {
+    print('DEBUG: Invalidating cache for monthIndex=$monthIndex, isVacation=$isVacation');
+    print('DEBUG: Active vacation accountId=${_vacationProvider.activeVacationAccountId}');
+    
     if (isVacation != null) {
       // Invalidate only the specific combination
-      final cacheKey = '$monthIndex-$isVacation';
-      _pageStreamCache.remove(cacheKey);
+      // We need to invalidate both with and without accountId to be safe
+      final normalKey = '$monthIndex-$isVacation';
+      final withAccountKey = '$monthIndex-$isVacation-${_vacationProvider.activeVacationAccountId ?? 'all'}';
+      
+      print('DEBUG: Removing cache keys: $normalKey, $withAccountKey');
+      _pageStreamCache.remove(normalKey);
+      _pageStreamCache.remove(withAccountKey);
+      
+      // Also invalidate any other vacation account keys to prevent data leakage
+      if (isVacation) {
+        final keysToRemove = <String>[];
+        _pageStreamCache.forEach((key, value) {
+          if (key.startsWith('$monthIndex-true-') && key != withAccountKey) {
+            keysToRemove.add(key);
+          }
+        });
+        print('DEBUG: Removing additional vacation account keys to prevent leakage: $keysToRemove');
+        for (final key in keysToRemove) {
+          _pageStreamCache.remove(key);
+        }
+      }
     } else {
       // Invalidate both vacation and normal mode for this month
       final normalKey = '$monthIndex-false';
       final vacationKey = '$monthIndex-true';
+      print('DEBUG: Removing cache keys: $normalKey, $vacationKey');
       _pageStreamCache.remove(normalKey);
       _pageStreamCache.remove(vacationKey);
+      
+      // Also invalidate all account-specific keys
+      final keysToRemove = <String>[];
+      _pageStreamCache.forEach((key, value) {
+        if (key.startsWith('$monthIndex-')) {
+          keysToRemove.add(key);
+        }
+      });
+      print('DEBUG: Removing all account-specific keys for month $monthIndex: $keysToRemove');
+      for (final key in keysToRemove) {
+        _pageStreamCache.remove(key);
+      }
     }
+    
+    print('DEBUG: Cache invalidation complete. Remaining cache keys: ${_pageStreamCache.keys.toList()}');
   }
 
   // Method to clear the cache if a full refresh is needed (e.g., on user logout/login).

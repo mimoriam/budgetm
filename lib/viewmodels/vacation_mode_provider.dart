@@ -43,18 +43,20 @@ class VacationProvider with ChangeNotifier {
     _isAiMode = _isVacationMode; // Keep AI mode in sync with vacation mode
     await prefs.setBool('vacationMode', _isVacationMode);
     // Diagnostic log to observe when vacation mode toggles
-    print('Vacation toggled -> $_isVacationMode (isAiMode=$_isAiMode)');
+    print('DEBUG: Vacation toggled -> $_isVacationMode (isAiMode=$_isAiMode), activeAccountId=$_activeVacationAccountId');
     notifyListeners();
   }
  
   Future<void> setActiveVacationAccountId(String? accountId) async {
     final prefs = await SharedPreferences.getInstance();
+    final previousAccountId = _activeVacationAccountId;
     _activeVacationAccountId = accountId;
     if (accountId == null) {
       await prefs.remove('activeVacationAccountId');
     } else {
       await prefs.setString('activeVacationAccountId', accountId);
     }
+    print('DEBUG: Vacation account changed from $previousAccountId to $accountId (vacationMode=$_isVacationMode)');
     notifyListeners();
   }
  

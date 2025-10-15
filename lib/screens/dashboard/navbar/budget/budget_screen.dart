@@ -267,7 +267,7 @@ class _BudgetScreenState extends State<BudgetScreen>
             builder: (context, vacationProvider, child) {
               // Hide the budget type chips when vacation mode is active
               if (vacationProvider.isVacationMode) {
-                return const SizedBox(height: 12); // Maintain vertical spacing
+                return const SizedBox(height: 2); // Maintain vertical spacing
               }
               return Builder(
                 builder: (ctx) {
