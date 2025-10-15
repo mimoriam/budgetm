@@ -179,40 +179,22 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                         context: context,
                         barrierDismissible: false,
                         builder: (ctx) {
-                          bool cascadeDelete = false;
-                          return StatefulBuilder(
-                            builder: (context, setState) {
-                              return AlertDialog(
-                                title: const Text('Delete Budget'),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text('Are you sure you want to delete "${widget.category.name ?? 'this budget'}"? This action cannot be undone.'),
-                                    const SizedBox(height: 8),
-                                    CheckboxListTile(
-                                      title: const Text('Cascade delete transactions'),
-                                      value: cascadeDelete,
-                                      onChanged: (val) => setState(() => cascadeDelete = val ?? false),
-                                      controlAffinity: ListTileControlAffinity.leading,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                  ],
+                          return AlertDialog(
+                            title: const Text('Delete Budget'),
+                            content: Text('Are you sure you want to delete "${widget.category.name ?? 'this budget'}"? This action cannot be undone.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': cascadeDelete}),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                    ),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              );
-                            },
+                                child: const Text('Delete'),
+                              ),
+                            ],
                           );
                         },
                       );
