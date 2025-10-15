@@ -905,6 +905,9 @@ class _MonthPageViewState extends State<MonthPageView> {
     final Color iconBackgroundColor = hexToColor(transaction.icon_color);
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
+    // Determine if the transaction is a vacation transaction
+    final bool isVacationTransaction = account?.isVacationAccount ?? false;
+
     return InkWell(
       onTap: () async {
         final result = await PersistentNavBarNavigator.pushNewScreen(
@@ -928,7 +931,7 @@ class _MonthPageViewState extends State<MonthPageView> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isVacationTransaction ? Colors.blue.shade50 : Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: Colors.grey.shade200, width: 1),
           boxShadow: [
