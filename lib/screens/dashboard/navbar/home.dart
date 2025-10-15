@@ -248,6 +248,43 @@ class MonthPageProvider extends ChangeNotifier {
     _isInitialized = false; // Reset initialization state
     notifyListeners();
   }
+
+  // Toggle paid status for a transaction locally
+  void togglePaidStatus(String transactionId) {
+    // Find and update in _allTransactions
+    final allIndex = _allTransactions.indexWhere(
+      (tx) => tx.transaction.id == transactionId,
+    );
+    if (allIndex != -1) {
+      final oldTx = _allTransactions[allIndex];
+      final updatedTransaction = oldTx.transaction.copyWith(
+        paid: !(oldTx.transaction.paid ?? false),
+      );
+      _allTransactions[allIndex] = TransactionWithAccount(
+        transaction: updatedTransaction,
+        account: oldTx.account,
+        category: oldTx.category,
+      );
+    }
+
+    // Find and update in _paginatedTransactions
+    final paginatedIndex = _paginatedTransactions.indexWhere(
+      (tx) => tx.transaction.id == transactionId,
+    );
+    if (paginatedIndex != -1) {
+      final oldTx = _paginatedTransactions[paginatedIndex];
+      final updatedTransaction = oldTx.transaction.copyWith(
+        paid: !(oldTx.transaction.paid ?? false),
+      );
+      _paginatedTransactions[paginatedIndex] = TransactionWithAccount(
+        transaction: updatedTransaction,
+        account: oldTx.account,
+        category: oldTx.category,
+      );
+    }
+
+    notifyListeners();
+  }
 }
 
 // Data manager for handling and caching month-specific data streams.
@@ -354,16 +391,19 @@ class MonthPageDataManager {
                   (a, b) => b.transaction.date.compareTo(a.transaction.date),
                 );
 
-                // Calculate totals client-side
-                double totalIncome = 0.0;
-                double totalExpenses = 0.0;
-                for (final transaction in transactions) {
-                  if (transaction.type == 'income') {
-                    totalIncome += transaction.amount;
-                  } else if (transaction.type == 'expense') {
-                    totalExpenses += transaction.amount;
-                  }
-                }
+                // Calculate totals client-side.
+                // The 'paid' status of a transaction is for informational purposes only and does not
+                // affect the calculation of total income and expenses. All transactions, paid or unpaid,
+                // are included in these totals.
+                final totalIncome = transactions
+                    .where((transaction) => transaction.type == 'income')
+                    .fold<double>(
+                        0.0, (sum, transaction) => sum + transaction.amount);
+
+                final totalExpenses = transactions
+                    .where((transaction) => transaction.type == 'expense')
+                    .fold<double>(
+                        0.0, (sum, transaction) => sum + transaction.amount);
 
                 return MonthPageData(
                   transactions: transactions,
@@ -1043,23 +1083,8 @@ class _MonthPageViewState extends State<MonthPageView> {
         );
 
         if (result == true) {
-          widget.dataManager.invalidateMonth(
-            widget.monthIndex,
-            null,
-          );
-          // Re-initialize provider with fresh data
-          widget.dataManager
-              .getStreamForMonth(
-                widget.monthIndex,
-                widget.month,
-                widget.isVacation,
-              )
-              .first
-              .then((data) {
-                if (mounted) {
-                  _provider.initialize(data);
-                }
-              });
+          // Use local state update instead of full data refresh
+          _provider.togglePaidStatus(uiTransaction.id);
         }
       },
       child: Container(
