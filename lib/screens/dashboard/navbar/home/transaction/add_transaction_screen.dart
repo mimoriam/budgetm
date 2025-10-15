@@ -1252,14 +1252,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
+    final isVacationMode = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+    
     return Container(
       padding: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.gradientStart, AppColors.gradientEnd2],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: isVacationMode
+            ? null
+            : const LinearGradient(
+                colors: [AppColors.gradientStart, AppColors.gradientEnd2],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        color: isVacationMode ? AppColors.aiGradientStart : null,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -1277,10 +1282,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 child: Container(
                   width: 36,
                   height: 36,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
-                      colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                      colors: isVacationMode
+                          ? [AppColors.aiGradientStart, const Color.fromARGB(255, 154, 185, 235)]
+                          : [AppColors.gradientStart, AppColors.gradientEnd],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -1379,6 +1386,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildBottomButtons(BuildContext context) {
+    final isVacationMode = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       color: const Color(0xFFFAFAFA),
@@ -1415,7 +1424,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gradientEnd,
+                backgroundColor: isVacationMode ? AppColors.vacationColor : AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.0),
