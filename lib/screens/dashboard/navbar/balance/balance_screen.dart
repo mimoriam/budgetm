@@ -13,6 +13,7 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'dart:async';
+import 'dart:math';
 
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
@@ -175,11 +176,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           .map((account) {
             final totalExpenses = expenseSums[account.id] ?? 0.0;
             // For vacation accounts the final balance should be initial balance minus expenses
-            final finalBalance = account.initialBalance - totalExpenses;
+            final finalBalance = max(0, account.initialBalance - totalExpenses);
             return {
               'account': account,
               'transactionsAmount':
-                  account.initialBalance - totalExpenses, // keep sign for consistency
+                  max(0, account.initialBalance - totalExpenses), // keep sign for consistency
               'finalBalance': finalBalance,
             };
           })
@@ -211,12 +212,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     final vacationAccounts = nonDefaultAccounts
         .where((account) => (account.isVacationAccount == true))
         .map((account) {
-          final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-          // Use account.balance directly as it's the single source of truth from Firestore
-          final finalBalance = account.balance;
+          final totalExpenses = expenseSums[account.id] ?? 0.0;
+          final finalBalance = max(0, account.initialBalance - totalExpenses);
           return {
             'account': account,
-            'transactionsAmount': transactionsAmount,
+            'transactionsAmount': finalBalance,
             'finalBalance': finalBalance,
           };
         })
@@ -333,44 +333,56 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                               }
                             },
                           ),
-                          const SizedBox(height: 12),
-                          ...normalAccounts.asMap().entries.map(
-                            (entry) => Column(
-                              children: [
-                                Builder(
-                                  builder: (context) {
-                                    final index = entry.key;
-                                    final accountData = entry.value;
-                                    final account =
-                                        accountData['account']
-                                            as FirestoreAccount;
-                                    final finalBalance =
-                                        accountData['finalBalance'] as double;
-                                    final isHighlighted = index == touchedIndex;
-                                    return _buildAccountCard(
-                                      context: context,
-                                      account: account,
-                                      icon: getAccountIcon(
-                                        account.accountType,
-                                      )[0][0],
-                                      iconColor: Colors.black,
-                                      iconBackgroundColor: Colors.grey.shade200,
-                                      accountName: account.name,
-                                      amount: finalBalance,
-                                      accountType: account.accountType,
-                                      creditLimit: account.creditLimit,
-                                      balanceLimit: account.balanceLimit,
-                                      currencySymbol:
-                                          currencyProvider.currencySymbol,
-                                      isHighlighted: isHighlighted,
-                                      accountsCount: normalAccounts.length,
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 12),
-                              ],
+                          const SizedBox(height: 6),
+                          // Condition to show "no normal accounts" message
+                          if (normalAccounts.isEmpty && vacationAccounts.isNotEmpty)
+                            Center(
+                              child: Text(
+                                'No normal accounts',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: AppColors.secondaryTextColorLight,
+                                    ),
+                              ),
+                            )
+                          else
+                            ...normalAccounts.asMap().entries.map(
+                              (entry) => Column(
+                                children: [
+                                  Builder(
+                                    builder: (context) {
+                                      final index = entry.key;
+                                      final accountData = entry.value;
+                                      final account =
+                                          accountData['account']
+                                              as FirestoreAccount;
+                                      final finalBalance =
+                                          accountData['finalBalance'] as double;
+                                      final isHighlighted = index == touchedIndex;
+                                      return _buildAccountCard(
+                                        context: context,
+                                        account: account,
+                                        icon: getAccountIcon(
+                                          account.accountType,
+                                        )[0][0],
+                                        iconColor: Colors.black,
+                                        iconBackgroundColor: Colors.grey.shade200,
+                                        accountName: account.name,
+                                        amount: finalBalance,
+                                        accountType: account.accountType,
+                                        creditLimit: account.creditLimit,
+                                        balanceLimit: account.balanceLimit,
+                                        currencySymbol:
+                                            currencyProvider.currencySymbol,
+                                        isHighlighted: isHighlighted,
+                                        accountsCount: normalAccounts.length,
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 6),
+                                ],
+                              ),
                             ),
-                          ),
 
                           // Vacation Accounts section (only in normal mode)
                           if (!isVacationMode) ...[
