@@ -320,10 +320,16 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           _buildSectionHeaderWithButton(
                             'MY ACCOUNTS',
                             () async {
+                              final vacationProvider = Provider.of<VacationProvider>(
+                                context,
+                                listen: false,
+                              );
+                              final isVacationMode = vacationProvider.isVacationMode;
+                              
                               final result =
                                   await PersistentNavBarNavigator.pushNewScreen(
                                     context,
-                                    screen: const AddAccountScreen(),
+                                    screen: AddAccountScreen(isCreatingVacationAccount: isVacationMode),
                                     withNavBar: false,
                                     pageTransitionAnimation:
                                         PageTransitionAnimation.cupertino,
@@ -387,7 +393,22 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           // Vacation Accounts section (only in normal mode)
                           if (!isVacationMode) ...[
                             const SizedBox(height: 24),
-                            _buildSectionHeader('VACATION'),
+                           _buildSectionHeaderWithButton(
+                             'VACATION',
+                             () async {
+                               final result =
+                                   await PersistentNavBarNavigator.pushNewScreen(
+                                     context,
+                                     screen: const AddAccountScreen(isCreatingVacationAccount: true),
+                                     withNavBar: false,
+                                     pageTransitionAnimation:
+                                         PageTransitionAnimation.cupertino,
+                                   );
+                               if (result == true) {
+                                 if (mounted) setState(() {});
+                               }
+                             },
+                           ),
                             const SizedBox(height: 12),
                             if (vacationAccounts.isEmpty)
                               Center(

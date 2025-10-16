@@ -41,7 +41,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                     isMain: true,
                   ),
                   const SizedBox(height: 24),
-                  _buildSectionHeader('OTHERS', showAddButton: true),
+                  // _buildSectionHeader('OTHERS', showAddButton: true),
                   // ..._buildOtherCurrencies(currencyProvider),
                 ],
               ),
@@ -262,13 +262,13 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                   code,
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
-                if (isMain) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Conversion rate: ${currencyProvider.conversionRate.toStringAsFixed(4)}',
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                  ),
-                ],
+                // if (isMain) ...[
+                //   const SizedBox(height: 8),
+                //   Text(
+                //     'Conversion rate: ${currencyProvider.conversionRate.toStringAsFixed(4)}',
+                //     style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                //   ),
+                // ],
               ],
             ),
           ),
@@ -278,15 +278,15 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ],
-          if (isMain) ...[
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.edit, size: 20),
-              onPressed: () {
-                _showEditRateDialog(context, code);
-              },
-            ),
-          ],
+          // if (isMain) ...[
+          //   const SizedBox(width: 8),
+          //   IconButton(
+          //     icon: const Icon(Icons.edit, size: 20),
+          //     onPressed: () {
+          //       _showEditRateDialog(context, code);
+          //     },
+          //   ),
+          // ],
         ],
       ),
     );

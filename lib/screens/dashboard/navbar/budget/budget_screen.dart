@@ -168,53 +168,79 @@ class _BudgetScreenState extends State<BudgetScreen>
                 ],
               ),
               // Add button to create a new budget even when no budgets exist
-              Container(
-                // height: 20,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  shape: BoxShape.rectangle,
-                  gradient: LinearGradient(
-                    colors: [AppColors.gradientStart, AppColors.gradientEnd],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  // color: AppColors.gradientEnd,
-                ),
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add, size: 16, color: Colors.black),
-                      const SizedBox(width: 6),
-                      const Text(
-                        "Add Budget",
-                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
+              Consumer<VacationProvider>(
+                builder: (context, vacationProvider, child) {
+                  return Visibility(
+                    visible: !vacationProvider.isVacationMode,
+                    child: Container(
+                      // height: 20,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        shape: BoxShape.rectangle,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.gradientStart,
+                            AppColors.gradientEnd,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        // color: AppColors.gradientEnd,
                       ),
-                    ],
-                  ),
-                  onPressed: () async {
-                    final isVacationMode = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-                    final result =
-                        await PersistentNavBarNavigator.pushNewScreen(
-                          context,
-                          screen: AddBudgetScreen(isVacationMode: isVacationMode),
-                          withNavBar: false,
-                          pageTransitionAnimation:
-                              PageTransitionAnimation.cupertino,
-                        );
-                    if (result == true) {
-                      if (context.mounted) {
-                        Provider.of<BudgetProvider>(
-                          context,
-                          listen: false,
-                        ).initialize();
-                      }
-                    }
-                  },
-                ),
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.add,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              "Add Budget",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        onPressed: () async {
+                          final isVacationMode = Provider.of<VacationProvider>(
+                            context,
+                            listen: false,
+                          ).isVacationMode;
+                          final result =
+                              await PersistentNavBarNavigator.pushNewScreen(
+                                context,
+                                screen: AddBudgetScreen(
+                                  isVacationMode: isVacationMode,
+                                ),
+                                withNavBar: false,
+                                pageTransitionAnimation:
+                                    PageTransitionAnimation.cupertino,
+                              );
+                          if (result == true) {
+                            if (context.mounted) {
+                              Provider.of<BudgetProvider>(
+                                context,
+                                listen: false,
+                              ).initialize();
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -247,85 +273,94 @@ class _BudgetScreenState extends State<BudgetScreen>
         break;
     }
 
-    return Container(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+    return Consumer<VacationProvider>(
+      builder: (context, vacationProvider, child) {
+        if (vacationProvider.isVacationMode) {
+          return const SizedBox(height: 0); // Maintain vertical spacing
+        }
+        return Container(
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Consumer<VacationProvider>(
-            builder: (context, vacationProvider, child) {
-              // Hide the budget type chips when vacation mode is active
-              if (vacationProvider.isVacationMode) {
-                return const SizedBox(height: 2); // Maintain vertical spacing
-              }
-              return Builder(
-                builder: (ctx) {
-                  // Diagnostic: log selected type and displayed period to help debug UI updates
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    print(
-                      'BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}',
-                    );
-                  });
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildTypeChip(
-                        context,
-                        'Weekly',
-                        BudgetType.weekly,
-                        provider.selectedBudgetType == BudgetType.weekly,
-                        () => provider.changeBudgetType(BudgetType.weekly),
-                      ),
-                      const SizedBox(width: 12),
-                      _buildTypeChip(
-                        context,
-                        'Monthly',
-                        BudgetType.monthly,
-                        provider.selectedBudgetType == BudgetType.monthly,
-                        () => provider.changeBudgetType(BudgetType.monthly),
-                      ),
-                      const SizedBox(width: 12),
-                      _buildTypeChip(
-                        context,
-                        'Yearly',
-                        BudgetType.yearly,
-                        provider.selectedBudgetType == BudgetType.yearly,
-                        () => provider.changeBudgetType(BudgetType.yearly),
-                      ),
-                    ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Consumer<VacationProvider>(
+                builder: (context, vacationProvider, child) {
+                  // Hide the budget type chips when vacation mode is active
+                  if (vacationProvider.isVacationMode) {
+                    return const SizedBox(
+                      height: 2,
+                    ); // Maintain vertical spacing
+                  }
+                  return Builder(
+                    builder: (ctx) {
+                      // Diagnostic: log selected type and displayed period to help debug UI updates
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        print(
+                          'BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}',
+                        );
+                      });
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildTypeChip(
+                            context,
+                            'Weekly',
+                            BudgetType.weekly,
+                            provider.selectedBudgetType == BudgetType.weekly,
+                            () => provider.changeBudgetType(BudgetType.weekly),
+                          ),
+                          const SizedBox(width: 12),
+                          _buildTypeChip(
+                            context,
+                            'Monthly',
+                            BudgetType.monthly,
+                            provider.selectedBudgetType == BudgetType.monthly,
+                            () => provider.changeBudgetType(BudgetType.monthly),
+                          ),
+                          const SizedBox(width: 12),
+                          _buildTypeChip(
+                            context,
+                            'Yearly',
+                            BudgetType.yearly,
+                            provider.selectedBudgetType == BudgetType.yearly,
+                            () => provider.changeBudgetType(BudgetType.yearly),
+                          ),
+                        ],
+                      );
+                    },
                   );
                 },
-              );
-            },
+              ),
+              // const SizedBox(height: 12),
+              Consumer<VacationProvider>(
+                builder: (context, vacationProvider, child) {
+                  // Hide the period selector when vacation mode is active
+                  if (vacationProvider.isVacationMode) {
+                    return const SizedBox.shrink();
+                  }
+                  return PeriodSelector(
+                    periodText: provider.currentPeriodDisplay,
+                    onPrevious: onPrevious,
+                    onNext: onNext,
+                    onQuickJump: onQuickJump,
+                  );
+                },
+              ),
+            ],
           ),
-          // const SizedBox(height: 12),
-          Consumer<VacationProvider>(
-            builder: (context, vacationProvider, child) {
-              // Hide the period selector when vacation mode is active
-              if (vacationProvider.isVacationMode) {
-                return const SizedBox.shrink();
-              }
-              return PeriodSelector(
-                periodText: provider.currentPeriodDisplay,
-                onPrevious: onPrevious,
-                onNext: onNext,
-                onQuickJump: onQuickJump,
-              );
-            },
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -383,7 +418,10 @@ class _BudgetScreenState extends State<BudgetScreen>
       'DEBUG _showQuickJumpPicker: type=${provider.selectedBudgetType}, mode=$mode, initialDate=$initialDate, helpText=$helpText',
     );
 
-    final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+    final navbarProvider = Provider.of<NavbarVisibilityProvider>(
+      context,
+      listen: false,
+    );
     navbarProvider.setNavBarVisibility(false);
 
     try {
@@ -434,11 +472,15 @@ class _BudgetScreenState extends State<BudgetScreen>
     DateTime focusedDay = initialDate;
     final bool useYearPicker = provider.selectedBudgetType == BudgetType.yearly;
 
-    CalendarFormat calendarFormat = provider.selectedBudgetType == BudgetType.weekly
+    CalendarFormat calendarFormat =
+        provider.selectedBudgetType == BudgetType.weekly
         ? CalendarFormat.week
         : CalendarFormat.month;
 
-    final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+    final navbarProvider = Provider.of<NavbarVisibilityProvider>(
+      context,
+      listen: false,
+    );
     navbarProvider.setNavBarVisibility(false);
 
     try {
@@ -497,7 +539,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                     headerStyle: HeaderStyle(
                       titleCentered: true,
                       formatButtonVisible: false,
-                      titleTextStyle: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                      titleTextStyle:
+                          Theme.of(ctx).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primaryTextColorLight,
                           ) ??
@@ -506,10 +549,14 @@ class _BudgetScreenState extends State<BudgetScreen>
                             fontWeight: FontWeight.bold,
                             color: AppColors.primaryTextColorLight,
                           ),
-                      leftChevronIcon:
-                          const Icon(Icons.chevron_left, color: AppColors.gradientEnd),
-                      rightChevronIcon:
-                          const Icon(Icons.chevron_right, color: AppColors.gradientEnd),
+                      leftChevronIcon: const Icon(
+                        Icons.chevron_left,
+                        color: AppColors.gradientEnd,
+                      ),
+                      rightChevronIcon: const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.gradientEnd,
+                      ),
                     ),
                     calendarStyle: CalendarStyle(
                       selectedDecoration: const BoxDecoration(
@@ -520,15 +567,21 @@ class _BudgetScreenState extends State<BudgetScreen>
                         color: AppColors.gradientStart.withOpacity(0.9),
                         shape: BoxShape.circle,
                       ),
-                      weekendTextStyle:
-                          const TextStyle(color: AppColors.secondaryTextColorLight),
-                      defaultTextStyle:
-                          const TextStyle(color: AppColors.primaryTextColorLight),
+                      weekendTextStyle: const TextStyle(
+                        color: AppColors.secondaryTextColorLight,
+                      ),
+                      defaultTextStyle: const TextStyle(
+                        color: AppColors.primaryTextColorLight,
+                      ),
                       outsideDaysVisible: false,
                     ),
                     daysOfWeekStyle: const DaysOfWeekStyle(
-                      weekendStyle: TextStyle(color: AppColors.secondaryTextColorLight),
-                      weekdayStyle: TextStyle(color: AppColors.secondaryTextColorLight),
+                      weekendStyle: TextStyle(
+                        color: AppColors.secondaryTextColorLight,
+                      ),
+                      weekdayStyle: TextStyle(
+                        color: AppColors.secondaryTextColorLight,
+                      ),
                     ),
                     selectedDayPredicate: (day) => isSameDay(day, tempSelected),
                     onDaySelected: (selected, focused) {
@@ -568,12 +621,12 @@ class _BudgetScreenState extends State<BudgetScreen>
                         provider.selectedBudgetType == BudgetType.weekly
                             ? 'Select Week'
                             : provider.selectedBudgetType == BudgetType.monthly
-                                ? 'Select Date'
-                                : 'Select Year',
+                            ? 'Select Date'
+                            : 'Select Year',
                         style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryTextColorLight,
-                            ),
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryTextColorLight,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -803,25 +856,39 @@ class _BudgetScreenState extends State<BudgetScreen>
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              color: AppColors.gradientEnd,
-              onPressed: () async {
-                final isVacationMode = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-                final result = await PersistentNavBarNavigator.pushNewScreen(
-                  context,
-                  screen: AddBudgetScreen(isVacationMode: isVacationMode),
-                  withNavBar: false,
-                  pageTransitionAnimation: PageTransitionAnimation.cupertino,
+            Consumer<VacationProvider>(
+              builder: (context, vacationProvider, child) {
+                return Visibility(
+                  visible: !vacationProvider.isVacationMode,
+                  child: IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    color: AppColors.gradientEnd,
+                    onPressed: () async {
+                      final isVacationMode = Provider.of<VacationProvider>(
+                        context,
+                        listen: false,
+                      ).isVacationMode;
+                      final result =
+                          await PersistentNavBarNavigator.pushNewScreen(
+                            context,
+                            screen: AddBudgetScreen(
+                              isVacationMode: isVacationMode,
+                            ),
+                            withNavBar: false,
+                            pageTransitionAnimation:
+                                PageTransitionAnimation.cupertino,
+                          );
+                      if (result == true) {
+                        Provider.of<BudgetProvider>(
+                          context,
+                          listen: false,
+                        ).initialize();
+                      }
+                    },
+                  ),
                 );
-                if (result == true) {
-                  Provider.of<BudgetProvider>(
-                    context,
-                    listen: false,
-                  ).initialize();
-                  }
-                },
-              ),
+              },
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -831,7 +898,10 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   String _formatAmountForCard(double amount) {
-    final currencySymbol = Provider.of<CurrencyProvider>(context, listen: false).currencySymbol;
+    final currencySymbol = Provider.of<CurrencyProvider>(
+      context,
+      listen: false,
+    ).currencySymbol;
     if (amount.abs() >= 1000) {
       return '$currencySymbol${(amount / 1000).floor()}k';
     }
@@ -850,237 +920,311 @@ class _BudgetScreenState extends State<BudgetScreen>
     final progress = hasLimit ? (spent / limit).clamp(0.0, 1.0) : 0.0;
     final isOverBudget = hasLimit && spent > limit;
     final remaining = limit - spent;
-    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
 
-    return GestureDetector(
-      onTap: () {
-        PersistentNavBarNavigator.pushNewScreen(
-          context,
-          screen: BudgetDetailScreen(
-            category: data.category,
-            budget: data.budget,
-          ),
-          withNavBar: false,
-          pageTransitionAnimation: PageTransitionAnimation.cupertino,
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.gradientEnd : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Row 1: icon + category name (category name gets its own line)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: _getColorFromString(
-                      data.categoryColor,
-                    ).withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _getIconFromString(data.categoryIcon),
-                    color: _getColorFromString(data.categoryColor),
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Category name occupies the remaining space on its own line and can wrap
-                Expanded(
-                  child: Text(
-                    data.categoryName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    softWrap: true,
-                    maxLines: 2,
-                    overflow: TextOverflow.visible,
-                  ),
+    return Consumer<VacationProvider>(
+      builder: (context, vacationProvider, child) {
+        return GestureDetector(
+          onTap: () {
+            PersistentNavBarNavigator.pushNewScreen(
+              context,
+              screen: BudgetDetailScreen(
+                category: data.category,
+                budget: data.budget,
+              ),
+              withNavBar: false,
+              pageTransitionAnimation: PageTransitionAnimation.cupertino,
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? AppColors.gradientEnd : Colors.transparent,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-
-            const SizedBox(height: 2),
-
-            // Row 3: amount, optional limit and edit button — amount and limit grouped on left, edit on right
-            Row(
-              children: [
-                // Amount and limit aligned to start, allowed to scale down if very large
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: RichText(
-                      text: TextSpan(
-                        text: _formatAmountForCard(spent),
+            child: vacationProvider.isVacationMode
+                ? Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _getColorFromString(
+                            data.categoryColor,
+                          ).withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _getIconFromString(data.categoryIcon),
+                          color: _getColorFromString(data.categoryColor),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          data.categoryName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          softWrap: true,
+                          maxLines: 2,
+                          overflow: TextOverflow.visible,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatAmountForCard(spent),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: _getColorFromString(data.categoryColor),
                         ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row 1: icon + category name (category name gets its own line)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          if (hasLimit)
-                            TextSpan(
-                              text: ' / ${_formatAmountForCard(limit)}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.normal,
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: _getColorFromString(
+                                data.categoryColor,
+                              ).withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _getIconFromString(data.categoryIcon),
+                              color: _getColorFromString(data.categoryColor),
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Category name occupies the remaining space on its own line and can wrap
+                          Expanded(
+                            child: Text(
+                              data.categoryName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              softWrap: true,
+                              maxLines: 2,
+                              overflow: TextOverflow.visible,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      // Row 3: amount, optional limit and edit button — amount and limit grouped on left, edit on right
+                      Row(
+                        children: [
+                          // Amount and limit aligned to start, allowed to scale down if very large
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: RichText(
+                                text: TextSpan(
+                                  text: _formatAmountForCard(spent),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: _getColorFromString(
+                                      data.categoryColor,
+                                    ),
+                                  ),
+                                  children: [
+                                    if (hasLimit)
+                                      TextSpan(
+                                        text:
+                                            ' / ${_formatAmountForCard(limit)}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.normal,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Edit button stays at the end of the row
+                          if (!vacationProvider.isVacationMode)
+                            IconButton(
+                              icon: Icon(
+                                Icons.edit,
                                 color: Colors.grey.shade600,
                               ),
+                              onPressed: () async {
+                                final controller = TextEditingController(
+                                  text: hasLimit
+                                      ? limit.toStringAsFixed(2)
+                                      : '',
+                                );
+                                final result = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) {
+                                    return AlertDialog(
+                                      title: const Text('Set spending limit'),
+                                      content: TextField(
+                                        controller: controller,
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        decoration: const InputDecoration(
+                                          hintText: 'Enter limit amount',
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: const Text('Save'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                                if (result == true) {
+                                  final text = controller.text.trim();
+                                  final parsed = double.tryParse(text);
+                                  if (parsed == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Enter a valid number'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  // Update budget limit using the budget ID
+                                  try {
+                                    if (data.budget.id.isNotEmpty) {
+                                      await provider.updateBudgetLimit(
+                                        data.budget.id,
+                                        parsed,
+                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Budget limit saved'),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      // If budget doesn't exist, create a new one
+                                      final isVacation =
+                                          Provider.of<VacationProvider>(
+                                            context,
+                                            listen: false,
+                                          ).isVacationMode;
+                                      await provider.addBudget(
+                                        data.category.id,
+                                        parsed,
+                                        provider.selectedBudgetType,
+                                        isVacation: isVacation,
+                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Budget created'),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      // Extract clean error message from exception
+                                      String errorMessage = e.toString();
+                                      if (errorMessage.startsWith(
+                                        'Exception: ',
+                                      )) {
+                                        errorMessage = errorMessage.substring(
+                                          'Exception: '.length,
+                                        );
+                                      }
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text(errorMessage)),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
                             ),
                         ],
                       ),
-                    ),
-                  ),
-                ),
 
-                // Edit button stays at the end of the row
-                if (!vacationProvider.isVacationMode)
-                  IconButton(
-                    icon: Icon(Icons.edit, color: Colors.grey.shade600),
-                    onPressed: () async {
-                    final controller = TextEditingController(
-                      text: hasLimit ? limit.toStringAsFixed(2) : '',
-                    );
-                    final result = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) {
-                        return AlertDialog(
-                          title: const Text('Set spending limit'),
-                          content: TextField(
-                            controller: controller,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
+                      // Progress section remains on its own block below
+                      if (hasLimit) ...[
+                        const SizedBox(height: 4),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: Colors.grey.shade300,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                progress > 1.0
+                                    ? Colors.red
+                                    : (isOverBudget
+                                          ? Colors.red
+                                          : Colors.green),
+                              ),
                             ),
-                            decoration: const InputDecoration(
-                              hintText: 'Enter limit amount',
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(true),
-                              child: const Text('Save'),
+                            const SizedBox(height: 4),
+                            Text(
+                              isOverBudget
+                                  ? '${Provider.of<CurrencyProvider>(context).currencySymbol}${(spent - limit).toStringAsFixed(2)} over budget'
+                                  : '${Provider.of<CurrencyProvider>(context).currencySymbol}${remaining.toStringAsFixed(2)} remaining',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: isOverBudget ? Colors.red : Colors.green,
+                              ),
                             ),
                           ],
-                        );
-                      },
-                    );
-                    if (result == true) {
-                      final text = controller.text.trim();
-                      final parsed = double.tryParse(text);
-                      if (parsed == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Enter a valid number')),
-                        );
-                        return;
-                      }
-
-                      // Update budget limit using the budget ID
-                      try {
-                        if (data.budget.id.isNotEmpty) {
-                          await provider.updateBudgetLimit(
-                            data.budget.id,
-                            parsed,
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Budget limit saved'),
-                              ),
-                            );
-                          }
-                        } else {
-                          // If budget doesn't exist, create a new one
-                          final isVacation = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-                          await provider.addBudget(
-                            data.category.id,
-                            parsed,
-                            provider.selectedBudgetType,
-                            isVacation: isVacation,
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Budget created')),
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          // Extract clean error message from exception
-                          String errorMessage = e.toString();
-                          if (errorMessage.startsWith('Exception: ')) {
-                            errorMessage = errorMessage.substring(
-                              'Exception: '.length,
-                            );
-                          }
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(errorMessage)));
-                        }
-                      }
-                    }
-                  },
-                ),
-              ],
-            ),
-
-            // Progress section remains on its own block below
-            if (hasLimit) ...[
-              const SizedBox(height: 4),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: Colors.grey.shade300,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      progress > 1.0
-                          ? Colors.red
-                          : (isOverBudget ? Colors.red : Colors.green),
-                    ),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isOverBudget
-                        ? '${Provider.of<CurrencyProvider>(context).currencySymbol}${(spent - limit).toStringAsFixed(2)} over budget'
-                        : '${Provider.of<CurrencyProvider>(context).currencySymbol}${remaining.toStringAsFixed(2)} remaining',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: isOverBudget ? Colors.red : Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

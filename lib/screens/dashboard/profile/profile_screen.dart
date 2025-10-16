@@ -116,19 +116,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     },
                   ),
-                  _buildProfileMenuItem(
-                    Icons.cloud_upload_outlined,
-                    'Import & Export Data',
-                    onTap: () {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const ExportDataScreen(),
-                        withNavBar: false,
-                        pageTransitionAnimation:
-                            PageTransitionAnimation.cupertino,
-                      );
-                    },
-                  ),
+                  // _buildProfileMenuItem(
+                  //   Icons.cloud_upload_outlined,
+                  //   'Import & Export Data',
+                  //   onTap: () {
+                  //     PersistentNavBarNavigator.pushNewScreen(
+                  //       context,
+                  //       screen: const ExportDataScreen(),
+                  //       withNavBar: false,
+                  //       pageTransitionAnimation:
+                  //           PageTransitionAnimation.cupertino,
+                  //     );
+                  //   },
+                  // ),
                   const SizedBox(height: 12),
                   _buildSectionHeader('LEGAL'),
                   _buildProfileMenuItem(
@@ -157,11 +157,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                   _buildSectionHeader('DANGER ZONE'),
-                  _buildProfileMenuItem(
-                    Icons.delete_outline,
-                    'Delete Account',
-                    color: Colors.red,
-                  ),
+                  // _buildProfileMenuItem(
+                  //   Icons.delete_outline,
+                  //   'Delete Account',
+                  //   color: Colors.red,
+                  // ),
                   _buildProfileMenuItem(
                     Icons.logout,
                     'Logout',

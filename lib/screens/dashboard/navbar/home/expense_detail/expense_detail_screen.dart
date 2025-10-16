@@ -385,7 +385,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'ACCOUNT',
+                                        'VACATION ACCOUNT',
                                         style: Theme.of(context).textTheme.bodySmall
                                             ?.copyWith(
                                               color: AppColors.secondaryTextColorLight,
@@ -402,13 +402,14 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                                   ?.copyWith(fontWeight: FontWeight.bold),
                                               textAlign: TextAlign.right,
                                             ),
-                                            if (secondaryAccount.accountType.isNotEmpty)
-                                              Text(
-                                                secondaryAccount.accountType,
-                                                style: Theme.of(context).textTheme.bodySmall
-                                                    ?.copyWith(color: Colors.grey.shade600),
-                                                textAlign: TextAlign.right,
-                                              ),
+                                            // if (secondaryAccount.accountType.isNotEmpty)
+                                            //   Text(
+                                            //     secondaryAccount.accountType,
+                                            //     style: Theme.of(context).textTheme.bodySmall
+                                            //         ?.copyWith(color: Colors.grey.shade600),
+                                            //     textAlign: TextAlign.right,
+                                            //   ),
+                                            SizedBox(height: 14),
                                           ],
                                         ),
                                       ),
