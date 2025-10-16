@@ -1566,16 +1566,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         );
 
         // Create the linked transactions
+        print('DEBUG: AddTxn(vacation) - creating linked expense: amount=$amount, date=${transactionDate.toIso8601String()}, vacationAcc=$_selectedAccountId, normalAcc=$_selectedNormalAccountId, category=$_selectedCategoryId');
         await _firestoreService.createLinkedVacationExpense(
           vacationTransaction: vacationTransaction,
           normalTransaction: normalTransaction,
         );
+        print('DEBUG: AddTxn(vacation) - createLinkedVacationExpense completed');
 
         if (mounted) {
-          Provider.of<HomeScreenProvider>(
+          final homeProvider = Provider.of<HomeScreenProvider>(
             context,
             listen: false,
-          ).triggerRefresh(transactionDate: transactionDate);
+          );
+          // Force re-creation of cached month streams so the linked vacation transaction appears immediately
+          homeProvider.triggerTransactionsRefresh();
+          // Keep month-targeted refresh so the UI jumps to the correct month
+          homeProvider.triggerRefresh(transactionDate: transactionDate);
           Navigator.of(context).pop(true); // Pass true to indicate success
         }
         return;

@@ -16,16 +16,22 @@ class HomeScreenProvider with ChangeNotifier {
   void triggerRefresh({DateTime? transactionDate}) {
     _shouldRefresh = true;
     _transactionDate = transactionDate;
+    // DEBUG
+    print('DEBUG: HomeScreenProvider.triggerRefresh(date=$_transactionDate)');
     notifyListeners();
   }
 
   void triggerAccountRefresh() {
     _shouldRefreshAccounts = true;
+    // DEBUG
+    print('DEBUG: HomeScreenProvider.triggerAccountRefresh()');
     notifyListeners();
   }
 
   void triggerTransactionsRefresh() {
     _shouldRefreshTransactions = true;
+    // DEBUG
+    print('DEBUG: HomeScreenProvider.triggerTransactionsRefresh()');
     notifyListeners();
   }
 
@@ -39,6 +45,8 @@ class HomeScreenProvider with ChangeNotifier {
     _shouldRefreshAccounts = false;
     _shouldRefreshTransactions = false;
     _transactionDate = null;
+    // DEBUG
+    print('DEBUG: HomeScreenProvider.completeRefresh()');
     notifyListeners();
   }
 }

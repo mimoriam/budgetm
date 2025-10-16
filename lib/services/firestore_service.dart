@@ -467,6 +467,10 @@ class FirestoreService {
           linkedTransactionId: vacationRef.id,
         );
 
+        // DEBUG: prepared linked transactions
+        print('DEBUG: createLinkedVacationExpense - prepared finalVacationTxn: id=${finalVacationTransaction.id}, accountId=${finalVacationTransaction.accountId}, date=${finalVacationTransaction.date.toIso8601String()}, amount=${finalVacationTransaction.amount}, linkedId=${finalVacationTransaction.linkedTransactionId}');
+        print('DEBUG: createLinkedVacationExpense - prepared finalNormalTxn: id=${finalNormalTransaction.id}, accountId=${finalNormalTransaction.accountId}, date=${finalNormalTransaction.date.toIso8601String()}, amount=${finalNormalTransaction.amount}, linkedId=${finalNormalTransaction.linkedTransactionId}');
+
         // 3. READS: Fetch the vacation and normal account documents BEFORE any writes
         final vacationAccountRef = _accountsCollection.doc(finalVacationTransaction.accountId);
         final normalAccountRef = _accountsCollection.doc(finalNormalTransaction.accountId);
@@ -498,7 +502,11 @@ class FirestoreService {
         transaction.update(vacationAccountRef, {'balance': newVacationBalance});
         transaction.update(normalAccountRef, {'balance': newNormalBalance});
 
+        // DEBUG: wrote docs and updated balances
+        print('DEBUG: createLinkedVacationExpense - wrote txns and updated balances: vacationAcc=${vacationAccountRef.id} newBalance=$newVacationBalance, normalAcc=${normalAccountRef.id} newBalance=$newNormalBalance');
+
         // 7. Return both IDs
+        print('DEBUG: createLinkedVacationExpense - returning ids: vacation=${vacationRef.id}, normal=${normalRef.id}');
         return {
           'vacationTransactionId': vacationRef.id,
           'normalTransactionId': normalRef.id,

@@ -166,6 +166,16 @@ class MonthPageProvider extends ChangeNotifier {
         .join(',')
         .hashCode
         .toString();
+    // DEBUG logging: hash and transaction IDs for initialization path
+    try {
+      final sampleIds = data.transactionsWithAccounts
+          .map((tx) => tx.transaction.id)
+          .take(8)
+          .toList();
+      print('DEBUG: MonthPageProvider.initialize - txWithAccounts=${data.transactionsWithAccounts.length}, newHash=$currentDataHash, lastHash=$_lastDataHash, isInitialized=$_isInitialized, hasReachedEnd=$_hasReachedEnd, currentPage=$_currentPage, sampleIds=$sampleIds');
+    } catch (e) {
+      print('DEBUG: MonthPageProvider.initialize - logging error: $e');
+    }
 
     // Always reset state if this is the first initialization or if data has changed
     if (!_isInitialized || currentDataHash != _lastDataHash) {
@@ -405,6 +415,16 @@ class MonthPageDataManager {
                     .fold<double>(
                         0.0, (sum, transaction) => sum + transaction.amount);
 
+                // DEBUG: emit stats before returning MonthPageData to validate stream updates
+                try {
+                  final linkedCount = transactions.where((transaction) => transaction.linkedTransactionId != null).length;
+                  final vacationCount = transactions.where((transaction) => transaction.isVacation == true).length;
+                  final sampleIds = transactions.map((t) => t.id).take(6).toList();
+                  print('DEBUG: MonthPageDataManager.combine - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, txCount=${transactions.length}, linkedCount=$linkedCount, vacationCount=$vacationCount, totalIncome=$totalIncome, totalExpenses=$totalExpenses, sampleIds=$sampleIds');
+                } catch (e) {
+                  print('DEBUG: MonthPageDataManager.combine - logging error: $e');
+                }
+
                 return MonthPageData(
                   transactions: transactions,
                   totalIncome: totalIncome,
@@ -435,10 +455,9 @@ class MonthPageDataManager {
     print('DEBUG: Active vacation accountId=${_vacationProvider.activeVacationAccountId}');
     
     if (isVacation != null) {
-      // Invalidate only the specific combination
-      // We need to invalidate both with and without accountId to be safe
+      // Invalidate the specific combination for the given mode
       final normalKey = '$monthIndex-$isVacation';
-      final withAccountKey = '$monthIndex-$isVacation-${_vacationProvider.activeVacationAccountId ?? 'all'}';
+      final withAccountKey = '$monthIndex-$isVacation-${isVacation ? (_vacationProvider.activeVacationAccountId ?? 'all') : 'all'}';
       
       print('DEBUG: Removing cache keys: $normalKey, $withAccountKey');
       _pageStreamCache.remove(normalKey);
@@ -453,6 +472,29 @@ class MonthPageDataManager {
           }
         });
         print('DEBUG: Removing additional vacation account keys to prevent leakage: $keysToRemove');
+        for (final key in keysToRemove) {
+          _pageStreamCache.remove(key);
+        }
+      }
+      
+      // NEW: Also invalidate the cache for the other mode to handle linked transactions
+      final otherMode = !isVacation;
+      final otherNormalKey = '$monthIndex-$otherMode';
+      final otherWithAccountKey = '$monthIndex-$otherMode-${otherMode ? (_vacationProvider.activeVacationAccountId ?? 'all') : 'all'}';
+      
+      print('DEBUG: Also invalidating cache for other mode (isVacation=$otherMode): $otherNormalKey, $otherWithAccountKey');
+      _pageStreamCache.remove(otherNormalKey);
+      _pageStreamCache.remove(otherWithAccountKey);
+      
+      // If the other mode is vacation, also invalidate other vacation account keys
+      if (otherMode) {
+        final keysToRemove = <String>[];
+        _pageStreamCache.forEach((key, value) {
+          if (key.startsWith('$monthIndex-true-') && key != otherWithAccountKey) {
+            keysToRemove.add(key);
+          }
+        });
+        print('DEBUG: Removing additional vacation account keys for other mode: $keysToRemove');
         for (final key in keysToRemove) {
           _pageStreamCache.remove(key);
         }
@@ -574,6 +616,14 @@ class _MonthPageViewState extends State<MonthPageView> {
               if (snapshot.hasData &&
                   !snapshot.data!.isLoading &&
                   snapshot.data!.error == null) {
+                // DEBUG: log incoming snapshot before provider.initialize to trace refresh
+                try {
+                  final txCount = snapshot.data!.transactionsWithAccounts.length;
+                  final linkedCount = snapshot.data!.transactions.where((t) => t.linkedTransactionId != null).length;
+                  print('DEBUG: MonthPageView.StreamBuilder - monthIndex=${widget.monthIndex}, isVacation=${widget.isVacation}, txCount=$txCount, linkedCount=$linkedCount, providerInitialized=${provider.isInitialized}, paginatedCount=${provider.paginatedTransactions.length}');
+                } catch (e) {
+                  print('DEBUG: MonthPageView.StreamBuilder - logging error: $e');
+                }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   provider.initialize(snapshot.data!);
                 });
@@ -1072,6 +1122,12 @@ class _MonthPageViewState extends State<MonthPageView> {
 
     // Determine if the transaction is a vacation transaction
     final bool isVacationTransaction = account?.isVacationAccount ?? false;
+    // DEBUG: Log each transaction item render (may be verbose)
+    try {
+      print('DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}');
+    } catch (e) {
+      print('DEBUG: BuildTransactionItem - logging error: $e');
+    }
 
     return InkWell(
       onTap: () async {
