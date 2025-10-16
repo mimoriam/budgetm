@@ -176,11 +176,16 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           .map((account) {
             final totalExpenses = expenseSums[account.id] ?? 0.0;
             // For vacation accounts the final balance should be initial balance minus expenses
-            final finalBalance = max(0, account.initialBalance - totalExpenses);
+            final finalBalance = max(0.0, account.initialBalance - totalExpenses);
+            // Diagnostics to confirm all values are doubles at runtime
+            print('DEBUG BalanceScreen: vacationMode finalBalance accountId=${account.id} '
+                  'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
+                  'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
+                  'final=$finalBalance(${finalBalance.runtimeType})');
             return {
               'account': account,
               'transactionsAmount':
-                  max(0, account.initialBalance - totalExpenses), // keep sign for consistency
+                  max(0.0, account.initialBalance - totalExpenses), // keep sign for consistency
               'finalBalance': finalBalance,
             };
           })
@@ -213,7 +218,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         .where((account) => (account.isVacationAccount == true))
         .map((account) {
           final totalExpenses = expenseSums[account.id] ?? 0.0;
-          final finalBalance = max(0, account.initialBalance - totalExpenses);
+          final finalBalance = max(0.0, account.initialBalance - totalExpenses);
+          // Diagnostics to confirm all values are doubles at runtime
+          print('DEBUG BalanceScreen: normalMode vacation finalBalance accountId=${account.id} '
+                'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
+                'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
+                'final=$finalBalance(${finalBalance.runtimeType})');
           return {
             'account': account,
             'transactionsAmount': finalBalance,

@@ -173,168 +173,124 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       const SizedBox(height: 16),
                       _buildCreditLimitOrBalanceField(),
                       const SizedBox(height: 16),
-                      _buildFormSection(
-                        context,
-                        'Account Type',
-                        Column(
-                          children: [
-                            widget.isCreatingVacationAccount
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10.0,
-                                      horizontal: 16.0,
+                      // Only show Account Type section if not creating a vacation account
+                      if (!widget.isCreatingVacationAccount)
+                        _buildFormSection(
+                          context,
+                          'Account Type',
+                          Column(
+                            children: [
+                              GestureDetector(
+                                onTap: _showAccountTypeSelection,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10.0,
+                                    horizontal: 16.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(
+                                      30.0,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(30.0),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                      ),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Builder(
-                                              builder: (context) {
-                                                final icons = getAccountIcon(
-                                                  _selectedAccountType,
-                                                );
-                                                final iconData =
-                                                    (icons.isNotEmpty &&
-                                                        icons.first.isNotEmpty)
-                                                    ? icons.first.first
-                                                    : HugeIcons
-                                                          .strokeRoundedCash01;
-                                                return HugeIcon(
-                                                  icon: iconData,
-                                                  color:
-                                                      _selectedAccountType !=
-                                                          null
-                                                      ? AppColors
-                                                            .primaryTextColorLight
-                                                      : AppColors
-                                                            .lightGreyBackground,
-                                                  size: 16,
-                                                );
-                                              },
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              _selectedAccountType ?? 'Credit',
-                                              style: TextStyle(
-                                                fontSize: 13,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Builder(
+                                            builder: (context) {
+                                              final icons = getAccountIcon(
+                                                _selectedAccountType,
+                                              );
+                                              final iconData =
+                                                  (icons.isNotEmpty &&
+                                                      icons
+                                                          .first
+                                                          .isNotEmpty)
+                                                  ? icons.first.first
+                                                  : HugeIcons
+                                                        .strokeRoundedCash01;
+                                              return HugeIcon(
+                                                icon: iconData,
                                                 color:
-                                                    _selectedAccountType != null
+                                                    _selectedAccountType !=
+                                                        null
                                                     ? AppColors
                                                           .primaryTextColorLight
                                                     : AppColors
                                                           .lightGreyBackground,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : GestureDetector(
-                                    onTap: _showAccountTypeSelection,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 16.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(
-                                          30.0,
-                                        ),
-                                        border: Border.all(
-                                          color: Colors.grey.shade300,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Builder(
-                                                builder: (context) {
-                                                  final icons = getAccountIcon(
-                                                    _selectedAccountType,
-                                                  );
-                                                  final iconData =
-                                                      (icons.isNotEmpty &&
-                                                          icons
-                                                              .first
-                                                              .isNotEmpty)
-                                                      ? icons.first.first
-                                                      : HugeIcons
-                                                            .strokeRoundedCash01;
-                                                  return HugeIcon(
-                                                    icon: iconData,
-                                                    color:
-                                                        _selectedAccountType !=
-                                                            null
-                                                        ? AppColors
-                                                              .primaryTextColorLight
-                                                        : AppColors
-                                                              .lightGreyBackground,
-                                                    size: 16,
-                                                  );
-                                                },
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                _selectedAccountType ??
-                                                    'Select Account Type',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color:
-                                                      _selectedAccountType !=
-                                                          null
-                                                      ? AppColors
-                                                            .primaryTextColorLight
-                                                      : AppColors
-                                                            .lightGreyBackground,
-                                                ),
-                                              ),
-                                            ],
+                                                size: 16,
+                                              );
+                                            },
                                           ),
-                                          const Icon(
-                                            Icons.arrow_drop_down,
-                                            color: AppColors
-                                                .secondaryTextColorLight,
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _selectedAccountType ??
+                                                'Select Account Type',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color:
+                                                  _selectedAccountType != null
+                                                  ? AppColors
+                                                        .primaryTextColorLight
+                                                  : AppColors
+                                                        .lightGreyBackground,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                  ),
-                            // Hidden field to store and validate the account_type
-                            Opacity(
-                              opacity: 0,
-                              child: AbsorbPointer(
-                                child: FormBuilderTextField(
-                                  name: 'account_type',
-                                  initialValue: widget.isCreatingVacationAccount
-                                      ? 'Credit'
-                                      : _selectedAccountType,
-                                  validator: FormBuilderValidators.required(
-                                    errorText: 'Account type is required',
-                                  ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
+                                      const Icon(
+                                        Icons.arrow_drop_down,
+                                        color: AppColors
+                                            .secondaryTextColorLight,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                              // Hidden field to store and validate the account_type
+                              Opacity(
+                                opacity: 0,
+                                child: AbsorbPointer(
+                                  child: FormBuilderTextField(
+                                    name: 'account_type',
+                                    initialValue: _selectedAccountType,
+                                    validator: FormBuilderValidators.required(
+                                      errorText: 'Account type is required',
+                                    ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      // For vacation accounts, we still need the hidden field to store the account type
+                      if (widget.isCreatingVacationAccount)
+                        Opacity(
+                          opacity: 0,
+                          child: AbsorbPointer(
+                            child: FormBuilderTextField(
+                              name: 'account_type',
+                              initialValue: 'Credit',
+                              validator: FormBuilderValidators.required(
+                                errorText: 'Account type is required',
+                              ),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                        ),
                       // const SizedBox(height: 10),
                       // Transform.scale(
                       //   scale: 0.9,

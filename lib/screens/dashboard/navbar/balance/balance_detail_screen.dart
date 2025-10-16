@@ -575,7 +575,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                   Text('Are you sure you want to delete "${widget.account.name}"? This action cannot be undone.'),
                   const SizedBox(height: 8),
                   CheckboxListTile(
-                    title: const Text('Cascade delete transactions'),
+                    title: const Text('Delete all associated transactions'),
                     value: cascadeDelete,
                     onChanged: (val) => setState(() => cascadeDelete = val ?? false),
                     controlAffinity: ListTileControlAffinity.leading,
