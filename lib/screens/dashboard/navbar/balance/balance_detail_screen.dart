@@ -249,54 +249,62 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                   children: [
                     // Row for Initial Balance and Current Balance
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Semantics(
-                          label: 'Initial Balance',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Initial Balance',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: Semantics(
+                            label: 'Initial Balance',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Initial Balance',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _currencyFormat.format(widget.account.initialBalance),
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: Colors.black,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(height: 4),
+                                Text(
+                                  _currencyFormat.format(widget.account.initialBalance),
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    color: Colors.black,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                        Semantics(
-                          label: 'Current Balance',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Current Balance',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w500,
+                        Container(
+                          width: 1,
+                          height: 50,
+                          color: Colors.black.withOpacity(0.2),
+                        ),
+                        Expanded(
+                          child: Semantics(
+                            label: 'Current Balance',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Current Balance',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _currencyFormat.format(currentBalance),
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: currentBalance >= 0 ? Colors.black : Colors.red[300],
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(height: 4),
+                                Text(
+                                  _currencyFormat.format(currentBalance),
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    color: currentBalance >= 0 ? Colors.black : Colors.red[300],
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -319,15 +327,24 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.clear, color: Colors.red, size: 16),
-                                  onPressed: () {
+                                GestureDetector(
+                                  onTap: () {
                                     setState(() {
                                       _selectedDateRange = null;
                                     });
                                   },
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.close_rounded,
+                                      color: Colors.red[400],
+                                      size: 18,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -356,62 +373,80 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
               Expanded(
                 child: (!snapshot.hasData || snapshot.data!.isEmpty)
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long,
-                              size: 80,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No transactions found',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Transactions for this account will appear here',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[500],
-                                  ),
-                            ),
-                          ],
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long,
+                                size: 80,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No transactions found',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Transactions for this account will appear here',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.grey[500],
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : filteredTransactions.isEmpty
                         ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.filter_list_off,
-                                  size: 80,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No transactions found for the selected period',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Try adjusting the date range filter',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Colors.grey[500],
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.filter_list_off,
+                                    size: 80,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No transactions found for the selected period',
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Try adjusting the date range filter',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.grey[500],
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedDateRange = null;
+                                      });
+                                    },
+                                    icon: const Icon(Icons.refresh, color: Colors.black,),
+                                    label: const Text('Clear Filter', style: TextStyle(
+                                      color: Colors.black
+                                    ),),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.gradientStart,
+                                      side: BorderSide(color: AppColors.gradientStart),
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30),
                                       ),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedDateRange = null;
-                                    });
-                                  },
-                                  icon: const Icon(Icons.clear),
-                                  label: const Text('Clear Filter'),
-                                ),
-                              ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           )
                         : _buildGroupedTransactionsList(filteredTransactions),

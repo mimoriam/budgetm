@@ -169,47 +169,29 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
-                            final result = await showDialog<Map<String, bool>>(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (ctx) {
-                                bool cascadeDelete = false;
-                                return StatefulBuilder(
-                                  builder: (context, setState) {
-                                    return AlertDialog(
-                                      title: const Text('Delete Goal'),
-                                      content: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text('Are you sure you want to delete "${widget.goal.name}"? This action cannot be undone.'),
-                                          const SizedBox(height: 8),
-                                          CheckboxListTile(
-                                            title: const Text('Cascade delete transactions'),
-                                            value: cascadeDelete,
-                                            onChanged: (val) => setState(() => cascadeDelete = val ?? false),
-                                            controlAffinity: ListTileControlAffinity.leading,
-                                            contentPadding: EdgeInsets.zero,
-                                          ),
-                                        ],
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': cascadeDelete}),
-                                          style: TextButton.styleFrom(
-                                            foregroundColor: Colors.red,
-                                          ),
-                                          child: const Text('Delete'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                            );
+                           final result = await showDialog<Map<String, bool>>(
+                             context: context,
+                             barrierDismissible: false,
+                             builder: (ctx) {
+                               return AlertDialog(
+                                 title: const Text('Delete Goal'),
+                                 content: Text('Are you sure you want to delete "${widget.goal.name}"? This action cannot be undone.'),
+                                 actions: [
+                                   TextButton(
+                                     onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
+                                     child: const Text('Cancel'),
+                                   ),
+                                   TextButton(
+                                     onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
+                                     style: TextButton.styleFrom(
+                                       foregroundColor: Colors.red,
+                                     ),
+                                     child: const Text('Delete'),
+                                   ),
+                                 ],
+                               );
+                             },
+                           );
 
                             if (result != null && result['confirmed'] == true) {
                               final cascadeDelete = result['cascadeDelete'] == true;
@@ -357,7 +339,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             return Row(
               children: [
                 Container(
-                  // padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: iconBackgroundColor,
                     borderRadius: BorderRadius.circular(14),
