@@ -49,6 +49,7 @@ class BudgetProvider with ChangeNotifier {
         _homeScreenProvider = homeScreenProvider {
     _vacationProvider.addListener(_onVacationModeChanged);
     _homeScreenProvider.addListener(_onHomeScreenProviderChanged);
+    _currencyProvider.addListener(_onCurrencyChanged);
   }
   
   // Getters
@@ -500,6 +501,12 @@ class BudgetProvider with ChangeNotifier {
     });
   }
   
+  // Listener for currency changes
+  void _onCurrencyChanged() {
+    print('DEBUG BudgetProvider: Currency changed, reloading data');
+    loadData();
+  }
+  
   // Listener for HomeScreenProvider changes
   void _onHomeScreenProviderChanged() {
     if (_homeScreenProvider.shouldRefreshTransactions || _homeScreenProvider.shouldRefresh) {
@@ -794,6 +801,7 @@ class BudgetProvider with ChangeNotifier {
     _transactionsSubscription?.cancel();
     _vacationProvider.removeListener(_onVacationModeChanged);
     _homeScreenProvider.removeListener(_onHomeScreenProviderChanged);
+    _currencyProvider.removeListener(_onCurrencyChanged);
     super.dispose();
   }
 }

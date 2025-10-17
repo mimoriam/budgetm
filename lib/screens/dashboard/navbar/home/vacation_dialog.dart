@@ -1,8 +1,10 @@
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
+import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -20,6 +22,10 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
   final vacationAccounts = all.where((a) => a.isVacationAccount == true).toList();
 
   if (!context.mounted) return;
+
+  // Get the current currency from CurrencyProvider
+  final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+  final currentCurrency = currencyProvider.selectedCurrencyCode;
 
   final result = await showGeneralDialog<FirestoreAccount>(
     context: context,
@@ -46,39 +52,199 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                     padding: const EdgeInsets.all(16),
                     child: const Text('No vacation accounts available.'),
                   )
-                : PrettyBottomSheet<FirestoreAccount>(
-                   title: 'Vacation Mode',
-                   items: vacationAccounts,
-                   selectedItem: vacationAccounts.first,
-                   getDisplayName: (a) => a.name,
-                   getLeading: (a) => Row(
-                     mainAxisSize: MainAxisSize.min,
-                     children: [
-                       Icon(
-                         Icons.credit_card,
-                         color: Theme.of(context).iconTheme.color,
-                         size: 20,
-                       ),
-                       const SizedBox(width: 8),
-                     ],
-                   ),
-                   actionButton: IconButton(
-                     icon: const Icon(Icons.add_circle, size: 30),
-                     onPressed: () async {
-                       Navigator.of(context).pop(); // Close the current dialog
-                       await PersistentNavBarNavigator.pushNewScreen(
-                         context,
-                         screen: const AddAccountScreen(isCreatingVacationAccount: true),
-                         withNavBar: false,
-                         pageTransitionAnimation: PageTransitionAnimation.cupertino,
-                       );
-                       // Re-show the dialog after returning to refresh the list
-                       if (context.mounted) {
-                          await showVacationDialog(context, isMandatory: isMandatory);
-                       }
-                     },
-                   ),
-                 ),
+                : StatefulBuilder(
+                    builder: (context, setState) {
+                      FirestoreAccount? selectedAccount = vacationAccounts.first;
+                      
+                      // Check if any account matches the current currency
+                      final hasMatchingCurrency = vacationAccounts.any((account) =>
+                          account.currency == currentCurrency);
+                      
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Handle bar
+                          Container(
+                            margin: const EdgeInsets.only(top: 8, bottom: 8),
+                            width: 40,
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: AppColors.lightGreyBackground.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          // Title with action button
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Vacation Mode',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryTextColorLight,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add_circle, size: 30),
+                                  onPressed: () async {
+                                    Navigator.of(context).pop(); // Close the current dialog
+                                    await PersistentNavBarNavigator.pushNewScreen(
+                                      context,
+                                      screen: const AddAccountScreen(isCreatingVacationAccount: true),
+                                      withNavBar: false,
+                                      pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                                    );
+                                    // Re-show the dialog after returning to refresh the list
+                                    if (context.mounted) {
+                                       await showVacationDialog(context, isMandatory: isMandatory);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Currency warning message if needed
+                          if (!hasMatchingCurrency)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(left: 12, right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.warning, color: Colors.amber[700], size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'No vacation accounts match your current currency ($currentCurrency)',
+                                      style: TextStyle(
+                                        color: Colors.amber[700],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          // Custom account list with validation
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 300),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              itemCount: vacationAccounts.length,
+                              itemBuilder: (context, index) {
+                                final account = vacationAccounts[index];
+                                final isSelected = account == selectedAccount;
+                                final currencyMatches = account.currency == currentCurrency;
+                                
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Card(
+                                    elevation: isSelected ? 4 : 1,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24.0),
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: isSelected
+                                            ? LinearGradient(
+                                                colors: [
+                                                  AppColors.gradientStart,
+                                                  AppColors.gradientEnd,
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              )
+                                            : null,
+                                        color: isSelected ? null : Colors.white,
+                                        borderRadius: BorderRadius.circular(24.0),
+                                      ),
+                                      child: ListTile(
+                                        contentPadding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                          vertical: 0.0,
+                                        ),
+                                        leading: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              currencyMatches
+                                                  ? Icons.check_circle
+                                                  : Icons.credit_card,
+                                              color: currencyMatches
+                                                  ? Colors.green
+                                                  : Theme.of(context).iconTheme.color,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                        ),
+                                        title: Text(
+                                          '${account.name} (${account.currency})',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected
+                                                ? AppColors.primaryTextColorLight
+                                                : AppColors.secondaryTextColorLight,
+                                          ),
+                                        ),
+                                        trailing: isSelected
+                                            ? Icon(
+                                                Icons.check_circle,
+                                                color: AppColors.primaryTextColorLight,
+                                                size: 24,
+                                              )
+                                            : null,
+                                        onTap: () {
+                                          setState(() {
+                                            selectedAccount = account;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          // Action button
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            child: ElevatedButton(
+                              onPressed: selectedAccount?.currency == currentCurrency
+                                  ? () => Navigator.of(context).pop(selectedAccount)
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: selectedAccount?.currency == currentCurrency
+                                    ? null
+                                    : Colors.grey.shade300,
+                              ),
+                              child: Text(
+                                selectedAccount?.currency == currentCurrency
+                                    ? 'Enable Vacation Mode'
+                                    : 'Currency Mismatch: ${selectedAccount?.currency} ≠ $currentCurrency',
+                                style: TextStyle(
+                                  color: selectedAccount?.currency == currentCurrency
+                                      ? null
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
           ),
         ),
       );

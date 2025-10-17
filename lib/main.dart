@@ -46,7 +46,15 @@ Future<void> main() async {
                 homeScreenProvider: homeScreenProvider,
               ),
         ),
-        ChangeNotifierProvider(create: (_) => GoalsProvider()),
+        ChangeNotifierProxyProvider<CurrencyProvider, GoalsProvider>(
+          create: (context) => GoalsProvider(
+            currencyProvider: Provider.of<CurrencyProvider>(context, listen: false),
+          ),
+          update: (context, currencyProvider, goalsProvider) =>
+              goalsProvider ?? GoalsProvider(
+                currencyProvider: currencyProvider,
+              ),
+        ),
       ],
       child: MyApp(onboardingDone: onboardingDone),
     ),

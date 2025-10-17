@@ -1,11 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class GoalsProvider extends ChangeNotifier {
-  GoalsProvider();
+  final CurrencyProvider _currencyProvider;
+  
+  GoalsProvider({required CurrencyProvider currencyProvider})
+      : _currencyProvider = currencyProvider {
+    _currencyProvider.addListener(_onCurrencyChanged);
+  }
 
   Future<void> addGoal(FirestoreGoal goal) async {
     await FirestoreService.instance.createGoal(goal);
@@ -86,5 +92,17 @@ class GoalsProvider extends ChangeNotifier {
       }
     }
     return false;
+  }
+  
+  // Listener for currency changes
+  void _onCurrencyChanged() {
+    print('DEBUG GoalsProvider: Currency changed, notifying listeners to refresh UI');
+    notifyListeners();
+  }
+  
+  @override
+  void dispose() {
+    _currencyProvider.removeListener(_onCurrencyChanged);
+    super.dispose();
   }
 }
