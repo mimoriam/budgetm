@@ -450,6 +450,11 @@ class BudgetProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
+    // Clear transactions early to avoid displaying stale data when switching currency or mode
+    print('DEBUG BudgetProvider.loadData: clearing _allTransactions before loading new data');
+    _allTransactions = [];
+    notifyListeners();
+    
     try {
       // Fetch categories
       print('DEBUG BudgetProvider.loadData: fetching categories');
