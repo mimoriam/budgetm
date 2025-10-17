@@ -6,12 +6,14 @@ import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class BudgetProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService.instance;
   final CurrencyProvider _currencyProvider;
   final VacationProvider _vacationProvider;
+  final HomeScreenProvider _homeScreenProvider;
   
   // Selected budget type filter
   BudgetType _selectedBudgetType = BudgetType.monthly;
@@ -41,9 +43,12 @@ class BudgetProvider with ChangeNotifier {
   BudgetProvider({
     required CurrencyProvider currencyProvider,
     required VacationProvider vacationProvider,
+    required HomeScreenProvider homeScreenProvider,
   })  : _currencyProvider = currencyProvider,
-        _vacationProvider = vacationProvider {
+        _vacationProvider = vacationProvider,
+        _homeScreenProvider = homeScreenProvider {
     _vacationProvider.addListener(_onVacationModeChanged);
+    _homeScreenProvider.addListener(_onHomeScreenProviderChanged);
   }
   
   // Getters
@@ -246,11 +251,10 @@ class BudgetProvider with ChangeNotifier {
           break;
       }
       
-      // Calculate spent amount from transactions
-      double spentAmount = 0.0;
-      if (matchingBudget.id.isNotEmpty || matchingBudget.isRecurring) {
-        spentAmount = _calculateSpentAmount(matchingBudget);
-      }
+      // Always calculate spent amount from transactions, even for placeholder budgets
+      // Ensure the isVacation flag is set correctly for placeholder budgets
+      final adjustedBudget = matchingBudget.copyWith(isVacation: _vacationProvider.isVacationMode);
+      final spentAmount = _calculateSpentAmount(adjustedBudget);
       
       return CategoryBudgetData(
         category: category,
@@ -412,11 +416,17 @@ class BudgetProvider with ChangeNotifier {
     // Cancel existing subscription if any
     _transactionsSubscription?.cancel();
     
-    // Subscribe to all transactions stream
+    // Subscribe to transactions stream filtered by vacation account ID if in vacation mode
     _transactionsSubscription = _firestoreService
-        .streamTransactions()
+        .streamTransactions(
+          vacationAccountId: _vacationProvider.isVacationMode
+            ? _vacationProvider.activeVacationAccountId
+            : null
+        )
         .listen((transactions) {
-      _allTransactions = transactions.where((t) => t.type == 'expense').toList();
+      _allTransactions = transactions.where((t) =>
+        t.type == 'expense' && t.isVacation == _vacationProvider.isVacationMode
+      ).toList();
       notifyListeners();
     });
   }
@@ -432,13 +442,20 @@ class BudgetProvider with ChangeNotifier {
       
       // Load budgets based on current vacation mode
       if (_vacationProvider.isVacationMode) {
-        _budgets = await _firestoreService.getAllVacationBudgets();
+        _budgets = await _firestoreService.getAllVacationBudgets(
+          vacationAccountId: _vacationProvider.activeVacationAccountId
+        );
       } else {
         _budgets = await _firestoreService.getAllBudgets(isVacation: false);
       }
       
       // Load all expense transactions based on current vacation mode
-      final allTransactions = await _firestoreService.getAllTransactions(isVacation: _vacationProvider.isVacationMode);
+      final allTransactions = await _firestoreService.getAllTransactions(
+        isVacation: _vacationProvider.isVacationMode,
+        vacationAccountId: _vacationProvider.isVacationMode
+          ? _vacationProvider.activeVacationAccountId
+          : null
+      );
       _allTransactions = allTransactions.where((t) => t.type == 'expense').toList();
       
     } catch (e) {
@@ -451,7 +468,20 @@ class BudgetProvider with ChangeNotifier {
 
   // Listener for vacation mode changes
   void _onVacationModeChanged() {
+    // Cancel existing subscription and recreate it with the new vacation mode
+    _transactionsSubscription?.cancel();
+    _setupTransactionsListener();
+    // Reload the budgets and other data
     loadData();
+  }
+  
+  // Listener for HomeScreenProvider changes
+  void _onHomeScreenProviderChanged() {
+    if (_homeScreenProvider.shouldRefreshTransactions || _homeScreenProvider.shouldRefresh) {
+      print('DEBUG: BudgetProvider detected refresh trigger, reloading data');
+      loadData();
+      _homeScreenProvider.completeRefresh();
+    }
   }
   
   Future<void> _fetchCategories() async {
@@ -738,6 +768,7 @@ class BudgetProvider with ChangeNotifier {
   void dispose() {
     _transactionsSubscription?.cancel();
     _vacationProvider.removeListener(_onVacationModeChanged);
+    _homeScreenProvider.removeListener(_onHomeScreenProviderChanged);
     super.dispose();
   }
 }

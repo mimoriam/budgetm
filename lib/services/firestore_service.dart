@@ -215,11 +215,17 @@ class FirestoreService {
   }
 
   // Get all vacation budgets for all time
-  Future<List<Budget>> getAllVacationBudgets() async {
+  Future<List<Budget>> getAllVacationBudgets({String? vacationAccountId}) async {
     try {
-      final querySnapshot = await _budgetsCollection
-          .where('isVacation', isEqualTo: true)
-          .get();
+      Query<Budget> query = _budgetsCollection
+          .where('isVacation', isEqualTo: true);
+      
+      // Add vacationAccountId filter if provided
+      if (vacationAccountId != null) {
+        query = query.where('vacationAccountId', isEqualTo: vacationAccountId);
+      }
+      
+      final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Error getting all vacation budgets: $e');
@@ -530,9 +536,15 @@ class FirestoreService {
   }
 
   // Get all transactions (optionally filtered by vacation mode)
-  Future<List<FirestoreTransaction>> getAllTransactions({bool isVacation = false}) async {
+  Future<List<FirestoreTransaction>> getAllTransactions({bool isVacation = false, String? vacationAccountId}) async {
     try {
-      final query = _transactionsCollection.where('isVacation', isEqualTo: isVacation);
+      Query<FirestoreTransaction> query = _transactionsCollection.where('isVacation', isEqualTo: isVacation);
+      
+      // Add vacationAccountId filter if provided
+      if (vacationAccountId != null) {
+        query = query.where('vacationAccountId', isEqualTo: vacationAccountId);
+      }
+      
       final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
@@ -727,10 +739,17 @@ class FirestoreService {
   }
 
   // Stream transactions (real-time updates)
-  Stream<List<FirestoreTransaction>> streamTransactions() {
+  Stream<List<FirestoreTransaction>> streamTransactions({String? vacationAccountId}) {
     try {
-      return _transactionsCollection
-          .orderBy('date', descending: true)
+      Query<FirestoreTransaction> query = _transactionsCollection
+          .orderBy('date', descending: true);
+      
+      // Add vacationAccountId filter if provided
+      if (vacationAccountId != null) {
+        query = query.where('vacationAccountId', isEqualTo: vacationAccountId);
+      }
+      
+      return query
           .snapshots()
           .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
     } catch (e) {
