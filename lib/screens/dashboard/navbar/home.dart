@@ -338,8 +338,14 @@ class MonthPageDataManager {
     print('DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId');
     print('DEBUG: Cache key: $cacheKey');
 
+    // In vacation mode without an active account, bypass caching to avoid stale 'all' cache reuse.
+    final bool bypassCache = isVacation && (activeVacationAccountId == null);
+    if (bypassCache) {
+      print('DEBUG: Bypassing cache for vacation mode without active account (key=$cacheKey)');
+    }
+
     // If a stream for this specific combination is already in the cache, return it.
-    if (_pageStreamCache.containsKey(cacheKey)) {
+    if (!bypassCache && _pageStreamCache.containsKey(cacheKey)) {
       print('DEBUG: Using cached stream for key: $cacheKey');
       return _pageStreamCache[cacheKey]!;
     }
@@ -444,8 +450,12 @@ class MonthPageDataManager {
               maxSize: 1,
             ); // Cache the result of this month's stream.
 
-    // Store the newly created stream in the cache with the composite key and return it.
-    _pageStreamCache[cacheKey] = stream;
+    // Store the newly created stream in the cache with the composite key if not bypassing the cache, then return it.
+    if (!bypassCache) {
+      _pageStreamCache[cacheKey] = stream;
+    } else {
+      print('DEBUG: Not caching stream for key=$cacheKey due to bypass');
+    }
     return stream;
   }
 
@@ -453,73 +463,39 @@ class MonthPageDataManager {
   void invalidateMonth(int monthIndex, [bool? isVacation]) {
     print('DEBUG: Invalidating cache for monthIndex=$monthIndex, isVacation=$isVacation');
     print('DEBUG: Active vacation accountId=${_vacationProvider.activeVacationAccountId}');
-    
+
+    // Build the prefix to match keys to remove
+    final String prefix = isVacation == null
+        ? '$monthIndex-'
+        : '$monthIndex-${isVacation}-';
+
+    // Collect keys to remove based on the computed prefix
+    final keysToRemove = <String>[];
+    _pageStreamCache.forEach((key, value) {
+      if (key.startsWith(prefix)) {
+        keysToRemove.add(key);
+      }
+    });
+    print('DEBUG: invalidateMonth -> removing keys by prefix "$prefix": $keysToRemove');
+    for (final key in keysToRemove) {
+      _pageStreamCache.remove(key);
+    }
+
+    // Optional: also invalidate the other mode to handle linked transactions crossing modes
     if (isVacation != null) {
-      // Invalidate the specific combination for the given mode
-      final normalKey = '$monthIndex-$isVacation';
-      final withAccountKey = '$monthIndex-$isVacation-${isVacation ? (_vacationProvider.activeVacationAccountId ?? 'all') : 'all'}';
-      
-      print('DEBUG: Removing cache keys: $normalKey, $withAccountKey');
-      _pageStreamCache.remove(normalKey);
-      _pageStreamCache.remove(withAccountKey);
-      
-      // Also invalidate any other vacation account keys to prevent data leakage
-      if (isVacation) {
-        final keysToRemove = <String>[];
-        _pageStreamCache.forEach((key, value) {
-          if (key.startsWith('$monthIndex-true-') && key != withAccountKey) {
-            keysToRemove.add(key);
-          }
-        });
-        print('DEBUG: Removing additional vacation account keys to prevent leakage: $keysToRemove');
-        for (final key in keysToRemove) {
-          _pageStreamCache.remove(key);
-        }
-      }
-      
-      // NEW: Also invalidate the cache for the other mode to handle linked transactions
-      final otherMode = !isVacation;
-      final otherNormalKey = '$monthIndex-$otherMode';
-      final otherWithAccountKey = '$monthIndex-$otherMode-${otherMode ? (_vacationProvider.activeVacationAccountId ?? 'all') : 'all'}';
-      
-      print('DEBUG: Also invalidating cache for other mode (isVacation=$otherMode): $otherNormalKey, $otherWithAccountKey');
-      _pageStreamCache.remove(otherNormalKey);
-      _pageStreamCache.remove(otherWithAccountKey);
-      
-      // If the other mode is vacation, also invalidate other vacation account keys
-      if (otherMode) {
-        final keysToRemove = <String>[];
-        _pageStreamCache.forEach((key, value) {
-          if (key.startsWith('$monthIndex-true-') && key != otherWithAccountKey) {
-            keysToRemove.add(key);
-          }
-        });
-        print('DEBUG: Removing additional vacation account keys for other mode: $keysToRemove');
-        for (final key in keysToRemove) {
-          _pageStreamCache.remove(key);
-        }
-      }
-    } else {
-      // Invalidate both vacation and normal mode for this month
-      final normalKey = '$monthIndex-false';
-      final vacationKey = '$monthIndex-true';
-      print('DEBUG: Removing cache keys: $normalKey, $vacationKey');
-      _pageStreamCache.remove(normalKey);
-      _pageStreamCache.remove(vacationKey);
-      
-      // Also invalidate all account-specific keys
-      final keysToRemove = <String>[];
+      final otherPrefix = '$monthIndex-${!isVacation}-';
+      final otherKeysToRemove = <String>[];
       _pageStreamCache.forEach((key, value) {
-        if (key.startsWith('$monthIndex-')) {
-          keysToRemove.add(key);
+        if (key.startsWith(otherPrefix)) {
+          otherKeysToRemove.add(key);
         }
       });
-      print('DEBUG: Removing all account-specific keys for month $monthIndex: $keysToRemove');
-      for (final key in keysToRemove) {
+      print('DEBUG: invalidateMonth -> also removing other mode keys by prefix "$otherPrefix": $otherKeysToRemove');
+      for (final key in otherKeysToRemove) {
         _pageStreamCache.remove(key);
       }
     }
-    
+
     print('DEBUG: Cache invalidation complete. Remaining cache keys: ${_pageStreamCache.keys.toList()}');
   }
 
@@ -1556,8 +1532,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
 
-    // Check if we should refresh the data
-    if (homeScreenProvider.shouldRefresh) {
+    // Prioritize transaction-specific refresh; also handle month jump if date provided
+    if (homeScreenProvider.shouldRefreshTransactions) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // If a transactionDate is provided, jump to that month first
+        final transactionDate = homeScreenProvider.transactionDate;
+        if (transactionDate != null) {
+          final newMonthIndex = _months.indexWhere(
+            (month) =>
+                month.year == transactionDate.year &&
+                month.month == transactionDate.month,
+          );
+
+          if (newMonthIndex != -1 && newMonthIndex != _selectedMonthIndex) {
+            setState(() {
+              _selectedMonthIndex = newMonthIndex;
+            });
+            _scrollToSelectedMonth();
+          }
+        }
+
+        // Invalidate all cached months and reset their providers to force a full list refresh
+        for (final monthIndex in _monthProviders.keys) {
+          _pageDataManager.invalidateMonth(monthIndex);
+          _monthProviders[monthIndex]!.reset();
+        }
+
+        // Mark refresh as complete and rebuild
+        homeScreenProvider.completeRefresh();
+        if (mounted) setState(() {});
+      });
+    }
+    // Check for account-specific refresh
+    else if (homeScreenProvider.shouldRefreshAccounts) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Invalidate all cached months for current mode and also other mode internally
+        final isVacation = Provider.of<VacationProvider>(
+          context,
+          listen: false,
+        ).isVacationMode;
+        for (final monthIndex in _monthProviders.keys) {
+          _pageDataManager.invalidateMonth(monthIndex, isVacation);
+          _monthProviders[monthIndex]!.reset();
+        }
+        homeScreenProvider.completeRefresh();
+        if (mounted) setState(() {});
+      });
+    }
+    // Check for month-targeted refresh (e.g., jump to a different month)
+    else if (homeScreenProvider.shouldRefresh) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final transactionDate = homeScreenProvider.transactionDate;
         if (transactionDate != null) {
@@ -1575,10 +1598,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
         }
         // Invalidate the specific month to force a refresh
-        final isVacation = Provider.of<VacationProvider>(
-          context,
-          listen: false,
-        ).isVacationMode;
         _pageDataManager.invalidateMonth(_selectedMonthIndex, null);
 
         // Reset the provider for the current month
@@ -1588,38 +1607,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // Mark refresh as complete
         homeScreenProvider.completeRefresh();
         // Trigger a rebuild
-        if (mounted) setState(() {});
-      });
-    }
-    // Check for account-specific refresh
-    else if (homeScreenProvider.shouldRefreshAccounts) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        // Invalidate all cached months
-        final isVacation = Provider.of<VacationProvider>(
-          context,
-          listen: false,
-        ).isVacationMode;
-        for (final monthIndex in _monthProviders.keys) {
-          _pageDataManager.invalidateMonth(monthIndex, isVacation);
-          _monthProviders[monthIndex]!.reset();
-        }
-        homeScreenProvider.completeRefresh();
-        if (mounted) setState(() {});
-      });
-    }
-    // Check for transaction-specific refresh
-    else if (homeScreenProvider.shouldRefreshTransactions) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        // Invalidate all cached months
-        final isVacation = Provider.of<VacationProvider>(
-          context,
-          listen: false,
-        ).isVacationMode;
-        for (final monthIndex in _monthProviders.keys) {
-          _pageDataManager.invalidateMonth(monthIndex);
-          _monthProviders[monthIndex]!.reset();
-        }
-        homeScreenProvider.completeRefresh();
         if (mounted) setState(() {});
       });
     }
@@ -1682,16 +1669,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           });
                         },
                         itemBuilder: (context, index) {
-                          final vacationProvider =
-                              Provider.of<VacationProvider>(
-                                context,
-                                listen: false,
-                              );
+                          // Watch VacationProvider so that changes to activeVacationAccountId also rebuild
+                          final vacationProvider = context.watch<VacationProvider>();
                           final isVacation = vacationProvider.isVacationMode;
+                          final activeVacationAccountId = vacationProvider.activeVacationAccountId;
                           // Get or create provider for this month and pass it to MonthPageView
                           final provider = _getOrCreateProvider(index);
                           return MonthPageView(
-                            key: ValueKey<String>('$index-$isVacation'),
+                            // Include activeVacationAccountId in the key to avoid stale cached children when account changes
+                            key: ValueKey<String>('$index-$isVacation-${activeVacationAccountId ?? 'all'}'),
                             monthIndex: index,
                             month: _months[index],
                             isVacation: isVacation,
@@ -1846,22 +1832,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                             // Only proceed if the mode actually changed.
                             if (newVacationMode != currentVacationMode) {
-                              // NOW, we trigger the rebuild and data refresh.
+                              // Trigger rebuild and data refresh.
                               setState(() {
-                                // Reset all providers and clear the entire page cache to force a full refresh.
+                                // Reset all providers and clear the data manager cache to force fresh streams.
                                 for (final provider in _monthProviders.values) {
                                   provider.reset();
                                 }
-
-                                // Recreate the MonthPageDataManager to force stream re-creation
-                                final vacationProvider =
-                                    Provider.of<VacationProvider>(
-                                      context,
-                                      listen: false,
-                                    );
-                                _pageDataManager = MonthPageDataManager(
-                                  vacationProvider,
-                                );
+                                // Prefer clearing cached page streams instead of recreating the manager
+                                _pageDataManager.clearCache();
+                                print('DEBUG: Vacation mode changed -> cleared MonthPageDataManager cache and reset all MonthPageProviders');
                               });
                             }
                           },
