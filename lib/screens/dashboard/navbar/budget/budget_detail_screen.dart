@@ -211,9 +211,29 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                         final cascadeDelete = result['cascadeDelete'] == true;
                         try {
                           // Attempt deletion and log outcome
-                          await Provider.of<BudgetProvider>(context, listen: false)
-                              .deleteBudget(widget.budget.id, cascadeDelete: cascadeDelete);
-                          print('BudgetDetail: delete succeeded for budgetId=${widget.budget.id}');
+                          // Determine effective budgetId for deletion, handling recurring budgets that may pass a temporary empty ID
+                          final provider = Provider.of<BudgetProvider>(context, listen: false);
+                          String effectiveBudgetId = widget.budget.id;
+                          final bool isRecurring = widget.budget.isRecurring;
+                          if (effectiveBudgetId.isEmpty && isRecurring) {
+                            final fallbackList = provider.budgets
+                                .where((b) =>
+                                    b.isRecurring &&
+                                    b.categoryId == widget.category.id &&
+                                    b.type == widget.budget.type)
+                                .toList();
+                            if (fallbackList.isNotEmpty) {
+                              effectiveBudgetId = fallbackList.first.id;
+                              print('BudgetDetail: using fallback recurring budgetId=$effectiveBudgetId for category=${widget.category.id} type=${widget.budget.type}');
+                            } else {
+                              print('BudgetDetail: ERROR no recurring underlying budget found for category=${widget.category.id} type=${widget.budget.type}');
+                            }
+                          }
+                          if (effectiveBudgetId.isEmpty) {
+                            throw Exception('Cannot delete budget: effective budgetId is empty');
+                          }
+                          await provider.deleteBudget(effectiveBudgetId, cascadeDelete: cascadeDelete);
+                          print('BudgetDetail: delete succeeded for budgetId=$effectiveBudgetId');
                         
                           // Ensure budgets list is refreshed so UI shows deletion immediately
                           await Provider.of<BudgetProvider>(context, listen: false).initialize();

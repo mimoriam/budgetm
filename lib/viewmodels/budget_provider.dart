@@ -120,8 +120,9 @@ class BudgetProvider with ChangeNotifier {
             // If a recurring budget is found, create a temporary budget with the correct date range
             if (recurringBudget.id.isNotEmpty) {
               final periodRange = _getSelectedPeriodRange();
+              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
               matchingBudget = recurringBudget.copyWith(
-                id: '', // Empty ID to indicate this is a temporary instance
+                id: recurringBudget.id, // Use real ID for recurring budget instance
                 startDate: periodRange['start'],
                 endDate: periodRange['end'],
               );
@@ -177,8 +178,9 @@ class BudgetProvider with ChangeNotifier {
             // If a recurring budget is found, create a temporary budget with the correct date range
             if (recurringBudget.id.isNotEmpty) {
               final periodRange = _getSelectedPeriodRange();
+              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
               matchingBudget = recurringBudget.copyWith(
-                id: '', // Empty ID to indicate this is a temporary instance
+                id: recurringBudget.id, // Use real ID for recurring budget instance
                 startDate: periodRange['start'],
                 endDate: periodRange['end'],
               );
@@ -233,8 +235,9 @@ class BudgetProvider with ChangeNotifier {
             // If a recurring budget is found, create a temporary budget with the correct date range
             if (recurringBudget.id.isNotEmpty) {
               final periodRange = _getSelectedPeriodRange();
+              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
               matchingBudget = recurringBudget.copyWith(
-                id: '', // Empty ID to indicate this is a temporary instance
+                id: recurringBudget.id, // Use real ID for recurring budget instance
                 startDate: periodRange['start'],
                 endDate: periodRange['end'],
               );
