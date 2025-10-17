@@ -635,6 +635,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           setState(() {
                             _isSaving = true;
                           });
+                          // Get the selected currency from CurrencyProvider
+                          String selectedCurrencyCode = 'USD';
+                          try {
+                            final currencyProvider = context.read<CurrencyProvider>();
+                            selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+                          } catch (e) {
+                            print('AddAccountScreen: CurrencyProvider not available, defaulting to USD: $e');
+                          }
+
                           final values = _formKey.currentState!.value;
                           final name = values['name'] as String;
                           final amount =
@@ -684,7 +693,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             balance: balance,
                             initialBalance:
                                 inputAmount, // Store the user's input as initial balance
-                            currency: 'USD', // Placeholder
+                            currency: selectedCurrencyCode,
                             creditLimit: creditLimitValue,
                             balanceLimit: balanceLimitValue,
                             transactionLimit: transactionLimitValue,
@@ -698,15 +707,6 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           // Create vacation budgets for all expense categories if this is a vacation account
                           if (widget.isCreatingVacationAccount == true && newAccount.isVacationAccount == true) {
                             try {
-                              // Get the selected currency from CurrencyProvider
-                              String selectedCurrencyCode = 'USD';
-                              try {
-                                final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-                                selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
-                              } catch (e) {
-                                print('AddAccountScreen: CurrencyProvider not available, defaulting to USD: $e');
-                              }
-                              
                               // Create vacation budgets for all expense categories
                               await _firestoreService.createVacationBudgetsForAllExpenseCategories(
                                 currency: selectedCurrencyCode,
@@ -749,6 +749,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                   .abs(), // Use absolute value of user-entered amount
                               type: transactionType,
                               date: DateTime.now(),
+                              currency: selectedCurrencyCode,
                               accountId: accountId,
                             );
 

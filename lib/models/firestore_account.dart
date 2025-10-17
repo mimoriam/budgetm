@@ -12,7 +12,7 @@ class FirestoreAccount {
   final String? icon;
  
   // Currency already existed for account; also reused by top-level account profile
-  final String? currency;
+  final String currency;
  
   final double? creditLimit;
   final double? balanceLimit;
@@ -38,7 +38,7 @@ class FirestoreAccount {
     this.description,
     this.color,
     this.icon,
-    this.currency,
+    required this.currency,
     this.creditLimit,
     this.balanceLimit,
     this.transactionLimit,
@@ -92,7 +92,7 @@ class FirestoreAccount {
       description: data['description'],
       color: data['color'],
       icon: data['icon'],
-      currency: data['currency'],
+      currency: data['currency'] ?? 'USD',
       creditLimit: (data['creditLimit'] as num?)?.toDouble(),
       balanceLimit: (data['balanceLimit'] as num?)?.toDouble(),
       transactionLimit: (data['transactionLimit'] as num?)?.toDouble(),
@@ -149,7 +149,7 @@ class FirestoreAccount {
       description: json['description'],
       color: json['color'],
       icon: json['icon'],
-      currency: json['currency'],
+      currency: json['currency'] ?? 'USD',
       creditLimit: (json['creditLimit'] as num?)?.toDouble(),
       balanceLimit: (json['balanceLimit'] as num?)?.toDouble(),
       transactionLimit: (json['transactionLimit'] as num?)?.toDouble(),

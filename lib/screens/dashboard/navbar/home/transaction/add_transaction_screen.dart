@@ -9,6 +9,7 @@ import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -80,6 +81,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _loadAccounts() async {
     try {
+      // Get current currency from CurrencyProvider
+      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+      final selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+      
       // When vacation mode is active, handle accounts differently
       final vacationProvider =
           Provider.of<VacationProvider>(context, listen: false);
@@ -90,10 +95,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             .where((account) => account.isVacationAccount == true)
             .toList();
         
-        // Populate normal accounts list
+        // Populate normal accounts list with currency filtering
         final normalAccounts = allAccounts
             .where((account) => account.isVacationAccount != true)
             .toList();
+        
+        // Filter normal accounts by currency, but always include default cash account
+        final filteredNormalAccounts = <FirestoreAccount>[];
+        for (final account in normalAccounts) {
+          // Always include default cash account regardless of currency
+          if (account.isDefault == true) {
+            filteredNormalAccounts.add(account);
+          }
+          // Include other accounts only if they match the selected currency
+          else if (account.currency == selectedCurrencyCode) {
+            filteredNormalAccounts.add(account);
+          }
+        }
 
         if (vacationAccounts.isNotEmpty) {
           final activeId = vacationProvider.activeVacationAccountId;
@@ -107,15 +125,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
           // Select default normal account
           String? selectedNormalId;
-          final defaultNormalAccount = normalAccounts.cast<FirestoreAccount?>().firstWhere(
+          final defaultNormalAccount = filteredNormalAccounts.cast<FirestoreAccount?>().firstWhere(
             (account) => account?.isDefault ?? false,
             orElse: () => null,
           );
           
           if (defaultNormalAccount != null) {
             selectedNormalId = defaultNormalAccount.id;
-          } else if (normalAccounts.isNotEmpty) {
-            selectedNormalId = normalAccounts.first.id;
+          } else if (filteredNormalAccounts.isNotEmpty) {
+            selectedNormalId = filteredNormalAccounts.first.id;
           }
 
           setState(() {
@@ -123,7 +141,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             _accounts = vacationAccounts;
             _selectedAccountId = selectedVacationId;
             // Populate normal accounts list for UI selection
-            _normalAccounts = normalAccounts;
+            _normalAccounts = filteredNormalAccounts;
             _selectedNormalAccountId = selectedNormalId;
           });
 
@@ -145,10 +163,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final normalModeAccounts = allAccounts
           .where((account) => account.isVacationAccount != true)
           .toList();
-      final nonDefaultAccounts = normalModeAccounts
+      
+      // Filter accounts by currency, but always include default cash account
+      final filteredAccounts = <FirestoreAccount>[];
+      for (final account in normalModeAccounts) {
+        // Always include default cash account regardless of currency
+        if (account.isDefault == true) {
+          filteredAccounts.add(account);
+        }
+        // Include other accounts only if they match the selected currency
+        else if (account.currency == selectedCurrencyCode) {
+          filteredAccounts.add(account);
+        }
+      }
+      
+      final nonDefaultAccounts = filteredAccounts
           .where((account) => !(account.isDefault ?? false))
           .toList();
-      final defaultAccount = normalModeAccounts.cast<FirestoreAccount?>().firstWhere(
+      final defaultAccount = filteredAccounts.cast<FirestoreAccount?>().firstWhere(
         (account) => account?.isDefault ?? false,
         orElse: () => null,
       );
@@ -156,12 +188,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       setState(() {
         if (nonDefaultAccounts.isNotEmpty) {
           // If user has created accounts, show all normal accounts including the default one.
-          _accounts = normalModeAccounts;
+          _accounts = filteredAccounts;
           if (defaultAccount != null) {
             _selectedAccountId =
                 defaultAccount.id; // Auto-select the default account
-          } else if (normalModeAccounts.isNotEmpty) {
-            _selectedAccountId = normalModeAccounts.first.id;
+          } else if (filteredAccounts.isNotEmpty) {
+            _selectedAccountId = filteredAccounts.first.id;
           }
         } else if (defaultAccount != null) {
           // If only the default account exists, use it but don't show it in the dropdown.
@@ -1465,6 +1497,45 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       final formData = _formKey.currentState!.value;
 
+      // Get the selected currency code from CurrencyProvider
+      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+      final selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+
+      // Get the selected account for validation
+      FirestoreAccount? _selectedAccount;
+      if (_accounts.isNotEmpty) {
+        _selectedAccount = _accounts.firstWhere(
+          (account) => account.id == _selectedAccountId,
+        );
+      } else if (_selectedAccountId != null) {
+        // Fetch the account from Firestore if not in the list (default account case)
+        final fetchedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
+        if (fetchedAccount != null) {
+          _selectedAccount = fetchedAccount;
+        }
+      }
+
+      // Currency validation check
+      if (_selectedAccount != null && _selectedAccount.isDefault == false) {
+        if (_selectedAccount.currency != selectedCurrencyCode) {
+          if (mounted) {
+            setState(() {
+              _isSaving = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Currency mismatch: The selected account\'s currency does not match the transaction currency.',
+                ),
+              ),
+            );
+          } else {
+            _isSaving = false;
+          }
+          return;
+        }
+      }
+
       // Calculate the transaction date with time
       // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
       final date = formData['date'] as DateTime? ?? _selectedDate ?? DateTime.now();
@@ -1528,6 +1599,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           amount: amount,
           type: 'expense',
           date: transactionDate,
+          currency: selectedCurrencyCode, // Set from provider
           categoryId: _selectedCategoryId,
           budgetId: null,
           goalId: null,
@@ -1550,6 +1622,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           amount: amount,
           type: 'expense',
           date: transactionDate,
+          currency: selectedCurrencyCode, // Set from provider
           categoryId: _selectedCategoryId,
           budgetId: null,
           goalId: null,
@@ -1578,10 +1651,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             context,
             listen: false,
           );
-          // Force re-creation of cached month streams so the linked vacation transaction appears immediately
-          homeProvider.triggerTransactionsRefresh();
-          // Keep month-targeted refresh so the UI jumps to the correct month
-          homeProvider.triggerRefresh(transactionDate: transactionDate);
+          // Trigger the new robust refresh mechanism for both modes
+          homeProvider.requestRefreshForBothModes(transactionDate: transactionDate);
           Navigator.of(context).pop(true); // Pass true to indicate success
         }
         return;
@@ -1661,26 +1732,27 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       // Create transaction
       final transaction = FirestoreTransaction(
-        id: widget.transaction?.id ?? '', // Use existing ID if editing
-        description: '', // Default empty description
-        amount: amount,
-        type: widget.transactionType == TransactionType.income
-            ? 'income'
-            : 'expense',
-        date: transactionDate,
-        categoryId: _selectedCategoryId,
-        budgetId: null,
-        goalId: selectedGoalId,
-        accountId: _selectedAccountId,
-        time: (formData['time'] as DateTime?)?.toIso8601String(),
-        repeat: formData['repeat'] as String?,
-        remind: formData['remind'] as String?,
-        icon: formData['icon'] as String?,
-        color: formData['color'] as String?,
-        icon_color: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
-        notes: formData['notes'] as String?,
-        paid: (formData['paid'] as bool? ?? true),
-      );
+       id: widget.transaction?.id ?? '', // Use existing ID if editing
+       description: '', // Default empty description
+       amount: amount,
+       type: widget.transactionType == TransactionType.income
+           ? 'income'
+           : 'expense',
+       date: transactionDate,
+       currency: selectedCurrencyCode, // Set from provider
+       categoryId: _selectedCategoryId,
+       budgetId: null,
+       goalId: selectedGoalId,
+       accountId: _selectedAccountId,
+       time: (formData['time'] as DateTime?)?.toIso8601String(),
+       repeat: formData['repeat'] as String?,
+       remind: formData['remind'] as String?,
+       icon: formData['icon'] as String?,
+       color: formData['color'] as String?,
+       icon_color: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
+       notes: formData['notes'] as String?,
+       paid: (formData['paid'] as bool? ?? true),
+     );
 
       // Insert or update transaction with vacation flag
       final isVacation = Provider.of<VacationProvider>(

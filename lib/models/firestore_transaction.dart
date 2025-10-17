@@ -6,6 +6,7 @@ class FirestoreTransaction {
   final double amount;
   final String type; // e.g., 'income', 'expense'
   final DateTime date;
+  final String currency;
   final String? categoryId;
   final String? budgetId;
   final String? goalId;
@@ -27,6 +28,7 @@ class FirestoreTransaction {
     required this.amount,
     required this.type,
     required this.date,
+    required this.currency,
     this.categoryId,
     this.budgetId,
     this.goalId,
@@ -50,6 +52,7 @@ class FirestoreTransaction {
       'amount': amount,
       'type': type,
       'date': Timestamp.fromDate(date),
+      'currency': currency,
       'categoryId': categoryId,
       'budgetId': budgetId,
       'goalId': goalId,
@@ -79,6 +82,7 @@ class FirestoreTransaction {
           : data['date'] is DateTime
               ? (data['date'] as DateTime)
               : DateTime.now(),
+      currency: data['currency'] as String? ?? 'USD',
       categoryId: data['categoryId'] as String?,
       budgetId: data['budgetId'] as String?,
       goalId: data['goalId'] as String?,
@@ -104,6 +108,7 @@ class FirestoreTransaction {
       'amount': amount,
       'type': type,
       'date': Timestamp.fromDate(date),
+      'currency': currency,
       'categoryId': categoryId,
       'budgetId': budgetId,
       'goalId': goalId,
@@ -133,6 +138,7 @@ class FirestoreTransaction {
           : json['date'] is DateTime
               ? json['date']
               : DateTime.now(),
+      currency: json['currency'] ?? 'USD',
       categoryId: json['categoryId'],
       budgetId: json['budgetId'],
       goalId: json['goalId'],
@@ -157,6 +163,7 @@ class FirestoreTransaction {
     double? amount,
     String? type,
     DateTime? date,
+    String? currency,
     String? categoryId,
     String? budgetId,
     String? goalId,
@@ -178,6 +185,7 @@ class FirestoreTransaction {
       amount: amount ?? this.amount,
       type: type ?? this.type,
       date: date ?? this.date,
+      currency: currency ?? this.currency,
       categoryId: categoryId ?? this.categoryId,
       budgetId: budgetId ?? this.budgetId,
       goalId: goalId ?? this.goalId,
@@ -197,7 +205,7 @@ class FirestoreTransaction {
 
   @override
   String toString() {
-    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, icon_color: $icon_color, notes: $notes, paid: $paid, isVacation: $isVacation, linkedTransactionId: $linkedTransactionId)';
+    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, currency: $currency, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, icon_color: $icon_color, notes: $notes, paid: $paid, isVacation: $isVacation, linkedTransactionId: $linkedTransactionId)';
   }
 
   @override
@@ -209,6 +217,7 @@ class FirestoreTransaction {
         other.amount == amount &&
         other.type == type &&
         other.date == date &&
+        other.currency == currency &&
         other.categoryId == categoryId &&
         other.budgetId == budgetId &&
         other.goalId == goalId &&
@@ -228,7 +237,7 @@ class FirestoreTransaction {
   @override
   int get hashCode {
     return Object.hash(
-      id, description, amount, type, date, categoryId, budgetId, goalId, accountId,
+      id, description, amount, type, date, currency, categoryId, budgetId, goalId, accountId,
       time, repeat, remind, icon, color, icon_color, notes, paid, isVacation,
       linkedTransactionId,
     );

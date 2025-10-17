@@ -4,12 +4,14 @@ class HomeScreenProvider with ChangeNotifier {
   bool _shouldRefresh = false;
   bool _shouldRefreshAccounts = false;
   bool _shouldRefreshTransactions = false;
+  bool _shouldRefreshBothModes = false;
   DateTime? _transactionDate;
   DateTime? _selectedDate;
 
   bool get shouldRefresh => _shouldRefresh;
   bool get shouldRefreshAccounts => _shouldRefreshAccounts;
   bool get shouldRefreshTransactions => _shouldRefreshTransactions;
+  bool get shouldRefreshBothModes => _shouldRefreshBothModes;
   DateTime? get transactionDate => _transactionDate;
   DateTime? get selectedDate => _selectedDate;
 
@@ -35,6 +37,14 @@ class HomeScreenProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void requestRefreshForBothModes({DateTime? transactionDate}) {
+    _shouldRefresh = true;
+    _transactionDate = transactionDate;
+    _shouldRefreshBothModes = true;
+    print('DEBUG: HomeScreenProvider.requestRefreshForBothModes(date=$_transactionDate)');
+    notifyListeners();
+  }
+
   void setSelectedDate(DateTime? date) {
     _selectedDate = date;
     notifyListeners();
@@ -44,6 +54,7 @@ class HomeScreenProvider with ChangeNotifier {
     _shouldRefresh = false;
     _shouldRefreshAccounts = false;
     _shouldRefreshTransactions = false;
+    _shouldRefreshBothModes = false; // Add this line
     _transactionDate = null;
     // DEBUG
     print('DEBUG: HomeScreenProvider.completeRefresh()');

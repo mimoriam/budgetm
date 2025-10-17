@@ -324,18 +324,19 @@ class MonthPageDataManager {
   Stream<MonthPageData> getStreamForMonth(
     int monthIndex,
     DateTime month,
-    bool isVacation,
-  ) {
+    bool isVacation, {
+    required String currencyCode,
+  }) {
     // Get the active vacation account ID when in vacation mode
     final activeVacationAccountId = isVacation
         ? _vacationProvider.activeVacationAccountId
         : null;
 
-    // Create a composite key that includes monthIndex, isVacation status, and accountId
+    // Create a composite key that includes monthIndex, isVacation status, accountId, and currencyCode
     final cacheKey =
-        '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}';
+        '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}-$currencyCode';
 
-    print('DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId');
+    print('DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, currencyCode=$currencyCode');
     print('DEBUG: Cache key: $cacheKey');
 
     // In vacation mode without an active account, bypass caching to avoid stale 'all' cache reuse.
@@ -363,6 +364,7 @@ class MonthPageDataManager {
                 endOfMonth,
                 isVacation: isVacation,
                 accountId: activeVacationAccountId,
+                currencyCode: currencyCode,
               ),
               _firestoreService.streamUpcomingTasksForDateRange(
                 startOfMonth,
@@ -556,7 +558,12 @@ class _MonthPageViewState extends State<MonthPageView> {
     // Initialize the provider with data if it hasn't been initialized yet
     if (_provider.allTransactions.isEmpty) {
       widget.dataManager
-          .getStreamForMonth(widget.monthIndex, widget.month, widget.isVacation)
+          .getStreamForMonth(
+            widget.monthIndex,
+            widget.month,
+            widget.isVacation,
+            currencyCode: context.read<CurrencyProvider>().selectedCurrencyCode,
+          )
           .first
           .then((data) {
             if (mounted) {
@@ -586,6 +593,7 @@ class _MonthPageViewState extends State<MonthPageView> {
               widget.monthIndex,
               widget.month,
               widget.isVacation,
+              currencyCode: context.read<CurrencyProvider>().selectedCurrencyCode,
             ),
             builder: (context, snapshot) {
               // Update provider when new data arrives
@@ -1313,6 +1321,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Map to hold MonthPageProvider instances for each month
   final Map<int, MonthPageProvider> _monthProviders = {};
 
+  // Track the last seen currency code to detect changes
+  String? _lastCurrencyCode;
+
+  bool _shouldRefreshForCurrencyChange = false;
+  VoidCallback? _currencyListener;
+
   @override
   void initState() {
     super.initState();
@@ -1328,6 +1342,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
     _pageDataManager = MonthPageDataManager(vacationProvider);
 
+    // Initialize the last currency code
+    _lastCurrencyCode = Provider.of<CurrencyProvider>(
+      context,
+      listen: false,
+    ).selectedCurrencyCode;
+
+    // Attach listener to CurrencyProvider
+    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+    _currencyListener = () {
+      final newCode = currencyProvider.selectedCurrencyCode;
+      if (_lastCurrencyCode != newCode) {
+        print('DEBUG: CurrencyProvider listener - changed from $_lastCurrencyCode to $newCode');
+        if (mounted) {
+          setState(() {
+            _shouldRefreshForCurrencyChange = true;
+          });
+        }
+      }
+    };
+    currencyProvider.addListener(_currencyListener!);
+
     _loadMonths();
     WidgetsBinding.instance.addObserver(this);
   }
@@ -1337,6 +1372,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _monthScrollController.dispose();
     _pageController.dispose();
+
+    // Remove CurrencyProvider listener
+    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+    if (_currencyListener != null) {
+      currencyProvider.removeListener(_currencyListener!);
+    }
 
     // Dispose all providers
     for (final provider in _monthProviders.values) {
@@ -1377,6 +1418,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           currentIndex + 1,
           _months[currentIndex + 1],
           isVacation,
+          currencyCode: context.read<CurrencyProvider>().selectedCurrencyCode,
         );
         nextStream.first.then((data) {
           if (mounted && !data.isLoading && data.error == null) {
@@ -1394,6 +1436,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           currentIndex - 1,
           _months[currentIndex - 1],
           isVacation,
+          currencyCode: context.read<CurrencyProvider>().selectedCurrencyCode,
         );
         prevStream.first.then((data) {
           if (mounted && !data.isLoading && data.error == null) {
@@ -1481,6 +1524,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               _selectedMonthIndex,
               _months[_selectedMonthIndex],
               isVacation,
+              currencyCode: context.read<CurrencyProvider>().selectedCurrencyCode,
             );
             stream.first.then((data) {
               if (mounted && !data.isLoading && data.error == null) {
@@ -1532,6 +1576,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
 
+    // Handle currency change refresh
+    if (_shouldRefreshForCurrencyChange) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        print('DEBUG: Performing full refresh due to currency change from $_lastCurrencyCode');
+        _pageDataManager.clearCache();
+        for (final p in _monthProviders.values) {
+          p.reset();
+        }
+        if (mounted) {
+          setState(() {
+            _lastCurrencyCode = Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode;
+            _shouldRefreshForCurrencyChange = false;
+          });
+        }
+      });
+    }
+
     // Prioritize transaction-specific refresh; also handle month jump if date provided
     if (homeScreenProvider.shouldRefreshTransactions) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -1553,8 +1614,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
 
         // Invalidate all cached months and reset their providers to force a full list refresh
+        final refreshBoth = homeScreenProvider.shouldRefreshBothModes;
         for (final monthIndex in _monthProviders.keys) {
-          _pageDataManager.invalidateMonth(monthIndex);
+          if (refreshBoth) {
+            // Explicitly invalidate both vacation and normal mode caches
+            _pageDataManager.invalidateMonth(monthIndex, true);
+            _pageDataManager.invalidateMonth(monthIndex, false);
+          } else {
+            // Keep the existing, less specific invalidation for other cases
+            _pageDataManager.invalidateMonth(monthIndex);
+          }
           _monthProviders[monthIndex]!.reset();
         }
 
@@ -1733,6 +1802,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   _selectedMonthIndex,
                   _months[_selectedMonthIndex],
                   isVacation,
+                  currencyCode: context.watch<CurrencyProvider>().selectedCurrencyCode,
                 )
               : Stream.value(MonthPageData.loading()),
           builder: (context, snapshot) {
@@ -1964,6 +2034,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               _selectedMonthIndex,
               _months[_selectedMonthIndex],
               isVacation,
+              currencyCode: context.watch<CurrencyProvider>().selectedCurrencyCode,
             )
           : Stream.value(MonthPageData.loading()),
       builder: (context, monthSnapshot) {

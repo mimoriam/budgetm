@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:currency_picker/currency_picker.dart';
 
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
@@ -324,7 +325,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           const SizedBox(height: 16),
                           _buildLegend(
                             normalAccounts,
-                            currencyProvider.currencySymbol,
                           ),
                           const SizedBox(height: 24),
                           _buildSectionHeaderWithButton(
@@ -388,8 +388,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                         accountType: account.accountType,
                                         creditLimit: account.creditLimit,
                                         balanceLimit: account.balanceLimit,
-                                        currencySymbol:
-                                            currencyProvider.currencySymbol,
+                                        currencySymbol: _getAccountCurrencySymbol(account),
                                         isHighlighted: isHighlighted,
                                         accountsCount: normalAccounts.length,
                                       );
@@ -464,8 +463,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                           (accountData['account']
                                                   as FirestoreAccount)
                                               .balanceLimit,
-                                      currencySymbol:
-                                          currencyProvider.currencySymbol,
+                                      currencySymbol: _getAccountCurrencySymbol(
+                                          accountData['account'] as FirestoreAccount),
                                       isHighlighted: false,
                                       accountsCount: vacationAccounts.length,
                                     ),
@@ -664,7 +663,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
   Widget _buildLegend(
     List<Map<String, dynamic>> accountsWithData,
-    String currencySymbol,
   ) {
     if (accountsWithData.isEmpty) {
       return const SizedBox.shrink();
@@ -693,7 +691,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 colors[index % colors.length],
                 account.name,
                 finalBalance,
-                currencySymbol,
+                _getAccountCurrencySymbol(account),
               ),
               if (index < accountsWithData.length - 1)
                 const SizedBox(height: 12),
@@ -845,7 +843,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   ),
                   if (creditLimit != null)
                     Text(
-                      'Credit Limit: $currencySymbol${creditLimit.toStringAsFixed(2)}',
+                      'Credit Limit: ${_getAccountCurrencySymbol(account)}${creditLimit.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.secondaryTextColorLight,
                       ),
@@ -860,7 +858,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   // )
                   else if (balanceLimit != null)
                     Text(
-                      'Balance Limit: $currencySymbol${balanceLimit.toStringAsFixed(2)}',
+                      'Balance Limit: ${_getAccountCurrencySymbol(account)}${balanceLimit.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.secondaryTextColorLight,
                       ),
@@ -869,7 +867,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               ),
             ),
             Text(
-              '$currencySymbol${amount.toStringAsFixed(2)}',
+              '${_getAccountCurrencySymbol(account)}${amount.toStringAsFixed(2)}',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -878,6 +876,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         ),
       ),
     );
+  }
+
+  String _getAccountCurrencySymbol(FirestoreAccount account) {
+    final currency = CurrencyService().findByCode(account.currency);
+    return currency?.symbol ?? '\$';
   }
 
   Widget _buildEmptyState() {

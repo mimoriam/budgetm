@@ -407,49 +407,68 @@ class BudgetProvider with ChangeNotifier {
   
   // Initialize and load data
   Future<void> initialize() async {
+    print('DEBUG BudgetProvider.initialize: start (isVacation=${_vacationProvider.isVacationMode})');
     await loadData();
+    print('DEBUG BudgetProvider.initialize: loadData completed, setting up transactions listener');
     _setupTransactionsListener();
+    print('DEBUG BudgetProvider.initialize: listener setup complete');
   }
   
   // Set up listener for transactions stream
   void _setupTransactionsListener() {
     // Cancel existing subscription if any
     _transactionsSubscription?.cancel();
-    
-    // Subscribe to transactions stream filtered by vacation account ID if in vacation mode
+    // Subscribe to transactions stream and locally filter by current vacation mode.
+    // If FirestoreService supports passing vacation params to the stream, it
+    // should be used instead for server-side filtering.
     _transactionsSubscription = _firestoreService
         .streamTransactions(
           vacationAccountId: _vacationProvider.isVacationMode
             ? _vacationProvider.activeVacationAccountId
-            : null
+            : null,
         )
         .listen((transactions) {
-      _allTransactions = transactions.where((t) =>
-        t.type == 'expense' && t.isVacation == _vacationProvider.isVacationMode
-      ).toList();
-      notifyListeners();
+      try {
+        final filtered = transactions.where((t) =>
+          t.type == 'expense' && (t.isVacation == _vacationProvider.isVacationMode)
+        ).toList();
+        print('DEBUG BudgetProvider.stream: received ${transactions.length} tx, filtered ${filtered.length} for isVacation=${_vacationProvider.isVacationMode}');
+        _allTransactions = filtered;
+        notifyListeners();
+      } catch (e) {
+        print('Error processing transactions stream: $e');
+      }
+    }, onError: (err) {
+      print('Transactions stream error: $err');
     });
   }
   
   // Load all data
   Future<void> loadData() async {
+    print('DEBUG BudgetProvider.loadData: start (isVacation=${_vacationProvider.isVacationMode})');
     _isLoading = true;
     notifyListeners();
     
     try {
       // Fetch categories
+      print('DEBUG BudgetProvider.loadData: fetching categories');
       await _fetchCategories();
+      print('DEBUG BudgetProvider.loadData: fetched ${_allCategories.length} categories, expenseCategories=${_expenseCategories.length}');
       
       // Load budgets based on current vacation mode
       if (_vacationProvider.isVacationMode) {
+        print('DEBUG BudgetProvider.loadData: fetching vacation budgets for vacationAccountId=${_vacationProvider.activeVacationAccountId}');
         _budgets = await _firestoreService.getAllVacationBudgets(
           vacationAccountId: _vacationProvider.activeVacationAccountId
         );
       } else {
+        print('DEBUG BudgetProvider.loadData: fetching regular budgets');
         _budgets = await _firestoreService.getAllBudgets(isVacation: false);
       }
+      print('DEBUG BudgetProvider.loadData: fetched ${_budgets.length} budgets (sample ids: ${_budgets.take(5).map((b)=>b.id).toList()})');
       
       // Load all expense transactions based on current vacation mode
+      print('DEBUG BudgetProvider.loadData: fetching transactions isVacation=${_vacationProvider.isVacationMode}');
       final allTransactions = await _firestoreService.getAllTransactions(
         isVacation: _vacationProvider.isVacationMode,
         vacationAccountId: _vacationProvider.isVacationMode
@@ -457,22 +476,28 @@ class BudgetProvider with ChangeNotifier {
           : null
       );
       _allTransactions = allTransactions.where((t) => t.type == 'expense').toList();
+      print('DEBUG BudgetProvider.loadData: fetched ${_allTransactions.length} expense transactions (sample ids: ${_allTransactions.take(5).map((t)=>t.id).toList()})');
       
     } catch (e) {
       print('Error loading budget data: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
+      print('DEBUG BudgetProvider.loadData: completed (isVacation=${_vacationProvider.isVacationMode})');
     }
   }
 
   // Listener for vacation mode changes
   void _onVacationModeChanged() {
-    // Cancel existing subscription and recreate it with the new vacation mode
+    // Recreate subscription and reload data when vacation mode flips so the
+    // provider state always reflects the currently-selected mode. We cancel
+    // first, then reinitialize everything.
     _transactionsSubscription?.cancel();
-    _setupTransactionsListener();
-    // Reload the budgets and other data
-    loadData();
+    // Reload budgets and transactions for the new mode, then recreate stream
+    // to keep everything in sync.
+    loadData().then((_) {
+      _setupTransactionsListener();
+    });
   }
   
   // Listener for HomeScreenProvider changes

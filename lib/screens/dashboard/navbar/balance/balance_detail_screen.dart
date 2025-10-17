@@ -15,6 +15,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sticky_headers/sticky_headers.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 class BalanceDetailScreen extends StatefulWidget {
   final FirestoreAccount account;
@@ -28,7 +29,6 @@ class BalanceDetailScreen extends StatefulWidget {
 
 class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService.instance;
-  NumberFormat get _currencyFormat => NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol);
   DateTimeRange? _selectedDateRange;
 
   // Group transactions by date
@@ -70,6 +70,13 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine the correct currency symbol for the account being viewed
+    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+    final accountCurrencyCode = widget.account.currency ?? currencyProvider.selectedCurrencyCode;
+    final currency = CurrencyService().findByCode(accountCurrencyCode);
+    final currencySymbol = currency?.symbol ?? '\$';
+    final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
+    
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight),
@@ -265,7 +272,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _currencyFormat.format(widget.account.initialBalance),
+                                  currencyFormat.format(widget.account.initialBalance),
                                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                     color: Colors.black,
                                     fontSize: 18,
@@ -296,7 +303,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _currencyFormat.format(currentBalance),
+                                  currencyFormat.format(currentBalance),
                                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                     color: currentBalance >= 0 ? Colors.black : Colors.red[300],
                                     fontSize: 18,
@@ -350,7 +357,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _currencyFormat.format(filteredSubtotal),
+                              currencyFormat.format(filteredSubtotal),
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: filteredSubtotal >= 0 ? Colors.black : Colors.red[300],
                                 fontWeight: FontWeight.bold,
@@ -461,6 +468,12 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   Widget _buildTransactionCard(FirestoreTransaction transaction) {
     final isIncome = transaction.type == 'income';
     
+    // Determine the correct currency symbol for the account being viewed
+    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+    final accountCurrencyCode = widget.account.currency ?? currencyProvider.selectedCurrencyCode;
+    final currency = CurrencyService().findByCode(accountCurrencyCode);
+    final currencySymbol = currency?.symbol ?? '\$';
+    
     // Get the icon color from the transaction, fallback to default if null
     final Color iconBackgroundColor = hexToColor(transaction.icon_color);
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
@@ -468,7 +481,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     return GestureDetector(
       onTap: () async {
         // Convert FirestoreTransaction to Transaction for ExpenseDetailScreen
-        final uiTransaction = await _convertToUiTransaction(transaction);
+        final uiTransaction = await _convertToUiTransaction(transaction, accountCurrencyCode);
         if (mounted) {
           final result = await Navigator.push(
             context,
@@ -547,7 +560,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
               ),
             ),
             Text(
-              '${isIncome ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${transaction.amount.toStringAsFixed(2)}',
+              '${isIncome ? '+' : '-'} $currencySymbol${transaction.amount.toStringAsFixed(2)}',
               style: TextStyle(
                 color: isIncome ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,
@@ -623,7 +636,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     }
   }
 
-  Future<Transaction> _convertToUiTransaction(FirestoreTransaction firestoreTransaction) async {
+  Future<Transaction> _convertToUiTransaction(FirestoreTransaction firestoreTransaction, String currencyCode) async {
     final isIncome = firestoreTransaction.type == 'income';
     
     // Get category name for title
@@ -650,7 +663,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
       accountId: firestoreTransaction.accountId,
       categoryId: firestoreTransaction.categoryId,
       paid: firestoreTransaction.paid,
-      currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
+      currency: currencyCode, // Use the passed-in currency code
     );
   }
 

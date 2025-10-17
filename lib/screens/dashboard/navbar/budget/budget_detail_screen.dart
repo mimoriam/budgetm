@@ -16,9 +16,10 @@ import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 // Helper function to convert Firestore transaction to UI transaction
-model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context) {
+model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context, String currencyCode) {
   return model.Transaction(
     id: firestoreTransaction.id,
     title: firestoreTransaction.description,
@@ -32,7 +33,7 @@ model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransact
     iconBackgroundColor: Colors.grey.shade100,
     accountId: firestoreTransaction.accountId,
     categoryId: firestoreTransaction.categoryId,
-    currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
+    currency: currencyCode,
   );
 }
 
@@ -54,10 +55,28 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService.instance;
   List<_TransactionWithAccount> _detailedTransactions = [];
   bool _isLoading = true;
+  BudgetProvider? _budgetProvider;
+  
+  // Currency-related variables
+  late String _budgetCurrencyCode;
+  late String _currencySymbol;
 
   @override
   void initState() {
     super.initState();
+    // Load initial transactions, and register a listener on the BudgetProvider
+    // to refresh when the selected period or vacation mode changes.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTransactions();
+      _budgetProvider = Provider.of<BudgetProvider>(context, listen: false);
+      _budgetProvider?.addListener(_onProviderChanged);
+    });
+  }
+
+  void _onProviderChanged() {
+    // Reload transactions when provider selection or mode changes.
+    // Throttle or debounce here if necessary to avoid rapid repeated reloads.
+    if (!mounted) return;
     _loadTransactions();
   }
 
@@ -118,6 +137,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine the correct currency symbol for the budget being viewed
+    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+    _budgetCurrencyCode = widget.budget.currency ?? currencyProvider.selectedCurrencyCode;
+    final currency = CurrencyService().findByCode(_budgetCurrencyCode);
+    _currencySymbol = currency?.symbol ?? '\$';
+    
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: PreferredSize(
@@ -273,6 +298,13 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     );
   }
 
+  @override
+  void dispose() {
+    // Remove provider listener if set
+    _budgetProvider?.removeListener(_onProviderChanged);
+    super.dispose();
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -323,7 +355,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     return GestureDetector(
       onTap: () async {
         // Convert FirestoreTransaction to Transaction for navigation
-        final uiTransaction = _convertToUiTransaction(transaction, context);
+        final uiTransaction = _convertToUiTransaction(transaction, context, _budgetCurrencyCode);
         
         // Navigate to ExpenseDetailScreen
         final result = await PersistentNavBarNavigator.pushNewScreen(
@@ -387,7 +419,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
             ),
             Text(
               // Match home.dart amount formatting and style (sign + space + currency)
-              '${transaction.type == 'income' ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${transaction.amount.toStringAsFixed(2)}',
+              '${transaction.type == 'income' ? '+' : '-'} $_currencySymbol${transaction.amount.toStringAsFixed(2)}',
               style: TextStyle(
                 color: transaction.type == 'income' ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,

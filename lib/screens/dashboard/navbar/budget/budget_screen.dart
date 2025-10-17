@@ -14,6 +14,7 @@ import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dar
 import 'package:budgetm/screens/dashboard/navbar/budget/add_budget_screen.dart';
 import 'dart:ui';
 import 'package:budgetm/screens/dashboard/main_screen.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -820,7 +821,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 ),
               ),
               Text(
-                '${Provider.of<CurrencyProvider>(context).currencySymbol}${item.spentAmount.toStringAsFixed(2)}',
+                _formatAmountForCard(item.spentAmount, currencyCode: item.budget.currency),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -897,11 +898,18 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
-  String _formatAmountForCard(double amount) {
-    final currencySymbol = Provider.of<CurrencyProvider>(
-      context,
-      listen: false,
-    ).currencySymbol;
+  String _formatAmountForCard(double amount, {String? currencyCode}) {
+    String currencySymbol;
+    if (currencyCode != null) {
+      final currency = CurrencyService().findByCode(currencyCode);
+      currencySymbol = currency?.symbol ?? '\$';
+    } else {
+      currencySymbol = Provider.of<CurrencyProvider>(
+        context,
+        listen: false,
+      ).currencySymbol;
+    }
+    
     if (amount.abs() >= 1000) {
       return '$currencySymbol${(amount / 1000).floor()}k';
     }
@@ -986,7 +994,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        _formatAmountForCard(spent),
+                        _formatAmountForCard(spent, currencyCode: data.budget.currency),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -1046,7 +1054,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                               alignment: Alignment.centerLeft,
                               child: RichText(
                                 text: TextSpan(
-                                  text: _formatAmountForCard(spent),
+                                  text: _formatAmountForCard(spent, currencyCode: data.budget.currency),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -1058,7 +1066,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                                     if (hasLimit)
                                       TextSpan(
                                         text:
-                                            ' / ${_formatAmountForCard(limit)}',
+                                            ' / ${_formatAmountForCard(limit, currencyCode: data.budget.currency)}',
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.normal,
@@ -1209,8 +1217,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                             const SizedBox(height: 4),
                             Text(
                               isOverBudget
-                                  ? '${Provider.of<CurrencyProvider>(context).currencySymbol}${(spent - limit).toStringAsFixed(2)} over budget'
-                                  : '${Provider.of<CurrencyProvider>(context).currencySymbol}${remaining.toStringAsFixed(2)} remaining',
+                                  ? '${_formatAmountForCard(spent - limit, currencyCode: data.budget.currency)} over budget'
+                                  : '${_formatAmountForCard(remaining, currencyCode: data.budget.currency)} remaining',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,

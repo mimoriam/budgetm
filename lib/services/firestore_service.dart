@@ -758,15 +758,16 @@ class FirestoreService {
     }
   }
 
-  // Stream transactions for a date range (optionally filtered by vacation mode and accountId)
+  // Stream transactions for a date range (optionally filtered by vacation mode, accountId, and currency)
   Stream<List<FirestoreTransaction>> streamTransactionsForDateRange(
     DateTime startDate,
     DateTime endDate, {
     String? accountId,
     bool isVacation = false,
+    String? currencyCode,
   }) {
     try {
-      print('DEBUG: streamTransactionsForDateRange - startDate=$startDate, endDate=$endDate, isVacation=$isVacation, accountId=$accountId');
+      print('DEBUG: streamTransactionsForDateRange - startDate=$startDate, endDate=$endDate, isVacation=$isVacation, accountId=$accountId, currencyCode=$currencyCode');
       
       Query<FirestoreTransaction> query = _transactionsCollection
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
@@ -779,12 +780,18 @@ class FirestoreService {
         print('DEBUG: Applied accountId filter: $accountId');
       }
       
+      // Add currency filter if provided
+      if (currencyCode != null) {
+        query = query.where('currency', isEqualTo: currencyCode);
+        print('DEBUG: Applied currency filter: $currencyCode');
+      }
+      
       return query
           .orderBy('date', descending: true)
           .snapshots()
           .map((snapshot) {
             final transactions = snapshot.docs.map((doc) => doc.data()).toList();
-            print('DEBUG: Fetched ${transactions.length} transactions for isVacation=$isVacation, accountId=$accountId');
+            print('DEBUG: Fetched ${transactions.length} transactions for isVacation=$isVacation, accountId=$accountId, currencyCode=$currencyCode');
             // Log transaction IDs for debugging
             if (transactions.isNotEmpty) {
               final txIds = transactions.map((tx) => '${tx.id}(acc:${tx.accountId})').take(5).join(', ');
@@ -1355,14 +1362,13 @@ class FirestoreService {
 
   // Update user currency
   Future<void> updateUserCurrency(String uid, String currencyCode) async {
+    final docRef = _firestore.collection('users').doc(uid);
     try {
-      await _firestore.collection('users').doc(uid).update({
-        'currency': currencyCode,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      print('User currency updated successfully');
+      // Use set with merge to create the document if it doesn't exist,
+      // or update it if it does. This is an idempotent operation.
+      await docRef.set({'currency': currencyCode}, SetOptions(merge: true));
     } catch (e) {
-      print('Error updating user currency: $e');
+      // Optional: more specific error handling if needed in the future.
       rethrow;
     }
   }
