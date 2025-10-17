@@ -142,7 +142,7 @@ class FirestoreService {
       for (final category in expenseCategories) {
         if (!existingBudgetCategoryIds.contains(category.id)) {
           // Generate a unique ID for the budget
-          final budgetId = Budget.generateId(_userId!, category.id, type, year, period, true);
+          final budgetId = Budget.generateId(_userId!, category.id, type, year, period, true, false);
           
           // Get date range for the budget
           final dateRange = Budget.getDateRange(type, year, period);

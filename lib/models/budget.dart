@@ -177,9 +177,11 @@ class Budget {
     int year,
     int period,
     bool isVacation,
+    bool isRecurring,
   ) {
     final modeSuffix = isVacation ? '_vacation' : '';
-    return '${userId}_${categoryId}_${type.toString().split('.').last}_${year}_$period$modeSuffix';
+    final recurringSuffix = isRecurring ? '_recurring' : '';
+    return '${userId}_${categoryId}_${type.toString().split('.').last}_${year}_$period$modeSuffix$recurringSuffix';
   }
 
   // Helper method to calculate week number (Sunday to Saturday) — week-of-year

@@ -25,6 +25,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   String? _selectedCategoryId;
   BudgetType _selectedType = BudgetType.monthly;
   bool _isLoading = false;
+  bool _isRecurring = false;
 
   @override
   void initState() {
@@ -70,7 +71,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
 
       try {
         await Provider.of<BudgetProvider>(context, listen: false)
-            .addBudget(_selectedCategoryId!, limit, _selectedType, isVacation: widget.isVacationMode);
+            .addBudget(_selectedCategoryId!, limit, _selectedType, isVacation: widget.isVacationMode, isRecurring: _isRecurring);
         
         if (mounted) {
           Navigator.of(context).pop(true);
@@ -220,6 +221,42 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 10),
+                      
+                      // Recurring Budget Section
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12.0),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: CheckboxListTile(
+                          title: Text(
+                            'Recurring Budget',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.primaryTextColorLight,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Automatically renew this budget for each period',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.secondaryTextColorLight,
+                            ),
+                          ),
+                          value: _isRecurring,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _isRecurring = value ?? false;
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          activeColor: AppColors.gradientEnd,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       
