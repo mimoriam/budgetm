@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum BudgetType { weekly, monthly, yearly }
 
 class Budget {
-  final String id; // Composite key: {userId}_{categoryId}_{type}_{year}_{period}_{isVacation}
+  final String
+  id; // Composite key: {userId}_{categoryId}_{type}_{year}_{period}_{isVacation}
   final String categoryId;
   final double limit;
   final BudgetType type;
@@ -15,6 +16,7 @@ class Budget {
   final String currency; // New field for currency
   final bool isVacation; // New field to differentiate vacation budgets
   double spentAmount; // Calculated dynamically, not stored in Firestore
+  bool isRecurring;
 
   Budget({
     required this.id,
@@ -29,6 +31,7 @@ class Budget {
     required this.currency, // New required field
     this.isVacation = false, // New field, defaulting to false
     this.spentAmount = 0.0,
+    this.isRecurring = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -43,6 +46,7 @@ class Budget {
       'userId': userId,
       'currency': currency,
       'isVacation': isVacation, // New field in JSON
+      'isRecurring': isRecurring,
     };
   }
 
@@ -61,6 +65,7 @@ class Budget {
       currency: data['currency'] ?? 'USD',
       isVacation: data['isVacation'] ?? false, // New field with default
       spentAmount: 0.0,
+      isRecurring: data['isRecurring'] ?? false,
     );
   }
 
@@ -78,6 +83,7 @@ class Budget {
       currency: json['currency'] ?? 'USD',
       isVacation: json['isVacation'] ?? false, // New field with default
       spentAmount: 0.0,
+      isRecurring: json['isRecurring'] ?? false,  
     );
   }
 
@@ -107,6 +113,7 @@ class Budget {
     String? currency,
     bool? isVacation, // New field
     double? spentAmount,
+    bool? isRecurring,
   }) {
     return Budget(
       id: id ?? this.id,
@@ -121,6 +128,7 @@ class Budget {
       currency: currency ?? this.currency,
       isVacation: isVacation ?? this.isVacation, // New field
       spentAmount: spentAmount ?? this.spentAmount,
+      isRecurring: isRecurring ?? this.isRecurring
     );
   }
 
@@ -141,16 +149,35 @@ class Budget {
         other.limit == limit &&
         other.userId == userId &&
         other.currency == currency &&
-        other.isVacation == isVacation; // New field
+        other.isVacation == isVacation &&
+        other.isRecurring == isRecurring;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, categoryId, type, year, period, limit, userId, currency, isVacation);
+    return Object.hash(
+      id,
+      categoryId,
+      type,
+      year,
+      period,
+      limit,
+      userId,
+      currency,
+      isVacation,
+      isRecurring,
+    );
   }
 
   // Helper method to generate budget ID
-  static String generateId(String userId, String categoryId, BudgetType type, int year, int period, bool isVacation) {
+  static String generateId(
+    String userId,
+    String categoryId,
+    BudgetType type,
+    int year,
+    int period,
+    bool isVacation,
+  ) {
     final modeSuffix = isVacation ? '_vacation' : '';
     return '${userId}_${categoryId}_${type.toString().split('.').last}_${year}_$period$modeSuffix';
   }
@@ -164,12 +191,12 @@ class Budget {
       daysToFirstSunday = 7;
     }
     final firstSunday = firstDayOfYear.add(Duration(days: daysToFirstSunday));
-    
+
     if (date.isBefore(firstSunday)) {
       // If date is before first Sunday, it belongs to the last week of previous year
       return getWeekNumber(DateTime(date.year - 1, 12, 31));
     }
-    
+
     final daysSinceFirstSunday = date.difference(firstSunday).inDays;
     return (daysSinceFirstSunday / 7).floor() + 1;
   }
@@ -190,17 +217,27 @@ class Budget {
   // Helper method to get start of week (Sunday)
   static DateTime getStartOfWeek(DateTime date) {
     final daysFromSunday = date.weekday % 7;
-    return DateTime(date.year, date.month, date.day).subtract(Duration(days: daysFromSunday));
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+    ).subtract(Duration(days: daysFromSunday));
   }
 
   // Helper method to get end of week (Saturday)
   static DateTime getEndOfWeek(DateTime date) {
     final startOfWeek = getStartOfWeek(date);
-    return startOfWeek.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+    return startOfWeek.add(
+      const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
+    );
   }
 
   // Helper method to get start and end dates for a budget type
-  static Map<String, DateTime> getDateRange(BudgetType type, int year, int period) {
+  static Map<String, DateTime> getDateRange(
+    BudgetType type,
+    int year,
+    int period,
+  ) {
     switch (type) {
       case BudgetType.weekly:
         // For weekly budgets we encode period as (month * 10 + weekOfMonth).
@@ -211,27 +248,37 @@ class Budget {
         if (month < 1 || month > 12 || weekOfMonth < 1) {
           // Fallback: treat period as week-of-year (legacy)
           final firstDayOfYear = DateTime(year, 1, 1);
-          int daysToFirstSunday = (DateTime.sunday - firstDayOfYear.weekday + 7) % 7;
-          if (daysToFirstSunday == 0 && firstDayOfYear.weekday != DateTime.sunday) {
+          int daysToFirstSunday =
+              (DateTime.sunday - firstDayOfYear.weekday + 7) % 7;
+          if (daysToFirstSunday == 0 &&
+              firstDayOfYear.weekday != DateTime.sunday) {
             daysToFirstSunday = 7;
           }
-          final firstSunday = firstDayOfYear.add(Duration(days: daysToFirstSunday));
+          final firstSunday = firstDayOfYear.add(
+            Duration(days: daysToFirstSunday),
+          );
           final startDate = firstSunday.add(Duration(days: (period - 1) * 7));
-          final endDate = startDate.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+          final endDate = startDate.add(
+            const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
+          );
           return {'startDate': startDate, 'endDate': endDate};
         }
         // Calculate the first Sunday of the month and then the requested week
         final firstDayOfMonth = DateTime(year, month, 1);
         final firstSunday = getStartOfWeek(firstDayOfMonth);
-        final startDate = firstSunday.add(Duration(days: (weekOfMonth - 1) * 7));
-        final endDate = startDate.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+        final startDate = firstSunday.add(
+          Duration(days: (weekOfMonth - 1) * 7),
+        );
+        final endDate = startDate.add(
+          const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
+        );
         return {'startDate': startDate, 'endDate': endDate};
-      
+
       case BudgetType.monthly:
         final startDate = DateTime(year, period, 1);
         final endDate = DateTime(year, period + 1, 0, 23, 59, 59);
         return {'startDate': startDate, 'endDate': endDate};
-      
+
       case BudgetType.yearly:
         final startDate = DateTime(year, 1, 1);
         final endDate = DateTime(year, 12, 31, 23, 59, 59);

@@ -67,8 +67,13 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     });
 
     try {
-      final allTransactions = await _firestoreService
-          .getTransactionsForDateRange(widget.budget.startDate, widget.budget.endDate);
+    // Use the currently selected period from the BudgetProvider if available
+    final provider = Provider.of<BudgetProvider>(context, listen: false);
+    final start = provider.selectedPeriodStart ?? widget.budget.startDate;
+    final end = provider.selectedPeriodEnd ?? widget.budget.endDate;
+
+    final allTransactions = await _firestoreService
+      .getTransactionsForDateRange(start, end);
 
       final categoryTransactions = allTransactions
           .where(

@@ -78,7 +78,7 @@ class BudgetProvider with ChangeNotifier {
           matchingBudget = _budgets.firstWhere(
             (b) => b.categoryId == category.id &&
                    b.type == _selectedBudgetType &&
-                   _isWeekInSelectedPeriod(b),
+                   (_isWeekInSelectedPeriod(b) || b.isRecurring),
             orElse: () => Budget(
               id: '',
               categoryId: category.id,
@@ -91,6 +91,7 @@ class BudgetProvider with ChangeNotifier {
               userId: '',
               currency: _currencyProvider.selectedCurrencyCode, // New required field
               spentAmount: 0.0,
+              isRecurring: false,
             ),
           );
           break;
@@ -114,6 +115,7 @@ class BudgetProvider with ChangeNotifier {
               userId: '',
               currency: _currencyProvider.selectedCurrencyCode, // New required field
               spentAmount: 0.0,
+              isRecurring: false,
             ),
           );
           break;
@@ -136,6 +138,7 @@ class BudgetProvider with ChangeNotifier {
               userId: '',
               currency: _currencyProvider.selectedCurrencyCode, // New required field
               spentAmount: 0.0,
+              isRecurring: false,
             ),
           );
           break;
@@ -182,14 +185,22 @@ class BudgetProvider with ChangeNotifier {
   
   // Calculate spent amount for a budget
   double _calculateSpentAmount(Budget budget) {
-    return _allTransactions
-        .where((t) =>
-            t.type == 'expense' &&
-            t.categoryId == budget.categoryId &&
-            t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
-            t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))) &&
-            t.isVacation == budget.isVacation) // Match vacation status
-        .fold(0.0, (sum, t) => sum + t.amount);
+  // Determine the date range to use: prefer the provider's currently selected
+  // period (start/end) because the UI selection should drive the displayed
+  // transactions. Fall back to the budget's own start/end if needed.
+  final periodRange = _getSelectedPeriodRange();
+  final start = periodRange['start'] ?? budget.startDate;
+  final end = periodRange['end'] ?? budget.endDate;
+
+  return _allTransactions
+    .where((t) =>
+      t.type == 'expense' &&
+      t.categoryId == budget.categoryId &&
+      // Include transactions on the boundary
+      t.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
+      t.date.isBefore(end.add(const Duration(seconds: 1))) &&
+      t.isVacation == budget.isVacation) // Match vacation status
+    .fold(0.0, (sum, t) => sum + t.amount);
   }
   
   // Get transactions for a specific budget
@@ -248,6 +259,41 @@ class BudgetProvider with ChangeNotifier {
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
+
+  // Compute the currently selected period's start and end DateTime based on
+  // the provider's selection fields and _selectedBudgetType.
+  // Returns a map with keys 'start' and 'end'. Values may be null if unable
+  // to determine and caller should fall back to budget values.
+  Map<String, DateTime?> _getSelectedPeriodRange() {
+    try {
+      switch (_selectedBudgetType) {
+        case BudgetType.weekly:
+          final currentYear = _selectedWeeklyMonth.year;
+          final currentMonth = _selectedWeeklyMonth.month;
+          final firstDayOfMonth = DateTime(currentYear, currentMonth, 1);
+          final firstSunday = Budget.getStartOfWeek(firstDayOfMonth);
+          final weekStartDate = firstSunday.add(Duration(days: (_selectedWeek - 1) * 7));
+          final weekEndDate = weekStartDate.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+          return {'start': weekStartDate, 'end': weekEndDate};
+        case BudgetType.monthly:
+          final start = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+          final end = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
+          return {'start': start, 'end': end};
+        case BudgetType.yearly:
+          final start = DateTime(_selectedYear.year, 1, 1);
+          final end = DateTime(_selectedYear.year, 12, 31, 23, 59, 59);
+          return {'start': start, 'end': end};
+      }
+    } catch (e) {
+      print('Error computing selected period range: $e');
+    }
+    return {'start': null, 'end': null};
+  }
+
+  // Public getters to expose the currently-selected period's start and end
+  // for other UI code (e.g., detail screens) to use when fetching data.
+  DateTime? get selectedPeriodStart => _getSelectedPeriodRange()['start'];
+  DateTime? get selectedPeriodEnd => _getSelectedPeriodRange()['end'];
   
   // Get transactions for selected category
   List<FirestoreTransaction> get filteredTransactions {
