@@ -30,7 +30,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   String? _selectedAccountType;
   late FirestoreService _firestoreService;
   late FocusNode _amountFocusNode;
-  String? _selectedVacationCurrencyCode; // Only used for vacation account creation
+  String? _selectedAccountCurrencyCode; // Used for non-vacation account creation
 
   @override
   void initState() {
@@ -41,16 +41,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     if (widget.isCreatingVacationAccount) {
       _isCreditSelected = true;
       _selectedAccountType = 'Credit';
-      // Initialize vacation currency from current CurrencyProvider selection
-      try {
-        final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-        _selectedVacationCurrencyCode = currencyProvider.selectedCurrencyCode;
-      } catch (_) {}
     } else {
       // Show account type selection bottom sheet immediately after first frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showAccountTypeSelection();
       });
+      // Initialize default currency from CurrencyProvider for non-vacation accounts
+      try {
+        final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+        _selectedAccountCurrencyCode = currencyProvider.selectedCurrencyCode;
+      } catch (_) {}
     }
   }
 
@@ -180,8 +180,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       const SizedBox(height: 16),
                       _buildCreditLimitOrBalanceField(),
                       const SizedBox(height: 16),
-                      // Vacation currency selection (only when creating a vacation account)
-                      if (widget.isCreatingVacationAccount)
+                      if (!widget.isCreatingVacationAccount)
                         _buildFormSection(
                           context,
                           'Currency',
@@ -193,7 +192,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                 showSearchField: true,
                                 onSelect: (Currency currency) {
                                   setState(() {
-                                    _selectedVacationCurrencyCode = currency.code;
+                                    _selectedAccountCurrencyCode = currency.code;
                                   });
                                 },
                               );
@@ -212,7 +211,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    _selectedVacationCurrencyCode ?? 'Select Currency',
+                                    _selectedAccountCurrencyCode ?? 'Select Currency',
                                     style: const TextStyle(fontSize: 13),
                                   ),
                                   const Icon(Icons.arrow_drop_down, color: Colors.black54),
@@ -221,7 +220,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             ),
                           ),
                         ),
-                      if (widget.isCreatingVacationAccount)
+                      if (!widget.isCreatingVacationAccount)
                         const SizedBox(height: 16),
                       // Only show Account Type section if not creating a vacation account
                       if (!widget.isCreatingVacationAccount)
@@ -686,15 +685,13 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             _isSaving = true;
                           });
                           // Determine currency code
-                          String selectedCurrencyCode = _selectedVacationCurrencyCode ?? 'USD';
-                          if (!widget.isCreatingVacationAccount) {
-                            // For non-vacation accounts, use global selection
-                            try {
-                              final currencyProvider = context.read<CurrencyProvider>();
-                              selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
-                            } catch (e) {
-                              print('AddAccountScreen: CurrencyProvider not available, defaulting to USD: $e');
-                            }
+                          String selectedCurrencyCode = 'USD';
+                          if (widget.isCreatingVacationAccount) {
+                            // Vacation accounts don't have a specific currency - use empty string or special flag
+                            selectedCurrencyCode = 'MULTI';
+                          } else {
+                            selectedCurrencyCode = _selectedAccountCurrencyCode ??
+                                (context.read<CurrencyProvider>().selectedCurrencyCode);
                           }
 
                           final values = _formKey.currentState!.value;
@@ -760,9 +757,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           // Create vacation budgets for all expense categories if this is a vacation account
                           if (widget.isCreatingVacationAccount == true && newAccount.isVacationAccount == true) {
                             try {
-                              // Create vacation budgets for all expense categories
+                              // Create vacation budgets for all expense categories (no specific currency for vacation accounts)
                               await _firestoreService.createVacationBudgetsForAllExpenseCategories(
-                                currency: selectedCurrencyCode,
+                                currency: 'MULTI', // Use special flag for multi-currency vacation accounts
                                 type: BudgetType.monthly,
                               );
                             } catch (e) {

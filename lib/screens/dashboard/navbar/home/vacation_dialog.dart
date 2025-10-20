@@ -6,7 +6,6 @@ import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account
 import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:currency_picker/currency_picker.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,13 +19,9 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
   
   // Load accounts to get fresh data every time the dialog is shown
   final all = await firestoreService.getAllAccounts();
-  final vacationAccounts = all.where((a) => a.isVacationAccount == true).toList();
+  final vacationAccounts = all.where((a) => a.isVacationAccount == true && a.currency != 'MULTI').toList();
 
   if (!context.mounted) return;
-
-  // Get the current currency from CurrencyProvider (used for icon hint)
-  final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-  final currentCurrency = currencyProvider.selectedCurrencyCode;
 
   final result = await showGeneralDialog<FirestoreAccount>(
     context: context,
@@ -117,7 +112,6 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                               itemBuilder: (context, index) {
                                 final account = vacationAccounts[index];
                                 final isSelected = account == selectedAccount;
-                                final currencyMatches = account.currency == currentCurrency;
                                 
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 4),
@@ -150,19 +144,15 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(
-                                              currencyMatches
-                                                  ? Icons.check_circle
-                                                  : Icons.credit_card,
-                                              color: currencyMatches
-                                                  ? Colors.green
-                                                  : Theme.of(context).iconTheme.color,
+                                              Icons.credit_card,
+                                              color: Theme.of(context).iconTheme.color,
                                               size: 20,
                                             ),
                                             const SizedBox(width: 8),
                                           ],
                                         ),
                                         title: Text(
-                                          '${account.name} (${account.currency})',
+                                          account.name,
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -229,37 +219,13 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
     await provider.setActiveVacationAccountId(result.id);
     await provider.setVacationMode(true);
 
-    // Also sync the app currency to the vacation account's currency
+    // Store the current currency before switching to vacation mode for reference
     try {
       final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-      // Store the current (normal mode) currency before switching
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('preVacationCurrencyCode', currencyProvider.selectedCurrencyCode);
-      final accountCurrencyCode = result.currency;
-      final currency = CurrencyService().findByCode(accountCurrencyCode);
-      if (currency != null) {
-        await currencyProvider.setCurrency(currency, 1.0);
-        if (context.mounted) {
-          // Inform the user that currency has been changed
-          await showDialog<void>(
-            context: context,
-            builder: (ctx) {
-              return AlertDialog(
-                title: const Text('Currency Updated'),
-                content: Text('App currency has been changed to ${currency.code} for this vacation account.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('OK'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      }
     } catch (e) {
-      // Non-fatal: currency sync failed
+      // Non-fatal: currency storage failed
       // ignore
     }
   }

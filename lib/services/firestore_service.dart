@@ -15,6 +15,43 @@ class FirestoreService {
     return _instance!;
   }
 
+  // Stream all transactions filtered by currency across all time.
+  // Applies vacation/account filters when provided. Results are ordered by date desc.
+  Stream<List<FirestoreTransaction>> streamTransactionsByCurrency(
+    String currencyCode, {
+    String? accountId,
+    bool isVacation = false,
+  }) {
+    try {
+      print('DEBUG: streamTransactionsByCurrency - currency=$currencyCode, isVacation=$isVacation, accountId=$accountId');
+
+      Query<FirestoreTransaction> query = _transactionsCollection
+          .where('currency', isEqualTo: currencyCode)
+          .where('isVacation', isEqualTo: isVacation);
+
+      if (accountId != null) {
+        query = query.where('accountId', isEqualTo: accountId);
+        print('DEBUG: streamTransactionsByCurrency - Applied accountId filter: $accountId');
+      }
+
+      return query
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) {
+            final transactions = snapshot.docs.map((doc) => doc.data()).toList();
+            print('DEBUG: streamTransactionsByCurrency - fetched ${transactions.length} tx for currency=$currencyCode');
+            if (transactions.isNotEmpty) {
+              final txIds = transactions.map((tx) => tx.id).take(6).join(', ');
+              print('DEBUG: streamTransactionsByCurrency - sample ids: $txIds');
+            }
+            return transactions;
+          });
+    } catch (e) {
+      print('Error streaming transactions by currency: $e');
+      return Stream.empty();
+    }
+  }
+
   FirestoreService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
