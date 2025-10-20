@@ -2,12 +2,13 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
-import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:currency_picker/currency_picker.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shows the vacation account selection dialog using showGeneralDialog.
 /// This function provides a robust implementation that correctly handles non-dismissible behavior.
@@ -23,7 +24,7 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
 
   if (!context.mounted) return;
 
-  // Get the current currency from CurrencyProvider
+  // Get the current currency from CurrencyProvider (used for icon hint)
   final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
   final currentCurrency = currencyProvider.selectedCurrencyCode;
 
@@ -52,15 +53,14 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                     padding: const EdgeInsets.all(16),
                     child: const Text('No vacation accounts available.'),
                   )
-                : StatefulBuilder(
-                    builder: (context, setState) {
-                      FirestoreAccount? selectedAccount = vacationAccounts.first;
-                      
-                      // Check if any account matches the current currency
-                      final hasMatchingCurrency = vacationAccounts.any((account) =>
-                          account.currency == currentCurrency);
-                      
-                      return Column(
+                : () {
+                    // Maintain selection outside the StatefulBuilder so it persists across rebuilds
+                    FirestoreAccount? selectedAccount = vacationAccounts.first;
+                    
+                    return StatefulBuilder(
+                      builder: (context, setState) {
+                        // UI hinting only; selection is allowed regardless of currency
+                        return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           // Handle bar
@@ -106,33 +106,7 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                               ],
                             ),
                           ),
-                          // Currency warning message if needed
-                          if (!hasMatchingCurrency)
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              margin: const EdgeInsets.only(left: 12, right: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.amber.withOpacity(0.5)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.warning, color: Colors.amber[700], size: 20),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'No vacation accounts match your current currency ($currentCurrency)',
-                                      style: TextStyle(
-                                        color: Colors.amber[700],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          // Removed currency warning; selection is always allowed
                           // Custom account list with validation
                           Container(
                             constraints: const BoxConstraints(maxHeight: 300),
@@ -221,30 +195,15 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             child: ElevatedButton(
-                              onPressed: selectedAccount?.currency == currentCurrency
-                                  ? () => Navigator.of(context).pop(selectedAccount)
-                                  : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: selectedAccount?.currency == currentCurrency
-                                    ? null
-                                    : Colors.grey.shade300,
-                              ),
-                              child: Text(
-                                selectedAccount?.currency == currentCurrency
-                                    ? 'Enable Vacation Mode'
-                                    : 'Currency Mismatch: ${selectedAccount?.currency} ≠ $currentCurrency',
-                                style: TextStyle(
-                                  color: selectedAccount?.currency == currentCurrency
-                                      ? null
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
+                              onPressed: () => Navigator.of(context).pop(selectedAccount),
+                              child: const Text('Enable Vacation Mode'),
                             ),
                           ),
                         ],
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    );
+                  }(),
           ),
         ),
       );
@@ -269,5 +228,39 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
     final provider = Provider.of<VacationProvider>(context, listen: false);
     await provider.setActiveVacationAccountId(result.id);
     await provider.setVacationMode(true);
+
+    // Also sync the app currency to the vacation account's currency
+    try {
+      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+      // Store the current (normal mode) currency before switching
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('preVacationCurrencyCode', currencyProvider.selectedCurrencyCode);
+      final accountCurrencyCode = result.currency;
+      final currency = CurrencyService().findByCode(accountCurrencyCode);
+      if (currency != null) {
+        await currencyProvider.setCurrency(currency, 1.0);
+        if (context.mounted) {
+          // Inform the user that currency has been changed
+          await showDialog<void>(
+            context: context,
+            builder: (ctx) {
+              return AlertDialog(
+                title: const Text('Currency Updated'),
+                content: Text('App currency has been changed to ${currency.code} for this vacation account.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      }
+    } catch (e) {
+      // Non-fatal: currency sync failed
+      // ignore
+    }
   }
 }

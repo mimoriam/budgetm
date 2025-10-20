@@ -758,16 +758,15 @@ class FirestoreService {
     }
   }
 
-  // Stream transactions for a date range (optionally filtered by vacation mode, accountId, and currency)
+  // Stream transactions for a date range (optionally filtered by vacation mode and accountId)
   Stream<List<FirestoreTransaction>> streamTransactionsForDateRange(
     DateTime startDate,
     DateTime endDate, {
     String? accountId,
     bool isVacation = false,
-    String? currencyCode,
   }) {
     try {
-      print('DEBUG: streamTransactionsForDateRange - startDate=$startDate, endDate=$endDate, isVacation=$isVacation, accountId=$accountId, currencyCode=$currencyCode');
+      print('DEBUG: streamTransactionsForDateRange - startDate=$startDate, endDate=$endDate, isVacation=$isVacation, accountId=$accountId');
       
       Query<FirestoreTransaction> query = _transactionsCollection
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
@@ -780,18 +779,12 @@ class FirestoreService {
         print('DEBUG: Applied accountId filter: $accountId');
       }
       
-      // Add currency filter if provided
-      if (currencyCode != null) {
-        query = query.where('currency', isEqualTo: currencyCode);
-        print('DEBUG: Applied currency filter: $currencyCode');
-      }
-      
       return query
           .orderBy('date', descending: true)
           .snapshots()
           .map((snapshot) {
             final transactions = snapshot.docs.map((doc) => doc.data()).toList();
-            print('DEBUG: Fetched ${transactions.length} transactions for isVacation=$isVacation, accountId=$accountId, currencyCode=$currencyCode');
+            print('DEBUG: Fetched ${transactions.length} transactions for isVacation=$isVacation, accountId=$accountId');
             // Log transaction IDs for debugging
             if (transactions.isNotEmpty) {
               final txIds = transactions.map((tx) => '${tx.id}(acc:${tx.accountId})').take(5).join(', ');

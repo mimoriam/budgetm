@@ -686,98 +686,135 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             validator: FormBuilderValidators.required(
                               errorText: 'Please select an account',
                             ),
-                            builder: (FormFieldState<String?> field) {
-                              final selectedAccount = _accounts
-                                  .firstWhere(
-                                    (acc) =>
-                                        acc.id ==
-                                        _selectedAccountId,
-                                    orElse: () => _accounts.first,
-                                  );
-                              
-                              return GestureDetector(
-                                onTap: () async {
-                                  final result =
-                                      await _showPrettySelectionBottomSheet<
-                                        FirestoreAccount
-                                      >(
-                                        title: 'Select Account',
-                                        items: _accounts,
-                                        selectedItem: selectedAccount,
-                                        getDisplayName: (account) =>
-                                            account.name,
-                                        getLeading: (account) => HugeIcon(
-                                          icon: getAccountIcon(account.accountType)[0][0],
-                                          color: AppColors.primaryTextColorLight,
-                                          size: 20,
-                                        ),
-                                      );
+                          builder: (FormFieldState<String?> field) {
+                            final selectedAccount = _accounts
+                                .firstWhere(
+                                  (acc) =>
+                                      acc.id ==
+                                      _selectedAccountId,
+                                  orElse: () => _accounts.first,
+                                );
 
-                                  if (result != null) {
-                                    setState(() {
-                                      _selectedAccountId = result.id;
-                                    });
-                                    field.didChange(result.id);
-                                  }
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10.0,
-                                    horizontal: 16.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(
-                                      30.0,
-                                    ),
-                                    border: Border.all(
-                                      color: field.hasError
-                                          ? AppColors.errorColor
-                                          : Colors.grey.shade300,
-                                      width: field.hasError ? 1.5 : 1.0,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Row(
-                                          children: [
-                                            HugeIcon(
-                                              icon: getAccountIcon(selectedAccount.accountType)[0][0],
-                                              size: 18,
-                                              color: _selectedAccountId != null
-                                                  ? AppColors.primaryTextColorLight
-                                                  : AppColors.lightGreyBackground,
+                            return Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      final result =
+                                          await _showPrettySelectionBottomSheet<
+                                            FirestoreAccount
+                                          >(
+                                            title: 'Select Account',
+                                            items: _accounts,
+                                            selectedItem: selectedAccount,
+                                            getDisplayName: (account) =>
+                                                account.name,
+                                            getLeading: (account) => HugeIcon(
+                                              icon: getAccountIcon(account.accountType)[0][0],
+                                              color: AppColors.primaryTextColorLight,
+                                              size: 20,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Flexible(
-                                              child: Text(
-                                                _selectedAccountId != null
-                                                    ? selectedAccount.name
-                                                    : 'Select',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color:
-                                                      _selectedAccountId != null
+                                          );
+
+                                      if (result != null) {
+                                        setState(() {
+                                          _selectedAccountId = result.id;
+                                        });
+                                        field.didChange(result.id);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(
+                                          30.0,
+                                        ),
+                                        border: Border.all(
+                                          color: field.hasError
+                                              ? AppColors.errorColor
+                                              : Colors.grey.shade300,
+                                          width: field.hasError ? 1.5 : 1.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Row(
+                                              children: [
+                                                HugeIcon(
+                                                  icon: getAccountIcon(selectedAccount.accountType)[0][0],
+                                                  size: 18,
+                                                  color: _selectedAccountId != null
                                                       ? AppColors.primaryTextColorLight
                                                       : AppColors.lightGreyBackground,
                                                 ),
-                                              ),
+                                                const SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    _selectedAccountId != null
+                                                        ? selectedAccount.name
+                                                        : 'Select',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color:
+                                                          _selectedAccountId != null
+                                                          ? AppColors.primaryTextColorLight
+                                                          : AppColors.lightGreyBackground,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ],
                                       ),
-                                      Icon(
-                                        Icons.arrow_drop_down,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 1,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10.0,
+                                      horizontal: 16.0,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(
+                                        30.0,
+                                      ),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        (selectedAccount.isDefault == true)
+                                            ? 'None'
+                                            : (selectedAccount.currency.isNotEmpty
+                                                ? selectedAccount.currency
+                                                : '—'),
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                           ),
                         ),
                       // Paid From Account field - only shown in vacation mode for expenses

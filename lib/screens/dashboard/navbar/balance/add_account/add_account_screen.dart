@@ -13,6 +13,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 class AddAccountScreen extends StatefulWidget {
   final bool isCreatingVacationAccount;
@@ -29,6 +30,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   String? _selectedAccountType;
   late FirestoreService _firestoreService;
   late FocusNode _amountFocusNode;
+  String? _selectedVacationCurrencyCode; // Only used for vacation account creation
 
   @override
   void initState() {
@@ -39,6 +41,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     if (widget.isCreatingVacationAccount) {
       _isCreditSelected = true;
       _selectedAccountType = 'Credit';
+      // Initialize vacation currency from current CurrencyProvider selection
+      try {
+        final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+        _selectedVacationCurrencyCode = currencyProvider.selectedCurrencyCode;
+      } catch (_) {}
     } else {
       // Show account type selection bottom sheet immediately after first frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -53,7 +60,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     super.dispose();
   }
 
-  Future<dynamic?> _showPrettySelectionBottomSheet({
+  Future<dynamic> _showPrettySelectionBottomSheet({
     required String title,
     required List<dynamic> items,
     required dynamic selectedItem,
@@ -173,6 +180,49 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       const SizedBox(height: 16),
                       _buildCreditLimitOrBalanceField(),
                       const SizedBox(height: 16),
+                      // Vacation currency selection (only when creating a vacation account)
+                      if (widget.isCreatingVacationAccount)
+                        _buildFormSection(
+                          context,
+                          'Currency',
+                          GestureDetector(
+                            onTap: () {
+                              showCurrencyPicker(
+                                context: context,
+                                showFlag: true,
+                                showSearchField: true,
+                                onSelect: (Currency currency) {
+                                  setState(() {
+                                    _selectedVacationCurrencyCode = currency.code;
+                                  });
+                                },
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10.0,
+                                horizontal: 16.0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30.0),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _selectedVacationCurrencyCode ?? 'Select Currency',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (widget.isCreatingVacationAccount)
+                        const SizedBox(height: 16),
                       // Only show Account Type section if not creating a vacation account
                       if (!widget.isCreatingVacationAccount)
                         _buildFormSection(
@@ -635,13 +685,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           setState(() {
                             _isSaving = true;
                           });
-                          // Get the selected currency from CurrencyProvider
-                          String selectedCurrencyCode = 'USD';
-                          try {
-                            final currencyProvider = context.read<CurrencyProvider>();
-                            selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
-                          } catch (e) {
-                            print('AddAccountScreen: CurrencyProvider not available, defaulting to USD: $e');
+                          // Determine currency code
+                          String selectedCurrencyCode = _selectedVacationCurrencyCode ?? 'USD';
+                          if (!widget.isCreatingVacationAccount) {
+                            // For non-vacation accounts, use global selection
+                            try {
+                              final currencyProvider = context.read<CurrencyProvider>();
+                              selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+                            } catch (e) {
+                              print('AddAccountScreen: CurrencyProvider not available, defaulting to USD: $e');
+                            }
                           }
 
                           final values = _formKey.currentState!.value;

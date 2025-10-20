@@ -304,7 +304,8 @@ class BudgetProvider with ChangeNotifier {
       // Include transactions on the boundary
       t.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
       t.date.isBefore(end.add(const Duration(seconds: 1))) &&
-      t.isVacation == budget.isVacation) // Match vacation status
+      t.isVacation == budget.isVacation && // Match vacation status
+      t.currency == budget.currency) // Match currency
     .fold(0.0, (sum, t) => sum + t.amount);
   }
   
@@ -316,7 +317,8 @@ class BudgetProvider with ChangeNotifier {
             t.categoryId == budget.categoryId &&
             t.date.isAfter(budget.startDate.subtract(const Duration(seconds: 1))) &&
             t.date.isBefore(budget.endDate.add(const Duration(seconds: 1))) &&
-            t.isVacation == budget.isVacation) // Match vacation status
+            t.isVacation == budget.isVacation && // Match vacation status
+            t.currency == budget.currency) // Match currency
         .toList();
   }
   
@@ -448,11 +450,6 @@ class BudgetProvider with ChangeNotifier {
   Future<void> loadData() async {
     print('DEBUG BudgetProvider.loadData: start (isVacation=${_vacationProvider.isVacationMode})');
     _isLoading = true;
-    notifyListeners();
-    
-    // Clear transactions early to avoid displaying stale data when switching currency or mode
-    print('DEBUG BudgetProvider.loadData: clearing _allTransactions before loading new data');
-    _allTransactions = [];
     notifyListeners();
     
     try {
