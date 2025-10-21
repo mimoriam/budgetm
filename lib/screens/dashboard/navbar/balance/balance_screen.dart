@@ -181,31 +181,51 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       }
     }
 
-    // In vacation mode, behavior remains the same
+    // In vacation mode, separate normal and vacation accounts (same as normal mode)
     if (isVacationMode) {
-      final accountsWithData = allAccounts
+      final nonDefaultAccounts = allAccounts
           .where((account) => !(account.isDefault ?? false))
+          .toList();
+
+      final normalAccounts = nonDefaultAccounts
+          .where((account) => (account.isVacationAccount != true))
+          .map((account) {
+            final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
+            // Use account.balance directly as it's the single source of truth from Firestore
+            final finalBalance = account.balance;
+            return {
+              'account': account,
+              'transactionsAmount': transactionsAmount,
+              'finalBalance': finalBalance,
+              'transactionCount': transactionCounts[account.id] ?? 0,
+            };
+          })
+          .toList();
+
+      final vacationAccounts = nonDefaultAccounts
           .where((account) => (account.isVacationAccount == true))
           .map((account) {
             final totalExpenses = expenseSums[account.id] ?? 0.0;
-            // For vacation accounts the final balance should be initial balance minus expenses
             final finalBalance = max(0.0, account.initialBalance - totalExpenses);
             // Diagnostics to confirm all values are doubles at runtime
-            print('DEBUG BalanceScreen: vacationMode finalBalance accountId=${account.id} '
+            print('DEBUG BalanceScreen: vacationMode vacation finalBalance accountId=${account.id} '
                   'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
                   'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
                   'final=$finalBalance(${finalBalance.runtimeType})');
             return {
               'account': account,
-              'transactionsAmount':
-                  max(0.0, account.initialBalance - totalExpenses), // keep sign for consistency
+              'transactionsAmount': finalBalance,
               'finalBalance': finalBalance,
               'transactionCount': vacationTransactionCounts[account.id] ?? 0,
             };
           })
           .toList();
 
-      _accountsWithTransactionsController?.add(accountsWithData);
+      // Emit a Map with both lists (same structure as normal mode)
+      _accountsWithTransactionsController?.add({
+        'normal_accounts': normalAccounts,
+        'vacation_accounts': vacationAccounts,
+      });
       return;
     }
 
@@ -303,11 +323,19 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               List<Map<String, dynamic>> vacationAccounts = [];
 
               if (isVacationMode) {
-                // In vacation mode, data is a List
-                if (snapshot.data is List && snapshot.data!.isEmpty) {
-                  return _buildEmptyState();
+                // In vacation mode, data is now a Map with two lists (same as normal mode)
+                if (snapshot.data is Map) {
+                  final data = snapshot.data as Map<String, dynamic>;
+                  normalAccounts =
+                      data['normal_accounts'] as List<Map<String, dynamic>>;
+                  vacationAccounts =
+                      data['vacation_accounts'] as List<Map<String, dynamic>>;
+
+                  // Show empty state if both lists are empty
+                  if (normalAccounts.isEmpty && vacationAccounts.isEmpty) {
+                    return _buildEmptyState();
+                  }
                 }
-                normalAccounts = snapshot.data as List<Map<String, dynamic>>;
               } else {
                 // In normal mode, data is a Map with two lists
                 if (snapshot.data is Map) {
@@ -336,12 +364,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildPieChart(normalAccounts),
+                          // Show chart for all accounts combined
+                          _buildPieChart([...normalAccounts, ...vacationAccounts]),
                           const SizedBox(height: 16),
-                          _buildLegend(
-                            normalAccounts,
-                          ),
+                          _buildLegend([...normalAccounts, ...vacationAccounts]),
                           const SizedBox(height: 24),
+                          
+                          // My Accounts section
                           _buildSectionHeaderWithButton(
                             'MY ACCOUNTS',
                             () async {
@@ -365,8 +394,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             },
                           ),
                           const SizedBox(height: 6),
-                          // Condition to show "no normal accounts" message
-                          if (normalAccounts.isEmpty && vacationAccounts.isNotEmpty)
+                          if (normalAccounts.isEmpty)
                             Center(
                               child: Text(
                                 'No normal accounts',
@@ -415,81 +443,79 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                               ),
                             ),
 
-                          // Vacation Accounts section (only in normal mode)
-                          if (!isVacationMode) ...[
-                            const SizedBox(height: 24),
-                           _buildSectionHeaderWithButton(
-                             'VACATION',
-                             () async {
-                               final result =
-                                   await PersistentNavBarNavigator.pushNewScreen(
-                                     context,
-                                     screen: const AddAccountScreen(isCreatingVacationAccount: true),
-                                     withNavBar: false,
-                                     pageTransitionAnimation:
-                                         PageTransitionAnimation.cupertino,
-                                   );
-                               if (result == true) {
-                                 if (mounted) setState(() {});
-                               }
-                             },
-                           ),
-                            const SizedBox(height: 12),
-                            if (vacationAccounts.isEmpty)
-                              Center(
-                                child: Text(
-                                  'No vacation accounts',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: AppColors.secondaryTextColorLight,
-                                      ),
-                                ),
-                              )
-                            else
-                              ...vacationAccounts.map(
-                                (accountData) => Column(
-                                  children: [
-                                    _buildAccountCard(
-                                      context: context,
-                                      account:
-                                          accountData['account']
-                                              as FirestoreAccount,
-                                      icon: getAccountIcon(
+                          // Vacation Accounts section (always shown)
+                          const SizedBox(height: 24),
+                          _buildSectionHeaderWithButton(
+                            'VACATION',
+                            () async {
+                              final result =
+                                  await PersistentNavBarNavigator.pushNewScreen(
+                                    context,
+                                    screen: const AddAccountScreen(isCreatingVacationAccount: true),
+                                    withNavBar: false,
+                                    pageTransitionAnimation:
+                                        PageTransitionAnimation.cupertino,
+                                  );
+                              if (result == true) {
+                                if (mounted) setState(() {});
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          if (vacationAccounts.isEmpty)
+                            Center(
+                              child: Text(
+                                'No vacation accounts',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: AppColors.secondaryTextColorLight,
+                                    ),
+                              ),
+                            )
+                          else
+                            ...vacationAccounts.map(
+                              (accountData) => Column(
+                                children: [
+                                  _buildAccountCard(
+                                    context: context,
+                                    account:
+                                        accountData['account']
+                                            as FirestoreAccount,
+                                    icon: getAccountIcon(
+                                      (accountData['account']
+                                              as FirestoreAccount)
+                                          .accountType,
+                                    )[0][0],
+                                    iconColor: Colors.black,
+                                    iconBackgroundColor: Colors.grey.shade200,
+                                    accountName:
+                                        (accountData['account']
+                                                as FirestoreAccount)
+                                            .name,
+                                    amount:
+                                        accountData['finalBalance'] as double,
+                                    accountType:
                                         (accountData['account']
                                                 as FirestoreAccount)
                                             .accountType,
-                                      )[0][0],
-                                      iconColor: Colors.black,
-                                      iconBackgroundColor: Colors.grey.shade200,
-                                      accountName:
-                                          (accountData['account']
-                                                  as FirestoreAccount)
-                                              .name,
-                                      amount:
-                                          accountData['finalBalance'] as double,
-                                      accountType:
-                                          (accountData['account']
-                                                  as FirestoreAccount)
-                                              .accountType,
-                                      creditLimit:
-                                          (accountData['account']
-                                                  as FirestoreAccount)
-                                              .creditLimit,
-                                      balanceLimit:
-                                          (accountData['account']
-                                                  as FirestoreAccount)
-                                              .balanceLimit,
-                                      currencySymbol: _getAccountCurrencySymbol(
-                                          accountData['account'] as FirestoreAccount),
-                                      isHighlighted: false,
-                                      accountsCount: vacationAccounts.length,
-                                      transactionCount: accountData['transactionCount'] as int,
-                                    ),
-                                    const SizedBox(height: 12),
-                                  ],
-                                ),
+                                    creditLimit:
+                                        (accountData['account']
+                                                as FirestoreAccount)
+                                            .creditLimit,
+                                    balanceLimit:
+                                        (accountData['account']
+                                                as FirestoreAccount)
+                                            .balanceLimit,
+                                    currencySymbol: _getAccountCurrencySymbol(
+                                        accountData['account'] as FirestoreAccount),
+                                    isHighlighted: false,
+                                    accountsCount: vacationAccounts.length,
+                                    transactionCount: accountData['transactionCount'] as int,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
                               ),
-                          ],
+                            ),
                         ],
                       ),
                     ),
@@ -623,12 +649,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     if (filteredData.isEmpty) {
       return Column(
         children: [
-          // Currency dropdown
-          if (availableCurrencies.length > 1) ...[
-            const SizedBox(height: 12),
-            _buildCurrencyDropdown(availableCurrencies),
-            const SizedBox(height: 12),
-          ],
           const SizedBox(height: 200),
           Center(
             child: Text(
@@ -642,32 +662,22 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
     // If there's only one account, show the app logo instead of the pie chart
     if (filteredData.length == 1) {
-      return Column(
-        children: [
-          // Currency dropdown
-          if (availableCurrencies.length > 1) ...[
-            const SizedBox(height: 12),
-            _buildCurrencyDropdown(availableCurrencies),
-            const SizedBox(height: 12),
-          ],
-          SizedBox(
-            height: 200,
-            child: Center(
-              child: SizedBox(
-                width: 150,
-                height: 150,
-                child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
-              ),
-            ),
+      return SizedBox(
+        height: 200,
+        child: Center(
+          child: SizedBox(
+            width: 150,
+            height: 150,
+            child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
           ),
-        ],
+        ),
       );
     }
 
     // For two or more accounts, show the pie chart as before
     return Column(
       children: [
-        // Currency dropdown
+        // Currency dropdown - only show when there's a chart (2+ accounts)
         if (availableCurrencies.length > 1) ...[
           const SizedBox(height: 12),
           _buildCurrencyDropdown(availableCurrencies),

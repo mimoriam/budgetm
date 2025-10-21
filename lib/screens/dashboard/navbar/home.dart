@@ -1542,18 +1542,31 @@ Future<void> _showVacationCurrencyDialog(
   await Future.delayed(const Duration(milliseconds: 100));
   
   try {
+    // Get the previous currency from SharedPreferences
+    String previousCurrency = 'USD'; // Default fallback
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      previousCurrency = prefs.getString('preVacationCurrencyCode') ?? 'USD';
+    } catch (e) {
+      // Non-fatal: use default currency
+    }
+    
+    // Get currency symbol for display
+    final currency = CurrencyService().findByCode(previousCurrency);
+    final currencySymbol = currency?.symbol ?? '\$';
+    
     await showDialog<void>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
           title: const Text('Vacation Mode'),
-          content: const Text(
-            'You can change currencies for your vacation transactions. Would you like to change the currency now?',
+          content: Text(
+            'You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was $currencySymbol $previousCurrency.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Keep Current'),
+              child: Text('Keep Current ($currencySymbol $previousCurrency)'),
             ),
             TextButton(
               onPressed: () async {

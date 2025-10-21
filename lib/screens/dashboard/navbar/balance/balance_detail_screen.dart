@@ -7,9 +7,7 @@ import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
-import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
-import 'package:budgetm/utils/icon_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -71,8 +69,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   @override
   Widget build(BuildContext context) {
     // Determine the correct currency symbol for the account being viewed
-    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-    final accountCurrencyCode = widget.account.currency ?? currencyProvider.selectedCurrencyCode;
+    final accountCurrencyCode = widget.account.currency;
     final currency = CurrencyService().findByCode(accountCurrencyCode);
     final currencySymbol = currency?.symbol ?? '\$';
     final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
@@ -185,11 +182,24 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
           // Calculate current balance
           double currentBalance = widget.account.initialBalance;
           if (snapshot.hasData) {
-            for (final transaction in snapshot.data!) {
-              if (transaction.type == 'income') {
-                currentBalance += transaction.amount;
-              } else {
-                currentBalance -= transaction.amount;
+            // For vacation accounts, calculate remaining balance (initial - expenses)
+            if (widget.account.isVacationAccount == true) {
+              double totalExpenses = 0.0;
+              for (final transaction in snapshot.data!) {
+                final isExpense = transaction.type.toString().toLowerCase().contains('expense');
+                if (isExpense) {
+                  totalExpenses += transaction.amount;
+                }
+              }
+              currentBalance = (widget.account.initialBalance - totalExpenses).clamp(0.0, double.infinity);
+            } else {
+              // For normal accounts, calculate balance from all transactions
+              for (final transaction in snapshot.data!) {
+                if (transaction.type == 'income') {
+                  currentBalance += transaction.amount;
+                } else {
+                  currentBalance -= transaction.amount;
+                }
               }
             }
           }
@@ -223,10 +233,19 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
           // Calculate filtered subtotal
           double filteredSubtotal = 0;
           for (final transaction in filteredTransactions) {
-            if (transaction.type == 'income') {
-              filteredSubtotal += transaction.amount;
+            if (widget.account.isVacationAccount == true) {
+              // For vacation accounts, only count expenses
+              final isExpense = transaction.type.toString().toLowerCase().contains('expense');
+              if (isExpense) {
+                filteredSubtotal -= transaction.amount;
+              }
             } else {
-              filteredSubtotal -= transaction.amount;
+              // For normal accounts, count both income and expenses
+              if (transaction.type == 'income') {
+                filteredSubtotal += transaction.amount;
+              } else {
+                filteredSubtotal -= transaction.amount;
+              }
             }
           }
 
@@ -469,8 +488,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     final isIncome = transaction.type == 'income';
     
     // Determine the correct currency symbol for the account being viewed
-    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-    final accountCurrencyCode = widget.account.currency ?? currencyProvider.selectedCurrencyCode;
+    final accountCurrencyCode = widget.account.currency;
     final currency = CurrencyService().findByCode(accountCurrencyCode);
     final currencySymbol = currency?.symbol ?? '\$';
     

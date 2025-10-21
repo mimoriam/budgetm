@@ -903,7 +903,15 @@ class _BudgetScreenState extends State<BudgetScreen>
     }
     
     if (amount.abs() >= 1000) {
-      return '$currencySymbol${(amount / 1000).floor()}k';
+      // Show decimal places for thousands (e.g., 1.5k, 1.59k)
+      final thousands = amount / 1000;
+      if (thousands == thousands.floor()) {
+        // If it's a whole number of thousands, show without decimal
+        return '$currencySymbol${thousands.floor()}k';
+      } else {
+        // Show one decimal place for partial thousands
+        return '$currencySymbol${thousands.toStringAsFixed(1)}k';
+      }
     }
     return '$currencySymbol${amount.toStringAsFixed(2)}';
   }

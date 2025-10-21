@@ -527,256 +527,200 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      // Category field (full width)
-                      _buildFormSection(
-                        context,
-                        'Category',
-                        FormBuilderField<String>(
-                          name: 'category',
-                          initialValue: _selectedCategoryId,
-                          validator: FormBuilderValidators.required(
-                            errorText: 'Please select a category',
-                          ),
-                          builder: (FormFieldState<String?> field) {
-                            Category? selectedCategory;
-                            if (_categories.isNotEmpty) {
-                              selectedCategory = _categories.firstWhere(
-                                (cat) => cat.id == _selectedCategoryId,
-                                orElse: () => _categories.first,
-                              );
-                            }
-
-                            return GestureDetector(
-                              onTap: () async {
-                                if (_categories.isEmpty) {
-                                  return;
-                                }
-                                final result =
-                                    await _showPrettySelectionBottomSheet<
-                                      Category
-                                    >(
-                                      title: 'Select Category',
-                                      items: _categories,
-                                      selectedItem:
-                                          selectedCategory ??
-                                          _categories.first,
-                                      getDisplayName: (category) =>
-                                          category.name ??
-                                          'Unnamed Category',
-                                      getLeading: (category) => HugeIcon(
-                                        icon: getIcon(category.icon),
-                                        color: AppColors
-                                            .primaryTextColorLight,
-                                      ),
+                      // Category and Currency fields side by side
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildFormSection(
+                              context,
+                              'Category',
+                              FormBuilderField<String>(
+                                name: 'category',
+                                initialValue: _selectedCategoryId,
+                                validator: FormBuilderValidators.required(
+                                  errorText: 'Please select a category',
+                                ),
+                                builder: (FormFieldState<String?> field) {
+                                  Category? selectedCategory;
+                                  if (_categories.isNotEmpty) {
+                                    selectedCategory = _categories.firstWhere(
+                                      (cat) => cat.id == _selectedCategoryId,
+                                      orElse: () => _categories.first,
                                     );
+                                  }
 
-                                if (result != null) {
-                                  setState(() {
-                                    _selectedCategoryId = result.id;
-                                  });
-                                  field.didChange(result.id);
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10.0,
-                                  horizontal: 16.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(
-                                    30.0,
-                                  ),
-                                  border: Border.all(
-                                    color: field.hasError
-                                        ? AppColors.errorColor
-                                        : Colors.grey.shade300,
-                                    width: field.hasError ? 1.5 : 1.0,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      if (_categories.isEmpty) {
+                                        return;
+                                      }
+                                      final result =
+                                          await _showPrettySelectionBottomSheet<
+                                            Category
+                                          >(
+                                            title: 'Select Category',
+                                            items: _categories,
+                                            selectedItem:
+                                                selectedCategory ??
+                                                _categories.first,
+                                            getDisplayName: (category) =>
+                                                category.name ??
+                                                'Unnamed Category',
+                                            getLeading: (category) => HugeIcon(
+                                              icon: getIcon(category.icon),
+                                              color: AppColors
+                                                  .primaryTextColorLight,
+                                            ),
+                                          );
+
+                                      if (result != null) {
+                                        setState(() {
+                                          _selectedCategoryId = result.id;
+                                        });
+                                        field.didChange(result.id);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(
+                                          30.0,
+                                        ),
+                                        border: Border.all(
+                                          color: field.hasError
+                                              ? AppColors.errorColor
+                                              : Colors.grey.shade300,
+                                          width: field.hasError ? 1.5 : 1.0,
+                                        ),
+                                      ),
                                       child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          HugeIcon(
-                                            icon: getIcon(
-                                              selectedCategory?.icon,
+                                          Expanded(
+                                            child: Row(
+                                              children: [
+                                                HugeIcon(
+                                                  icon: getIcon(
+                                                    selectedCategory?.icon,
+                                                  ),
+                                                  size: 18,
+                                                  color:
+                                                      selectedCategory != null
+                                                      ? AppColors
+                                                            .primaryTextColorLight
+                                                      : AppColors
+                                                            .lightGreyBackground,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    selectedCategory?.name ??
+                                                        'Select',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color:
+                                                          selectedCategory !=
+                                                              null
+                                                          ? AppColors
+                                                                .primaryTextColorLight
+                                                          : AppColors
+                                                                .lightGreyBackground,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            size: 18,
-                                            color:
-                                                selectedCategory != null
-                                                ? AppColors
-                                                      .primaryTextColorLight
-                                                : AppColors
-                                                      .lightGreyBackground,
                                           ),
-                                          const SizedBox(width: 8),
-                                          Flexible(
-                                            child: Text(
-                                              selectedCategory?.name ??
-                                                  'Select',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color:
-                                                    selectedCategory !=
-                                                        null
-                                                    ? AppColors
-                                                          .primaryTextColorLight
-                                                    : AppColors
-                                                          .lightGreyBackground,
-                                              ),
-                                            ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey.shade600,
                                           ),
                                         ],
                                       ),
                                     ),
-                                    Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ],
-                                ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildFormSection(
+                              context,
+                              'Currency',
+                              FormBuilderField<String>(
+                                name: Provider.of<VacationProvider>(context, listen: false).isVacationMode ? 'vacationCurrency' : 'transactionCurrency',
+                                initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
+                                validator: FormBuilderValidators.required(
+                                  errorText: 'Please select a currency',
+                                ),
+                                builder: (FormFieldState<String?> field) {
+                                  return Consumer<CurrencyProvider>(
+                                    builder: (context, currencyProvider, child) {
+                                      return GestureDetector(
+                                        onTap: () {
+                                          showCurrencyPicker(
+                                            context: context,
+                                            showFlag: true,
+                                            showSearchField: true,
+                                            onSelect: (Currency currency) async {
+                                              // Update the currency provider
+                                              final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                                              await currencyProvider.setCurrency(currency, 1.0);
+                                              if (!Provider.of<VacationProvider>(context, listen: false).isVacationMode) {
+                                                _loadAccounts(); // Reload accounts when currency changes in normal mode
+                                              }
+                                              field.didChange(currency.code);
+                                            },
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10.0,
+                                            horizontal: 16.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(30.0),
+                                            border: Border.all(
+                                              color: field.hasError
+                                                  ? AppColors.errorColor
+                                                  : Colors.grey.shade300,
+                                              width: field.hasError ? 1.5 : 1.0,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                field.value ?? currencyProvider.selectedCurrencyCode,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: AppColors.primaryTextColorLight,
+                                                ),
+                                              ),
+                                              Icon(
+                                                Icons.arrow_drop_down,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                      // Currency selector for normal mode (moved up)
-                      if (!Provider.of<VacationProvider>(context).isVacationMode)
-                        _buildFormSection(
-                          context,
-                          'Currency',
-                          FormBuilderField<String>(
-                            name: 'transactionCurrency',
-                            initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
-                            validator: FormBuilderValidators.required(
-                              errorText: 'Please select a currency',
-                            ),
-                            builder: (FormFieldState<String?> field) {
-                              return Consumer<CurrencyProvider>(
-                                builder: (context, currencyProvider, child) {
-                                  return GestureDetector(
-                                    onTap: () {
-                                      showCurrencyPicker(
-                                        context: context,
-                                        showFlag: true,
-                                        showSearchField: true,
-                                        onSelect: (Currency currency) async {
-                                          // Update the currency provider
-                                          final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-                                          await currencyProvider.setCurrency(currency, 1.0);
-                                          _loadAccounts(); // Reload accounts when currency changes
-                                          field.didChange(currency.code);
-                                        },
-                                      );
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 16.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30.0),
-                                        border: Border.all(
-                                          color: field.hasError
-                                              ? AppColors.errorColor
-                                              : Colors.grey.shade300,
-                                          width: field.hasError ? 1.5 : 1.0,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            field.value ?? currencyProvider.selectedCurrencyCode,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              color: AppColors.primaryTextColorLight,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      // Currency selector for vacation mode
-                      if (Provider.of<VacationProvider>(context).isVacationMode)
-                        _buildFormSection(
-                          context,
-                          'Currency',
-                          FormBuilderField<String>(
-                            name: 'vacationCurrency',
-                            initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
-                            validator: FormBuilderValidators.required(
-                              errorText: 'Please select a currency',
-                            ),
-                            builder: (FormFieldState<String?> field) {
-                              return Consumer<CurrencyProvider>(
-                                builder: (context, currencyProvider, child) {
-                                  return GestureDetector(
-                                    onTap: () {
-                                      showCurrencyPicker(
-                                        context: context,
-                                        showFlag: true,
-                                        showSearchField: true,
-                                        onSelect: (Currency currency) async {
-                                          // Update the currency provider
-                                          await currencyProvider.setCurrency(currency, 1.0);
-                                          field.didChange(currency.code);
-                                        },
-                                      );
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 16.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30.0),
-                                        border: Border.all(
-                                          color: field.hasError
-                                              ? AppColors.errorColor
-                                              : Colors.grey.shade300,
-                                          width: field.hasError ? 1.5 : 1.0,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            field.value ?? currencyProvider.selectedCurrencyCode,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              color: AppColors.primaryTextColorLight,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
                       const SizedBox(height: 10),
                       // Account field (full width) - shown in both modes
                       if (_accounts.isNotEmpty)
