@@ -219,11 +219,16 @@ class _BudgetScreenState extends State<BudgetScreen>
                             context,
                             listen: false,
                           ).isVacationMode;
+                          final budgetProvider = Provider.of<BudgetProvider>(
+                            context,
+                            listen: false,
+                          );
                           final result =
                               await PersistentNavBarNavigator.pushNewScreen(
                                 context,
                                 screen: AddBudgetScreen(
                                   isVacationMode: isVacationMode,
+                                  initialBudgetType: budgetProvider.selectedBudgetType,
                                 ),
                                 withNavBar: false,
                                 pageTransitionAnimation:
@@ -869,11 +874,16 @@ class _BudgetScreenState extends State<BudgetScreen>
                         context,
                         listen: false,
                       ).isVacationMode;
+                      final budgetProvider = Provider.of<BudgetProvider>(
+                        context,
+                        listen: false,
+                      );
                       final result =
                           await PersistentNavBarNavigator.pushNewScreen(
                             context,
                             screen: AddBudgetScreen(
                               isVacationMode: isVacationMode,
+                              initialBudgetType: budgetProvider.selectedBudgetType,
                             ),
                             withNavBar: false,
                             pageTransitionAnimation:
@@ -928,6 +938,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     final progress = hasLimit ? (spent / limit).clamp(0.0, 1.0) : 0.0;
     final isOverBudget = hasLimit && spent > limit;
     final remaining = limit - spent;
+    final transactionCount = provider.getTransactionCountForBudget(data.budget);
 
     return Consumer<VacationProvider>(
       builder: (context, vacationProvider, child) {
@@ -981,15 +992,28 @@ class _BudgetScreenState extends State<BudgetScreen>
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          data.categoryName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          softWrap: true,
-                          maxLines: 2,
-                          overflow: TextOverflow.visible,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data.categoryName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              softWrap: true,
+                              maxLines: 2,
+                              overflow: TextOverflow.visible,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$transactionCount transactions',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1028,15 +1052,28 @@ class _BudgetScreenState extends State<BudgetScreen>
                           const SizedBox(width: 12),
                           // Category name occupies the remaining space on its own line and can wrap
                           Expanded(
-                            child: Text(
-                              data.categoryName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              softWrap: true,
-                              maxLines: 2,
-                              overflow: TextOverflow.visible,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  data.categoryName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  softWrap: true,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.visible,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$transactionCount transactions',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

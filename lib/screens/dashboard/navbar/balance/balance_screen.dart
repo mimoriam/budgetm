@@ -136,6 +136,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
     // For normal mode: compute net transaction amounts (income positive, expense negative) for paid txns
     final transactionAmounts = <String, double>{};
+    final transactionCounts = <String, int>{};
     for (var transaction in transactions) {
       final accId = transaction.accountId;
       if (accId == null || defaultAccountIds.contains(accId)) continue;
@@ -149,11 +150,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           (v) => v + txnAmount,
           ifAbsent: () => txnAmount,
         );
+        transactionCounts.update(
+          accId,
+          (v) => v + 1,
+          ifAbsent: () => 1,
+        );
       }
     }
 
     // For vacation mode: compute total expenses ever made for each account (ignore paid flag; include all expense transactions)
     final expenseSums = <String, double>{};
+    final vacationTransactionCounts = <String, int>{};
     for (var transaction in transactions) {
       final accId = transaction.accountId;
       if (accId == null || defaultAccountIds.contains(accId)) continue;
@@ -165,6 +172,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           accId,
           (v) => v + transaction.amount,
           ifAbsent: () => transaction.amount,
+        );
+        vacationTransactionCounts.update(
+          accId,
+          (v) => v + 1,
+          ifAbsent: () => 1,
         );
       }
     }
@@ -188,6 +200,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               'transactionsAmount':
                   max(0.0, account.initialBalance - totalExpenses), // keep sign for consistency
               'finalBalance': finalBalance,
+              'transactionCount': vacationTransactionCounts[account.id] ?? 0,
             };
           })
           .toList();
@@ -211,6 +224,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             'account': account,
             'transactionsAmount': transactionsAmount,
             'finalBalance': finalBalance,
+            'transactionCount': transactionCounts[account.id] ?? 0,
           };
         })
         .toList();
@@ -229,6 +243,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             'account': account,
             'transactionsAmount': finalBalance,
             'finalBalance': finalBalance,
+            'transactionCount': vacationTransactionCounts[account.id] ?? 0,
           };
         })
         .toList();
@@ -391,6 +406,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                         currencySymbol: _getAccountCurrencySymbol(account),
                                         isHighlighted: isHighlighted,
                                         accountsCount: normalAccounts.length,
+                                        transactionCount: accountData['transactionCount'] as int,
                                       );
                                     },
                                   ),
@@ -467,6 +483,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                           accountData['account'] as FirestoreAccount),
                                       isHighlighted: false,
                                       accountsCount: vacationAccounts.length,
+                                      transactionCount: accountData['transactionCount'] as int,
                                     ),
                                     const SizedBox(height: 12),
                                   ],
@@ -780,6 +797,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     required String currencySymbol,
     required bool isHighlighted,
     required int accountsCount,
+    required int transactionCount,
   }) {
     return GestureDetector(
       onTap: () {
@@ -837,6 +855,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   ),
                   Text(
                     accountType,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.secondaryTextColorLight,
+                    ),
+                  ),
+                  Text(
+                    '$transactionCount transactions',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.secondaryTextColorLight,
                     ),

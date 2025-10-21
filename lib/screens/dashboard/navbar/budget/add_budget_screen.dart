@@ -1,7 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
-import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -10,11 +10,13 @@ import 'package:provider/provider.dart';
 import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/models/category.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 class AddBudgetScreen extends StatefulWidget {
   final bool isVacationMode;
+  final BudgetType? initialBudgetType;
   
-  const AddBudgetScreen({super.key, this.isVacationMode = false});
+  const AddBudgetScreen({super.key, this.isVacationMode = false, this.initialBudgetType});
 
   @override
   State<AddBudgetScreen> createState() => _AddBudgetScreenState();
@@ -23,15 +25,28 @@ class AddBudgetScreen extends StatefulWidget {
 class _AddBudgetScreenState extends State<AddBudgetScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   String? _selectedCategoryId;
-  BudgetType _selectedType = BudgetType.monthly;
+  late BudgetType _selectedType;
   bool _isLoading = false;
   bool _isRecurring = false;
+  String _selectedCurrencyCode = 'USD';
+  String _selectedCurrencySymbol = '\$';
 
   @override
   void initState() {
     super.initState();
+    // Initialize budget type from parameter or default to monthly
+    _selectedType = widget.initialBudgetType ?? BudgetType.monthly;
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<BudgetProvider>(context, listen: false);
+      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+      
+      // Initialize currency from CurrencyProvider
+      setState(() {
+        _selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+        _selectedCurrencySymbol = currencyProvider.selectedCurrencySymbol;
+      });
+      
       if (provider.expenseCategories.isNotEmpty && _selectedCategoryId == null) {
         setState(() {
           _selectedCategoryId = provider.expenseCategories.first.id;
@@ -71,7 +86,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
 
       try {
         await Provider.of<BudgetProvider>(context, listen: false)
-            .addBudget(_selectedCategoryId!, limit, _selectedType, isVacation: widget.isVacationMode, isRecurring: _isRecurring);
+            .addBudget(_selectedCategoryId!, limit, _selectedType, isVacation: widget.isVacationMode, isRecurring: _isRecurring, currency: _selectedCurrencyCode);
         
         if (mounted) {
           Navigator.of(context).pop(true);
@@ -224,6 +239,78 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                       ),
                       const SizedBox(height: 10),
                       
+                      // Currency Section - only show in normal mode
+                      if (!widget.isVacationMode) ...[
+                        _buildFormSection(
+                          context,
+                          'Currency',
+                          GestureDetector(
+                            onTap: () {
+                              showCurrencyPicker(
+                                context: context,
+                                showFlag: true,
+                                showSearchField: true,
+                                onSelect: (Currency currency) {
+                                  setState(() {
+                                    _selectedCurrencyCode = currency.code;
+                                    _selectedCurrencySymbol = currency.symbol;
+                                  });
+                                },
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10.0,
+                                horizontal: 16.0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30.0),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _getCurrencyFlag(_selectedCurrencyCode),
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _selectedCurrencyCode,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.primaryTextColorLight,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _selectedCurrencySymbol,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.secondaryTextColorLight,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Icon(
+                                    Icons.arrow_drop_down,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      
                       // Recurring Budget Section
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -356,8 +443,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                           return 'Monthly';
                                         case BudgetType.yearly:
                                           return 'Yearly';
-                                        default:
-                                          return 'Monthly';
                                       }
                                     },
                                   );
@@ -585,5 +670,79 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
         ],
       ),
     );
+  }
+  
+  String _getCurrencyFlag(String currencyCode) {
+    // Map currency codes to flag emojis
+    switch (currencyCode) {
+      case 'USD':
+        return '🇺🇸';
+      case 'EUR':
+        return '🇪🇺';
+      case 'GBP':
+        return '🇬🇧';
+      case 'JPY':
+        return '🇯🇵';
+      case 'CAD':
+        return '🇨🇦';
+      case 'AUD':
+        return '🇦🇺';
+      case 'CHF':
+        return '🇨🇭';
+      case 'CNY':
+        return '🇨🇳';
+      case 'INR':
+        return '🇮🇳';
+      case 'BRL':
+        return '🇧🇷';
+      case 'MXN':
+        return '🇲🇽';
+      case 'KRW':
+        return '🇰🇷';
+      case 'SGD':
+        return '🇸🇬';
+      case 'HKD':
+        return '🇭🇰';
+      case 'NZD':
+        return '🇳🇿';
+      case 'SEK':
+        return '🇸🇪';
+      case 'NOK':
+        return '🇳🇴';
+      case 'DKK':
+        return '🇩🇰';
+      case 'PLN':
+        return '🇵🇱';
+      case 'CZK':
+        return '🇨🇿';
+      case 'HUF':
+        return '🇭🇺';
+      case 'RUB':
+        return '🇷🇺';
+      case 'TRY':
+        return '🇹🇷';
+      case 'ZAR':
+        return '🇿🇦';
+      case 'AED':
+        return '🇦🇪';
+      case 'SAR':
+        return '🇸🇦';
+      case 'EGP':
+        return '🇪🇬';
+      case 'ILS':
+        return '🇮🇱';
+      case 'THB':
+        return '🇹🇭';
+      case 'MYR':
+        return '🇲🇾';
+      case 'IDR':
+        return '🇮🇩';
+      case 'PHP':
+        return '🇵🇭';
+      case 'VND':
+        return '🇻🇳';
+      default:
+        return '🌍'; // Default globe emoji for unknown currencies
+    }
   }
 }

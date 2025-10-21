@@ -94,11 +94,19 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final allTransactions = await _firestoreService
       .getTransactionsForDateRange(start, end);
 
+      // Debug logging for currency filtering
+      print('BudgetDetail: Loading transactions for budget currency=${widget.budget.currency}, category=${widget.category.id}');
+      print('BudgetDetail: Total transactions found: ${allTransactions.length}');
+      
       final categoryTransactions = allTransactions
           .where(
-            (t) => t.type == 'expense' && t.categoryId == widget.category.id,
+            (t) => t.type == 'expense' && 
+                   t.categoryId == widget.category.id &&
+                   t.currency == widget.budget.currency,
           )
           .toList();
+      
+      print('BudgetDetail: Filtered transactions matching currency: ${categoryTransactions.length}');
 
       // Create a list of futures to fetch account names and types
       final detailedTransactionsFutures = categoryTransactions.map((t) async {
@@ -139,7 +147,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   Widget build(BuildContext context) {
     // Determine the correct currency symbol for the budget being viewed
     final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-    _budgetCurrencyCode = widget.budget.currency ?? currencyProvider.selectedCurrencyCode;
+    _budgetCurrencyCode = widget.budget.currency;
     final currency = CurrencyService().findByCode(_budgetCurrencyCode);
     _currencySymbol = currency?.symbol ?? '\$';
     
@@ -198,11 +206,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                       ),
                     ),
                   ),
-                  // Delete button for the budget (destructive action)
-                  IconButton(
-                    icon: const Icon(Icons.delete_forever),
-                    color: Colors.red,
-                    onPressed: () async {
+                  // Delete button for the budget (destructive action) - only show if budget has a real ID
+                  if (widget.budget.id.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.delete_forever),
+                      color: Colors.red,
+                      onPressed: () async {
                       // Diagnostic log: user initiated delete
                       print('BudgetDetail: delete pressed for budgetId=${widget.budget.id}');
                       final result = await showDialog<Map<String, bool>>(
@@ -236,10 +245,51 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                         final cascadeDelete = result['cascadeDelete'] == true;
                         try {
                           // Attempt deletion and log outcome
-                          // Determine effective budgetId for deletion, handling recurring budgets that may pass a temporary empty ID
+                          // Determine effective budgetId for deletion, handling placeholder budgets and recurring budgets
                           final provider = Provider.of<BudgetProvider>(context, listen: false);
                           String effectiveBudgetId = widget.budget.id;
                           final bool isRecurring = widget.budget.isRecurring;
+                          
+                          // If budget ID is empty (placeholder budget), try to find a real budget
+                          if (effectiveBudgetId.isEmpty) {
+                            // First, try to find any budget for this category and type
+                            final realBudget = provider.budgets.firstWhere(
+                              (b) => b.categoryId == widget.category.id &&
+                                     b.type == widget.budget.type &&
+                                     b.id.isNotEmpty,
+                              orElse: () => Budget(
+                                id: '',
+                                categoryId: '',
+                                limit: 0.0,
+                                type: BudgetType.monthly,
+                                year: 0,
+                                period: 0,
+                                startDate: DateTime.now(),
+                                endDate: DateTime.now(),
+                                userId: '',
+                                currency: '',
+                                spentAmount: 0.0,
+                                isRecurring: false,
+                              ),
+                            );
+                            
+                            if (realBudget.id.isNotEmpty) {
+                              effectiveBudgetId = realBudget.id;
+                              print('BudgetDetail: found real budget for placeholder, using budgetId=$effectiveBudgetId');
+                            } else {
+                              // If no real budget exists, this is just a placeholder - show message and return
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('No budget to delete. This is just a placeholder for transactions.'),
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+                          }
+                          
+                          // Handle recurring budgets that may pass a temporary empty ID
                           if (effectiveBudgetId.isEmpty && isRecurring) {
                             final fallbackList = provider.budgets
                                 .where((b) =>
@@ -254,8 +304,9 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                               print('BudgetDetail: ERROR no recurring underlying budget found for category=${widget.category.id} type=${widget.budget.type}');
                             }
                           }
+                          
                           if (effectiveBudgetId.isEmpty) {
-                            throw Exception('Cannot delete budget: effective budgetId is empty');
+                            throw Exception('Cannot delete budget: no valid budget found for this category');
                           }
                           await provider.deleteBudget(effectiveBudgetId, cascadeDelete: cascadeDelete);
                           print('BudgetDetail: delete succeeded for budgetId=$effectiveBudgetId');
@@ -322,7 +373,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'No transactions found for this category in the selected period',
+              'No transactions found for this category in ${widget.budget.currency} currency for the selected period',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
             ),
