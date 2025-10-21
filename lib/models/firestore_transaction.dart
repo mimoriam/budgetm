@@ -21,6 +21,7 @@ class FirestoreTransaction {
   final bool? paid;
   final bool isVacation;
   final String? linkedTransactionId;
+  final String? linkedVacationAccountId;
 
   FirestoreTransaction({
     required this.id,
@@ -43,6 +44,7 @@ class FirestoreTransaction {
     this.paid,
     this.isVacation = false,
     this.linkedTransactionId,
+    this.linkedVacationAccountId,
   });
 
   // Convert FirestoreTransaction to JSON for Firestore
@@ -67,6 +69,7 @@ class FirestoreTransaction {
       'paid': paid,
       'isVacation': isVacation,
       'linkedTransactionId': linkedTransactionId,
+      'linkedVacationAccountId': linkedVacationAccountId,
     };
   }
 
@@ -98,6 +101,7 @@ class FirestoreTransaction {
       paid: (data['paid'] as bool?) ?? ((data['type'] as String?) == 'expense' ? true : false),
       isVacation: (data['isVacation'] as bool?) ?? false,
       linkedTransactionId: data['linkedTransactionId'] as String?,
+      linkedVacationAccountId: data['linkedVacationAccountId'] as String?,
     );
   }
 
@@ -123,6 +127,7 @@ class FirestoreTransaction {
       'paid': paid,
       'isVacation': isVacation,
       'linkedTransactionId': linkedTransactionId,
+      'linkedVacationAccountId': linkedVacationAccountId,
     };
   }
 
@@ -153,6 +158,7 @@ class FirestoreTransaction {
       paid: json['paid'],
       isVacation: json['isVacation'] ?? false,
       linkedTransactionId: json['linkedTransactionId'],
+      linkedVacationAccountId: json['linkedVacationAccountId'],
     );
   }
 
@@ -178,6 +184,7 @@ class FirestoreTransaction {
     bool? paid,
     bool? isVacation,
     String? linkedTransactionId,
+    String? linkedVacationAccountId,
   }) {
     return FirestoreTransaction(
       id: id ?? this.id,
@@ -200,12 +207,13 @@ class FirestoreTransaction {
       paid: paid ?? this.paid,
       isVacation: isVacation ?? this.isVacation,
       linkedTransactionId: linkedTransactionId ?? this.linkedTransactionId,
+      linkedVacationAccountId: linkedVacationAccountId ?? this.linkedVacationAccountId,
     );
   }
 
   @override
   String toString() {
-    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, currency: $currency, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, icon_color: $icon_color, notes: $notes, paid: $paid, isVacation: $isVacation, linkedTransactionId: $linkedTransactionId)';
+    return 'FirestoreTransaction(id: $id, description: $description, amount: $amount, type: $type, date: $date, currency: $currency, categoryId: $categoryId, budgetId: $budgetId, goalId: $goalId, accountId: $accountId, time: $time, repeat: $repeat, remind: $remind, icon: $icon, color: $color, icon_color: $icon_color, notes: $notes, paid: $paid, isVacation: $isVacation, linkedTransactionId: $linkedTransactionId, linkedVacationAccountId: $linkedVacationAccountId)';
   }
 
   @override
@@ -231,15 +239,16 @@ class FirestoreTransaction {
         other.notes == notes &&
         other.paid == paid &&
         other.isVacation == isVacation &&
-        other.linkedTransactionId == linkedTransactionId;
+        other.linkedTransactionId == linkedTransactionId &&
+        other.linkedVacationAccountId == linkedVacationAccountId;
   }
  
   @override
   int get hashCode {
-    return Object.hash(
+    return Object.hashAll([
       id, description, amount, type, date, currency, categoryId, budgetId, goalId, accountId,
       time, repeat, remind, icon, color, icon_color, notes, paid, isVacation,
-      linkedTransactionId,
-    );
+      linkedTransactionId, linkedVacationAccountId,
+    ]);
   }
 }

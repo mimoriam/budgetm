@@ -623,7 +623,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     final totalCount = provider.categoryBudgetData.length;
     final displayData = showingAll
         ? provider.categoryBudgetData
-              .where((data) => data.spentAmount > 0 || data.limit > 0)
+              .where((data) => data.spentAmount > 0 || data.limit > 0 || data.budget.isVacation == true)
               .toList()
         : provider.categoryBudgetData
               .where((data) => data.category.id == selectedCategory)
@@ -635,7 +635,7 @@ class _BudgetScreenState extends State<BudgetScreen>
         'BudgetScreen: selectedCategory=$selectedCategory showingAll=$showingAll totalCategories=$totalCount displayCount=${displayData.length}',
       );
       final hiddenByFilter = provider.categoryBudgetData
-          .where((d) => d.spentAmount == 0 && d.limit == 0)
+          .where((d) => d.spentAmount == 0 && d.limit == 0 && d.budget.isVacation != true)
           .map((d) => {'categoryId': d.category.id, 'name': d.categoryName})
           .toList();
       print(
@@ -824,8 +824,9 @@ class _BudgetScreenState extends State<BudgetScreen>
   Widget _buildCategoryList(BuildContext context, BudgetProvider provider) {
     // Show categories with spending > 0 OR limit > 0 (budgets exist)
     // This ensures newly created budgets appear even with no spending yet
+    // Also show vacation budgets even if limit=0
     final data = provider.categoryBudgetData
-        .where((d) => d.spentAmount > 0 || d.limit > 0)
+        .where((d) => d.spentAmount > 0 || d.limit > 0 || d.budget.isVacation == true)
         .toList();
 
     if (data.isEmpty) {

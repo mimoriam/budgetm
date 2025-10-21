@@ -30,8 +30,15 @@ class FirestoreService {
           .where('isVacation', isEqualTo: isVacation);
 
       if (accountId != null) {
-        query = query.where('accountId', isEqualTo: accountId);
-        print('DEBUG: streamTransactionsByCurrency - Applied accountId filter: $accountId');
+        if (isVacation) {
+          // For vacation transactions, check linkedVacationAccountId
+          query = query.where('linkedVacationAccountId', isEqualTo: accountId);
+          print('DEBUG: streamTransactionsByCurrency - Applied linkedVacationAccountId filter: $accountId');
+        } else {
+          // For normal transactions, use regular accountId filter
+          query = query.where('accountId', isEqualTo: accountId);
+          print('DEBUG: streamTransactionsByCurrency - Applied accountId filter: $accountId');
+        }
       }
 
       return query
@@ -645,6 +652,86 @@ class FirestoreService {
     }
   }
 
+  // Create a linked vacation transaction that affects both normal and vacation accounts
+  Future<String> createLinkedVacationTransaction(FirestoreTransaction transaction) async {
+    try {
+      if (transaction.linkedVacationAccountId == null || transaction.linkedVacationAccountId!.isEmpty) {
+        throw Exception('linkedVacationAccountId is required for linked vacation transactions');
+      }
+
+      final result = await _firestore.runTransaction((firestoreTransaction) async {
+        // 1. Get new document reference for the transaction
+        final transactionRef = _transactionsCollection.doc();
+
+        // 2. Create the final transaction object with the generated ID
+        final finalTransaction = transaction.copyWith(id: transactionRef.id);
+
+        // 3. READS: Fetch both account documents BEFORE any writes
+        final normalAccountRef = _accountsCollection.doc(finalTransaction.accountId!);
+        final vacationAccountRef = _accountsCollection.doc(finalTransaction.linkedVacationAccountId!);
+
+        final normalAccountSnapshot = await firestoreTransaction.get(normalAccountRef);
+        final vacationAccountSnapshot = await firestoreTransaction.get(vacationAccountRef);
+
+        if (!normalAccountSnapshot.exists) {
+          throw Exception('Normal account does not exist');
+        }
+        if (!vacationAccountSnapshot.exists) {
+          throw Exception('Vacation account does not exist');
+        }
+
+        // 4. Compute new balances
+        final normalAccount = normalAccountSnapshot.data()!;
+        final vacationAccount = vacationAccountSnapshot.data()!;
+        final amount = finalTransaction.amount;
+
+        // For expenses, subtract from both account balances
+        // For income, add to both account balances
+        final newNormalBalance = finalTransaction.type == 'income'
+            ? normalAccount.balance + amount
+            : normalAccount.balance - amount;
+        final newVacationBalance = finalTransaction.type == 'income'
+            ? vacationAccount.balance + amount
+            : vacationAccount.balance - amount;
+
+        // 5. WRITES: Create the transaction document
+        firestoreTransaction.set(transactionRef, finalTransaction);
+
+        // 6. WRITES: Update both account balances
+        firestoreTransaction.update(normalAccountRef, {'balance': newNormalBalance});
+        firestoreTransaction.update(vacationAccountRef, {'balance': newVacationBalance});
+
+        print('DEBUG: createLinkedVacationTransaction - created transaction: id=${transactionRef.id}, normalAcc=${normalAccountRef.id} newBalance=$newNormalBalance, vacationAcc=${vacationAccountRef.id} newBalance=$newVacationBalance');
+
+        return transactionRef.id;
+      });
+
+      // After the transaction completes successfully, create vacation budget if needed
+      print('DEBUG: createLinkedVacationTransaction - checking budget creation: type=${transaction.type}, categoryId=${transaction.categoryId}, currency=${transaction.currency}');
+      if (transaction.type == 'expense' && transaction.categoryId != null && transaction.categoryId!.isNotEmpty) {
+        print('DEBUG: createLinkedVacationTransaction - attempting to create vacation budget');
+        try {
+          await createVacationBudgetForCategory(
+            categoryId: transaction.categoryId!,
+            currency: transaction.currency,
+            transactionDate: transaction.date,
+          );
+          print('DEBUG: createLinkedVacationTransaction - vacation budget creation completed');
+        } catch (e) {
+          // Log error but don't fail the transaction creation
+          print('Error creating automatic vacation budget: $e');
+        }
+      } else {
+        print('DEBUG: createLinkedVacationTransaction - skipping budget creation: type=${transaction.type}, categoryId=${transaction.categoryId}');
+      }
+
+      return result;
+    } catch (e) {
+      print('Error creating linked vacation transaction: $e');
+      rethrow;
+    }
+  }
+
   // Create linked vacation expense transaction with a normal account transaction
   Future<Map<String, String>> createLinkedVacationExpense({
     required FirestoreTransaction vacationTransaction,
@@ -752,7 +839,7 @@ class FirestoreService {
       
       // Add accountId filter if provided (for vacation transactions, filter by the vacation account)
       if (vacationAccountId != null && isVacation) {
-        query = query.where('accountId', isEqualTo: vacationAccountId);
+        query = query.where('linkedVacationAccountId', isEqualTo: vacationAccountId);
       }
       
       final querySnapshot = await query.get();
@@ -830,9 +917,50 @@ class FirestoreService {
         final transactionData = transactionSnapshot.data()!;
         final accountId = transactionData.accountId;
         final linkedTransactionId = transactionData.linkedTransactionId;
+        final linkedVacationAccountId = transactionData.linkedVacationAccountId;
 
-        // Handle linked transaction cascade deletion
-        if (linkedTransactionId != null && linkedTransactionId.isNotEmpty) {
+        // Handle new linked vacation transaction deletion
+        if (linkedVacationAccountId != null && linkedVacationAccountId.isNotEmpty) {
+          // READS: Pre-fetch both accounts BEFORE any writes
+          final normalAccountRef = _accountsCollection.doc(accountId!);
+          final vacationAccountRef = _accountsCollection.doc(linkedVacationAccountId);
+
+          final normalAccountSnapshot = await transaction.get(normalAccountRef);
+          final vacationAccountSnapshot = await transaction.get(vacationAccountRef);
+
+          if (!normalAccountSnapshot.exists) {
+            throw Exception("Normal account does not exist!");
+          }
+          if (!vacationAccountSnapshot.exists) {
+            throw Exception("Vacation account does not exist!");
+          }
+
+          // WRITES: Update account balances (reverse the transaction) AFTER all reads
+          final normalAccount = normalAccountSnapshot.data()!;
+          final vacationAccount = vacationAccountSnapshot.data()!;
+          final transactionAmount = transactionData.amount;
+          final transactionType = transactionData.type;
+
+          // For deletion, we reverse the original balance change
+          // Income: subtract the amount (since original added it)
+          // Expense: add the amount (since original subtracted it)
+          final newNormalBalance = (transactionType == 'income')
+              ? normalAccount.balance - transactionAmount
+              : normalAccount.balance + transactionAmount;
+          final newVacationBalance = (transactionType == 'income')
+              ? vacationAccount.balance - transactionAmount
+              : vacationAccount.balance + transactionAmount;
+
+          transaction.update(normalAccountRef, {'balance': newNormalBalance});
+          transaction.update(vacationAccountRef, {'balance': newVacationBalance});
+
+          // Finally delete the transaction
+          transaction.delete(transactionDocRef);
+
+          print('DEBUG: deleteTransaction - deleted linked vacation transaction: id=$id, normalAcc=${normalAccountRef.id} newBalance=$newNormalBalance, vacationAcc=${vacationAccountRef.id} newBalance=$newVacationBalance');
+        }
+        // Handle old linked transaction cascade deletion (for backward compatibility)
+        else if (linkedTransactionId != null && linkedTransactionId.isNotEmpty) {
           // Get the linked transaction (READ)
           final linkedTransactionRef = _transactionsCollection.doc(linkedTransactionId);
           final linkedTransactionSnapshot = await transaction.get(linkedTransactionRef);
@@ -985,8 +1113,15 @@ class FirestoreService {
       
       // Add accountId filter if provided
       if (accountId != null) {
-        query = query.where('accountId', isEqualTo: accountId);
-        print('DEBUG: Applied accountId filter: $accountId');
+        if (isVacation) {
+          // For vacation transactions, check both accountId and linkedVacationAccountId
+          query = query.where('linkedVacationAccountId', isEqualTo: accountId);
+          print('DEBUG: Applied linkedVacationAccountId filter: $accountId');
+        } else {
+          // For normal transactions, use regular accountId filter
+          query = query.where('accountId', isEqualTo: accountId);
+          print('DEBUG: Applied accountId filter: $accountId');
+        }
       }
       
       return query
@@ -997,7 +1132,7 @@ class FirestoreService {
             print('DEBUG: Fetched ${transactions.length} transactions for isVacation=$isVacation, accountId=$accountId');
             // Log transaction IDs for debugging
             if (transactions.isNotEmpty) {
-              final txIds = transactions.map((tx) => '${tx.id}(acc:${tx.accountId})').take(5).join(', ');
+              final txIds = transactions.map((tx) => '${tx.id}(acc:${tx.accountId},linkedVac:${tx.linkedVacationAccountId})').take(5).join(', ');
               print('DEBUG: Sample transaction IDs: $txIds${transactions.length > 5 ? '...' : ''}');
             }
             return transactions;
@@ -1341,11 +1476,12 @@ class FirestoreService {
 
       final txn = txnSnap.data()!;
       final String? accountId = txn.accountId;
+      final String? linkedVacationAccountId = txn.linkedVacationAccountId;
       final double amount = txn.amount;
       final String type = txn.type; // 'income' or 'expense'
       final bool previousPaid = txn.paid ?? false;
 
-      print('toggleTransactionPaidStatus: id=$transactionId prevPaid=$previousPaid -> newPaid=$isPaid type=$type amount=$amount accountId=$accountId');
+      print('toggleTransactionPaidStatus: id=$transactionId prevPaid=$previousPaid -> newPaid=$isPaid type=$type amount=$amount accountId=$accountId linkedVacationAccountId=$linkedVacationAccountId');
 
       // If no change, only ensure the field is persisted and exit early
       if (previousPaid == isPaid) {
@@ -1354,7 +1490,47 @@ class FirestoreService {
         return;
       }
 
-      // If no linked account, just persist the paid flag
+      // Handle linked vacation transaction
+      if (linkedVacationAccountId != null && linkedVacationAccountId.isNotEmpty) {
+        // READS: Pre-fetch both accounts BEFORE any writes
+        final normalAccountRef = _accountsCollection.doc(accountId!);
+        final vacationAccountRef = _accountsCollection.doc(linkedVacationAccountId);
+
+        final normalAccountSnapshot = await tx.get(normalAccountRef);
+        final vacationAccountSnapshot = await tx.get(vacationAccountRef);
+
+        if (!normalAccountSnapshot.exists) {
+          throw Exception('Normal account does not exist');
+        }
+        if (!vacationAccountSnapshot.exists) {
+          throw Exception('Vacation account does not exist');
+        }
+
+        // Compute balance delta based on type and direction of toggle
+        double delta;
+        if (type == 'income') {
+          // Income: marking paid adds funds; marking unpaid removes them
+          delta = isPaid ? amount : -amount;
+        } else {
+          // Default/expense: marking paid subtracts funds; marking unpaid adds them back
+          delta = isPaid ? -amount : amount;
+        }
+
+        // Update both account balances
+        final normalAccount = normalAccountSnapshot.data()!;
+        final vacationAccount = vacationAccountSnapshot.data()!;
+        final newNormalBalance = normalAccount.balance + delta;
+        final newVacationBalance = vacationAccount.balance + delta;
+
+        tx.update(normalAccountRef, {'balance': newNormalBalance});
+        tx.update(vacationAccountRef, {'balance': newVacationBalance});
+        tx.update(transactionRef, {'paid': isPaid});
+
+        print('toggleTransactionPaidStatus: updated linked vacation transaction balances: normalAcc=${normalAccountRef.id} newBalance=$newNormalBalance, vacationAcc=${vacationAccountRef.id} newBalance=$newVacationBalance');
+        return;
+      }
+
+      // Handle single account transaction (existing logic)
       if (accountId == null || accountId.isEmpty) {
         tx.update(transactionRef, {'paid': isPaid});
         print('toggleTransactionPaidStatus: no account linked; updated paid only.');

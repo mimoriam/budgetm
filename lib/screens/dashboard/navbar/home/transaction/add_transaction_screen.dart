@@ -48,7 +48,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   bool _hasAutoOpenedCategorySheet = false;
   Color _selectedColor = Colors.grey.shade300;
   DateTime? _selectedDate;
-  String? _selectedNormalAccountId;
 
   @override
   void initState() {
@@ -82,72 +81,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _loadAccounts() async {
     try {
-      // When vacation mode is active, handle accounts differently
-      final vacationProvider =
-          Provider.of<VacationProvider>(context, listen: false);
-      if (vacationProvider.isVacationMode) {
-        // Load all accounts once
-        final allAccounts = await _firestoreService.getAllAccounts();
-        final vacationAccounts = allAccounts
-            .where((account) => account.isVacationAccount == true)
-            .toList();
-        
-        // Populate normal accounts list (no currency filtering)
-        final normalAccounts = allAccounts
-            .where((account) => account.isVacationAccount != true)
-            .toList();
-
-        if (vacationAccounts.isNotEmpty) {
-          final activeId = vacationProvider.activeVacationAccountId;
-          String? selectedVacationId;
-          if (activeId != null &&
-              vacationAccounts.any((acc) => acc.id == activeId)) {
-            selectedVacationId = activeId;
-          } else {
-            selectedVacationId = vacationAccounts.first.id;
-          }
-
-          // Select default normal account
-          String? selectedNormalId;
-          final defaultNormalAccount = normalAccounts.cast<FirestoreAccount?>().firstWhere(
-            (account) => account?.isDefault ?? false,
-            orElse: () => null,
-          );
-          
-          if (defaultNormalAccount != null) {
-            selectedNormalId = defaultNormalAccount.id;
-          } else if (normalAccounts.isNotEmpty) {
-            selectedNormalId = normalAccounts.first.id;
-          }
-
-          setState(() {
-            // Store vacation account for internal use (not shown in UI)
-            _accounts = vacationAccounts;
-            _selectedAccountId = selectedVacationId;
-            // Store normal accounts for UI selection (no longer needed since we removed Paid From Account field)
-            _selectedNormalAccountId = selectedNormalId;
-          });
-
-          // Patch normal account form field (not account field)
-          if (_selectedNormalAccountId != null) {
-            _formKey.currentState?.patchValue({'normalAccount': _selectedNormalAccountId});
-          }
-          return;
-        } else {
-          // No vacation accounts found — fall back to normal loading below.
-          debugPrint(
-              'Vacation mode active but no vacation accounts found, falling back to regular accounts');
-        }
-      }
-
-      // Default behavior: Get all accounts
+      // Get all accounts
       final allAccounts = await _firestoreService.getAllAccounts();
-      // Filter out vacation accounts when in normal mode
+      // Filter out vacation accounts (show only normal accounts)
       final normalModeAccounts = allAccounts
           .where((account) => account.isVacationAccount != true)
           .toList();
       
-      // Filter accounts by currency in normal mode
+      // Filter accounts by currency
       final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
       final selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
       
@@ -163,7 +104,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         }
       }
       
-
       setState(() {
         // Always show accounts if any exist (including filtered accounts)
         if (filteredAccounts.isNotEmpty) {
@@ -175,8 +115,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           _accounts = [];
           _selectedAccountId = null;
         }
-        // Clear normal account selection in normal mode
-        _selectedNormalAccountId = null;
       });
 
       if (_selectedAccountId != null) {
@@ -673,9 +611,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                               // Update the currency provider
                                               final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
                                               await currencyProvider.setCurrency(currency, 1.0);
-                                              if (!Provider.of<VacationProvider>(context, listen: false).isVacationMode) {
-                                                _loadAccounts(); // Reload accounts when currency changes in normal mode
-                                              }
+                                              // Reload accounts when currency changes (both normal and vacation mode)
+                                              _loadAccounts();
                                               field.didChange(currency.code);
                                             },
                                           );
@@ -825,6 +762,36 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               ),
                             );
                           },
+                          ),
+                        ),
+                      // Show helpful message when no accounts are available for selected currency
+                      if (_accounts.isEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Colors.orange.shade600,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'No accounts available for the selected currency. Please create an account with this currency or select a different currency.',
+                                  style: TextStyle(
+                                    color: Colors.orange.shade700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       if (widget.transactionType == TransactionType.income)
@@ -1442,47 +1409,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
       final isVacationMode = vacationProvider.isVacationMode;
 
-      // Currency validation for normal mode transactions
-      if (!isVacationMode) {
-        final selectedTransactionCurrency = formData['transactionCurrency'] as String? ?? selectedCurrencyCode;
-        
-        // Get the selected account for validation
-        FirestoreAccount? selectedAccount;
-        if (_accounts.isNotEmpty) {
-          selectedAccount = _accounts.firstWhere(
-            (account) => account.id == _selectedAccountId,
-          );
-        } else if (_selectedAccountId != null) {
-          // Fetch the account from Firestore if not in the list (default account case)
-          final fetchedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
-          if (fetchedAccount != null) {
-            selectedAccount = fetchedAccount;
-          }
-        }
-
-        // Validate currency matching for custom accounts (not default cash account)
-        if (selectedAccount != null && selectedAccount.isDefault != true) {
-          if (selectedAccount.currency != selectedTransactionCurrency) {
-            if (mounted) {
-              setState(() {
-                _isSaving = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Currency mismatch: The selected account\'s currency (${selectedAccount.currency}) does not match the transaction currency ($selectedTransactionCurrency).',
-                  ),
-                ),
-              );
-            } else {
-              _isSaving = false;
-            }
-            return;
-          }
-        }
-        // Default cash account accepts any currency, no validation needed
-      }
-
       // Calculate the transaction date with time
       // Provide default values if date/time fields are not in form data (when "more" options aren't expanded)
       final date = formData['date'] as DateTime? ?? _selectedDate ?? DateTime.now();
@@ -1497,26 +1423,42 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Selected goal (optional, only for income)
       final String? selectedGoalId = formData['goal'] as String?;
 
-      // Special handling for vacation mode expenses
-      if (isVacationMode && widget.transactionType == TransactionType.expense) {
-        // Validate required fields for vacation expense
+      // Handle vacation mode transactions
+      if (isVacationMode) {
+        // Validate required fields for vacation transaction
         if (_selectedAccountId == null) {
-          throw Exception('No active vacation account selected');
-        }
-        if (_selectedNormalAccountId == null) {
-          throw Exception('No normal account selected to pay from');
+          throw Exception('No account selected');
         }
 
         // Get the selected normal account
-        final normalAccount = await _firestoreService.getAccountById(_selectedNormalAccountId!);
-        if (normalAccount == null) {
-          throw Exception('Selected normal account not found');
+        final selectedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
+        if (selectedAccount == null) {
+          throw Exception('Selected account not found');
+        }
+
+        // Validate currency matching (default cash account accepts any currency)
+        if (selectedAccount.isDefault != true && selectedAccount.currency != selectedCurrencyCode) {
+          if (mounted) {
+            setState(() {
+              _isSaving = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Currency mismatch: The selected account\'s currency (${selectedAccount.currency}) does not match the transaction currency ($selectedCurrencyCode).',
+                ),
+              ),
+            );
+          } else {
+            _isSaving = false;
+          }
+          return;
         }
 
         // Check credit limit on normal account (not vacation account which has unlimited credit)
-        if (normalAccount.creditLimit != null) {
-          final newBalance = normalAccount.balance - amount;
-          if (newBalance.abs() > normalAccount.creditLimit!) {
+        if (selectedAccount.creditLimit != null && widget.transactionType == TransactionType.expense) {
+          final newBalance = selectedAccount.balance - amount;
+          if (newBalance.abs() > selectedAccount.creditLimit!) {
             if (mounted) {
               setState(() {
                 _isSaving = false;
@@ -1524,7 +1466,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'This transaction exceeds the credit limit for the selected normal account.',
+                    'This transaction exceeds the credit limit for the selected account.',
                   ),
                 ),
               );
@@ -1535,28 +1477,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           }
         }
 
-        // Get the selected vacation currency from form data
-        final vacationCurrency = formData['vacationCurrency'] as String? ?? selectedCurrencyCode;
-        
-        
-        // Get the normal account to check its currency
-        final normalAccountForCurrency = await _firestoreService.getAccountById(_selectedNormalAccountId!);
-        if (normalAccountForCurrency == null) {
-          throw Exception('Selected normal account not found');
+        // Get active vacation account ID
+        final activeVacationAccountId = vacationProvider.activeVacationAccountId;
+        if (activeVacationAccountId == null) {
+          throw Exception('No active vacation account found');
         }
 
-        // Create the vacation transaction
-        final vacationTransaction = FirestoreTransaction(
-          id: '', // Will be set by the service
+        // Create the linked vacation transaction
+        final transaction = FirestoreTransaction(
+          id: widget.transaction?.id ?? '', // Use existing ID if editing
           description: '', // Default empty description
           amount: amount,
-          type: 'expense',
+          type: widget.transactionType == TransactionType.income
+              ? 'income'
+              : 'expense',
           date: transactionDate,
-          currency: vacationCurrency, // Use selected vacation currency
+          currency: selectedCurrencyCode,
           categoryId: _selectedCategoryId,
           budgetId: null,
-          goalId: null,
-          accountId: _selectedAccountId, // Vacation account
+          goalId: selectedGoalId,
+          accountId: _selectedAccountId, // Normal account
           time: (formData['time'] as DateTime?)?.toIso8601String(),
           repeat: formData['repeat'] as String?,
           remind: formData['remind'] as String?,
@@ -1565,51 +1505,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           icon_color: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
           notes: formData['notes'] as String?,
           paid: (formData['paid'] as bool? ?? true),
-          isVacation: true,
+          isVacation: true, // Mark as vacation transaction for display purposes
+          linkedVacationAccountId: activeVacationAccountId, // Link to vacation account
         );
-        
-        print('DEBUG: Creating vacation transaction - accountId=$_selectedAccountId, currency=$vacationCurrency, amount=$amount, isVacation=true');
 
-        // Check if currencies match for linked transaction creation
-        if (vacationCurrency == normalAccountForCurrency.currency) {
-          // Create the normal transaction for linked expense
-          final normalTransaction = FirestoreTransaction(
-            id: '', // Will be set by the service
-            description: '', // Default empty description
-            amount: amount,
-            type: 'expense',
-            date: transactionDate,
-            currency: normalAccountForCurrency.currency, // Use normal account currency
-            categoryId: _selectedCategoryId,
-            budgetId: null,
-            goalId: null,
-            accountId: _selectedNormalAccountId, // Normal account
-            time: (formData['time'] as DateTime?)?.toIso8601String(),
-            repeat: formData['repeat'] as String?,
-            remind: formData['remind'] as String?,
-            icon: formData['icon'] as String?,
-            color: formData['color'] as String?,
-            icon_color: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
-            notes: formData['notes'] as String?,
-            paid: (formData['paid'] as bool? ?? true),
-            isVacation: false,
+        // Create the linked vacation transaction
+        print('DEBUG: AddTransactionScreen - creating linked vacation transaction: type=${widget.transactionType}, categoryId=$_selectedCategoryId, currency=$selectedCurrencyCode, amount=$amount');
+        if (widget.transaction != null) {
+          // Update existing transaction
+          print('DEBUG: AddTransactionScreen - updating existing transaction');
+          await _firestoreService.updateTransactionObject(
+            widget.transaction!.id,
+            transaction,
           );
-
-          // Create the linked transactions
-          print('DEBUG: AddTxn(vacation) - creating linked expense: amount=$amount, date=${transactionDate.toIso8601String()}, vacationAcc=$_selectedAccountId, normalAcc=$_selectedNormalAccountId, category=$_selectedCategoryId, vacationCurrency=$vacationCurrency, normalCurrency=${normalAccountForCurrency.currency}');
-          await _firestoreService.createLinkedVacationExpense(
-            vacationTransaction: vacationTransaction,
-            normalTransaction: normalTransaction,
-          );
-          print('DEBUG: AddTxn(vacation) - createLinkedVacationExpense completed');
         } else {
-          // Create standalone vacation expense (no linked normal transaction)
-          print('DEBUG: AddTxn(vacation) - creating standalone expense: amount=$amount, date=${transactionDate.toIso8601String()}, vacationAcc=$_selectedAccountId, category=$_selectedCategoryId, vacationCurrency=$vacationCurrency, normalCurrency=${normalAccountForCurrency.currency} (currencies don\'t match)');
-          await _firestoreService.createTransaction(
-            vacationTransaction,
-            isVacation: true,
-          );
-          print('DEBUG: AddTxn(vacation) - standalone vacation expense created');
+          // Create new linked vacation transaction
+          print('DEBUG: AddTransactionScreen - creating new linked vacation transaction');
+          await _firestoreService.createLinkedVacationTransaction(transaction);
         }
 
         if (mounted) {
@@ -1705,7 +1617,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
            ? 'income'
            : 'expense',
        date: transactionDate,
-       currency: isVacationMode ? selectedCurrencyCode : (formData['transactionCurrency'] as String? ?? selectedCurrencyCode), // Use selected currency for normal mode
+       currency: formData['transactionCurrency'] as String? ?? selectedCurrencyCode, // Use selected currency
        categoryId: _selectedCategoryId,
        budgetId: null,
        goalId: selectedGoalId,
@@ -1720,12 +1632,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
        paid: (formData['paid'] as bool? ?? true),
      );
 
-      // Insert or update transaction with vacation flag
-      final isVacation = Provider.of<VacationProvider>(
-        context,
-        listen: false,
-      ).isVacationMode;
-      
+      // Insert or update transaction
       if (widget.transaction != null) {
         // Update existing transaction
         await _firestoreService.updateTransactionObject(
@@ -1736,11 +1643,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         // Create new transaction
         await _firestoreService.createTransaction(
           transaction,
-          isVacation: isVacation,
+          isVacation: false, // Normal mode transactions are not vacation transactions
         );
       }
 
-      // Update account balance (skip for vacation expenses as it's handled in createLinkedVacationExpense)
+      // Update account balance
       final newBalance = widget.transactionType == TransactionType.income
           ? selectedAccount.balance + amount
           : selectedAccount.balance - amount;
