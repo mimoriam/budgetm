@@ -49,7 +49,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Color _selectedColor = Colors.grey.shade300;
   DateTime? _selectedDate;
   String? _selectedNormalAccountId;
-  String? _selectedVacationCurrency; // For vacation mode currency selection
 
   @override
   void initState() {
@@ -76,9 +75,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _selectedDate = DateTime.now();
     }
     
-    // Initialize vacation currency from current CurrencyProvider
-    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-    _selectedVacationCurrency = currencyProvider.selectedCurrencyCode;
     
     _loadAccounts();
     _loadCategories();
@@ -93,7 +89,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         // Load all accounts once
         final allAccounts = await _firestoreService.getAllAccounts();
         final vacationAccounts = allAccounts
-            .where((account) => account.isVacationAccount == true && account.currency != 'MULTI')
+            .where((account) => account.isVacationAccount == true)
             .toList();
         
         // Populate normal accounts list (no currency filtering)
@@ -167,30 +163,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         }
       }
       
-      final nonDefaultAccounts = filteredAccounts
-          .where((account) => !(account.isDefault ?? false))
-          .toList();
-      final defaultAccount = filteredAccounts.cast<FirestoreAccount?>().firstWhere(
-        (account) => account?.isDefault ?? false,
-        orElse: () => null,
-      );
 
       setState(() {
-        if (nonDefaultAccounts.isNotEmpty) {
-          // If user has created accounts, show filtered accounts including the default one.
+        // Always show accounts if any exist (including filtered accounts)
+        if (filteredAccounts.isNotEmpty) {
           _accounts = filteredAccounts;
-          if (defaultAccount != null) {
-            _selectedAccountId =
-                defaultAccount.id; // Auto-select the default account
-          } else if (filteredAccounts.isNotEmpty) {
-            _selectedAccountId = filteredAccounts.first.id;
-          }
-        } else if (defaultAccount != null) {
-          // If only the default account exists, use it but don't show it in the dropdown.
-          _accounts = []; // Empty list to hide dropdown
-          _selectedAccountId = defaultAccount.id;
+          // Auto-select the first available account
+          _selectedAccountId = filteredAccounts.first.id;
         } else {
-          // No accounts exist at all.
+          // No accounts match the current currency filter
           _accounts = [];
           _selectedAccountId = null;
         }
@@ -671,125 +652,127 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           'Currency',
                           FormBuilderField<String>(
                             name: 'transactionCurrency',
-                            initialValue: _selectedVacationCurrency,
+                            initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
                             validator: FormBuilderValidators.required(
                               errorText: 'Please select a currency',
                             ),
                             builder: (FormFieldState<String?> field) {
-                              return GestureDetector(
-                                onTap: () {
-                                  showCurrencyPicker(
-                                    context: context,
-                                    showFlag: true,
-                                    showSearchField: true,
-                                    onSelect: (Currency currency) {
-                                      setState(() {
-                                        _selectedVacationCurrency = currency.code;
-                                        _loadAccounts(); // Reload accounts when currency changes
-                                      });
-                                      field.didChange(currency.code);
+                              return Consumer<CurrencyProvider>(
+                                builder: (context, currencyProvider, child) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      showCurrencyPicker(
+                                        context: context,
+                                        showFlag: true,
+                                        showSearchField: true,
+                                        onSelect: (Currency currency) async {
+                                          // Update the currency provider
+                                          final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                                          await currencyProvider.setCurrency(currency, 1.0);
+                                          _loadAccounts(); // Reload accounts when currency changes
+                                          field.didChange(currency.code);
+                                        },
+                                      );
                                     },
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10.0,
-                                    horizontal: 16.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(30.0),
-                                    border: Border.all(
-                                      color: field.hasError
-                                          ? AppColors.errorColor
-                                          : Colors.grey.shade300,
-                                      width: field.hasError ? 1.5 : 1.0,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        _selectedVacationCurrency ?? 'Select Currency',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: _selectedVacationCurrency != null
-                                              ? AppColors.primaryTextColorLight
-                                              : AppColors.lightGreyBackground,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30.0),
+                                        border: Border.all(
+                                          color: field.hasError
+                                              ? AppColors.errorColor
+                                              : Colors.grey.shade300,
+                                          width: field.hasError ? 1.5 : 1.0,
                                         ),
                                       ),
-                                      Icon(
-                                        Icons.arrow_drop_down,
-                                        color: Colors.grey.shade600,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            field.value ?? currencyProvider.selectedCurrencyCode,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.primaryTextColorLight,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),
                         ),
-                      // Currency selector for vacation mode expenses (moved up)
-                      if (Provider.of<VacationProvider>(context).isVacationMode &&
-                          widget.transactionType == TransactionType.expense)
+                      // Currency selector for vacation mode
+                      if (Provider.of<VacationProvider>(context).isVacationMode)
                         _buildFormSection(
                           context,
                           'Currency',
                           FormBuilderField<String>(
                             name: 'vacationCurrency',
-                            initialValue: _selectedVacationCurrency,
+                            initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
                             validator: FormBuilderValidators.required(
                               errorText: 'Please select a currency',
                             ),
                             builder: (FormFieldState<String?> field) {
-                              return GestureDetector(
-                                onTap: () {
-                                  showCurrencyPicker(
-                                    context: context,
-                                    showFlag: true,
-                                    showSearchField: true,
-                                    onSelect: (Currency currency) {
-                                      setState(() {
-                                        _selectedVacationCurrency = currency.code;
-                                      });
-                                      field.didChange(currency.code);
+                              return Consumer<CurrencyProvider>(
+                                builder: (context, currencyProvider, child) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      showCurrencyPicker(
+                                        context: context,
+                                        showFlag: true,
+                                        showSearchField: true,
+                                        onSelect: (Currency currency) async {
+                                          // Update the currency provider
+                                          await currencyProvider.setCurrency(currency, 1.0);
+                                          field.didChange(currency.code);
+                                        },
+                                      );
                                     },
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10.0,
-                                    horizontal: 16.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(30.0),
-                                    border: Border.all(
-                                      color: field.hasError
-                                          ? AppColors.errorColor
-                                          : Colors.grey.shade300,
-                                      width: field.hasError ? 1.5 : 1.0,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        _selectedVacationCurrency ?? 'Select Currency',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: _selectedVacationCurrency != null
-                                              ? AppColors.primaryTextColorLight
-                                              : AppColors.lightGreyBackground,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 16.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(30.0),
+                                        border: Border.all(
+                                          color: field.hasError
+                                              ? AppColors.errorColor
+                                              : Colors.grey.shade300,
+                                          width: field.hasError ? 1.5 : 1.0,
                                         ),
                                       ),
-                                      Icon(
-                                        Icons.arrow_drop_down,
-                                        color: Colors.grey.shade600,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            field.value ?? currencyProvider.selectedCurrencyCode,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.primaryTextColorLight,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),
@@ -815,132 +798,87 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   orElse: () => _accounts.first,
                                 );
 
-                            return Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: GestureDetector(
-                                    onTap: () async {
-                                      final result =
-                                          await _showPrettySelectionBottomSheet<
-                                            FirestoreAccount
-                                          >(
-                                            title: 'Select Account',
-                                            items: _accounts,
-                                            selectedItem: selectedAccount,
-                                            getDisplayName: (account) =>
-                                                '${account.name}${account.isDefault == true ? ' (Any Currency)' : ' (${account.currency})'}',
-                                            getLeading: (account) => HugeIcon(
-                                              icon: getAccountIcon(account.accountType)[0][0],
-                                              color: AppColors.primaryTextColorLight,
-                                              size: 20,
-                                            ),
-                                          );
+                            return GestureDetector(
+                              onTap: () async {
+                                final result =
+                                    await _showPrettySelectionBottomSheet<
+                                      FirestoreAccount
+                                    >(
+                                      title: 'Select Account',
+                                      items: _accounts,
+                                      selectedItem: selectedAccount,
+                                      getDisplayName: (account) =>
+                                          account.name,
+                                      getLeading: (account) => HugeIcon(
+                                        icon: getAccountIcon(account.accountType)[0][0],
+                                        color: AppColors.primaryTextColorLight,
+                                        size: 20,
+                                      ),
+                                    );
 
-                                      if (result != null) {
-                                        setState(() {
-                                          _selectedAccountId = result.id;
-                                        });
-                                        field.didChange(result.id);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 16.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(
-                                          30.0,
-                                        ),
-                                        border: Border.all(
-                                          color: field.hasError
-                                              ? AppColors.errorColor
-                                              : Colors.grey.shade300,
-                                          width: field.hasError ? 1.5 : 1.0,
-                                        ),
-                                      ),
+                                if (result != null) {
+                                  setState(() {
+                                    _selectedAccountId = result.id;
+                                  });
+                                  field.didChange(result.id);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10.0,
+                                  horizontal: 16.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(
+                                    30.0,
+                                  ),
+                                  border: Border.all(
+                                    color: field.hasError
+                                        ? AppColors.errorColor
+                                        : Colors.grey.shade300,
+                                    width: field.hasError ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
                                       child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Expanded(
-                                            child: Row(
-                                              children: [
-                                                HugeIcon(
-                                                  icon: getAccountIcon(selectedAccount.accountType)[0][0],
-                                                  size: 18,
-                                                  color: _selectedAccountId != null
-                                                      ? AppColors.primaryTextColorLight
-                                                      : AppColors.lightGreyBackground,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Flexible(
-                                                  child: Text(
-                                                    _selectedAccountId != null
-                                                        ? selectedAccount.name
-                                                        : 'Select',
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      color:
-                                                          _selectedAccountId != null
-                                                          ? AppColors.primaryTextColorLight
-                                                          : AppColors.lightGreyBackground,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                          HugeIcon(
+                                            icon: getAccountIcon(selectedAccount.accountType)[0][0],
+                                            size: 18,
+                                            color: _selectedAccountId != null
+                                                ? AppColors.primaryTextColorLight
+                                                : AppColors.lightGreyBackground,
                                           ),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Colors.grey.shade600,
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              _selectedAccountId != null
+                                                  ? selectedAccount.name
+                                                  : 'Select',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color:
+                                                    _selectedAccountId != null
+                                                    ? AppColors.primaryTextColorLight
+                                                    : AppColors.lightGreyBackground,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ),
+                                    Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 1,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10.0,
-                                      horizontal: 16.0,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(
-                                        30.0,
-                                      ),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                        width: 1.0,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        (selectedAccount.isDefault == true)
-                                            ? 'Any'
-                                            : (selectedAccount.currency.isNotEmpty
-                                                ? selectedAccount.currency
-                                                : '—'),
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: selectedAccount.isDefault == true 
-                                              ? Colors.green.shade600 
-                                              : Colors.black87,
-                                          fontWeight: selectedAccount.isDefault == true 
-                                              ? FontWeight.w600 
-                                              : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             );
                           },
                           ),
@@ -1562,7 +1500,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       // Currency validation for normal mode transactions
       if (!isVacationMode) {
-        final selectedTransactionCurrency = formData['transactionCurrency'] as String? ?? _selectedVacationCurrency ?? selectedCurrencyCode;
+        final selectedTransactionCurrency = formData['transactionCurrency'] as String? ?? selectedCurrencyCode;
         
         // Get the selected account for validation
         FirestoreAccount? selectedAccount;
@@ -1653,22 +1591,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           }
         }
 
-        // Get the selected vacation currency
-        final vacationCurrency = formData['vacationCurrency'] as String? ?? _selectedVacationCurrency ?? selectedCurrencyCode;
+        // Get the selected vacation currency from form data
+        final vacationCurrency = formData['vacationCurrency'] as String? ?? selectedCurrencyCode;
         
-        // Check if vacation currency is different from current currency and switch if needed
-        if (vacationCurrency != selectedCurrencyCode) {
-          try {
-            final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-            final currency = CurrencyService().findByCode(vacationCurrency);
-            if (currency != null) {
-              await currencyProvider.setCurrency(currency, 1.0);
-              print('DEBUG: Switched to vacation transaction currency: $vacationCurrency');
-            }
-          } catch (e) {
-            print('DEBUG: Failed to switch currency: $e');
-          }
-        }
         
         // Get the normal account to check its currency
         final normalAccountForCurrency = await _firestoreService.getAccountById(_selectedNormalAccountId!);
@@ -1836,7 +1761,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
            ? 'income'
            : 'expense',
        date: transactionDate,
-       currency: isVacationMode ? selectedCurrencyCode : (formData['transactionCurrency'] as String? ?? _selectedVacationCurrency ?? selectedCurrencyCode), // Use selected currency for normal mode
+       currency: isVacationMode ? selectedCurrencyCode : (formData['transactionCurrency'] as String? ?? selectedCurrencyCode), // Use selected currency for normal mode
        categoryId: _selectedCategoryId,
        budgetId: null,
        goalId: selectedGoalId,

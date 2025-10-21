@@ -1467,6 +1467,88 @@ class _MonthPageViewState extends State<MonthPageView> {
   }
 }
 
+// Helper function to show currency change dialog
+Future<void> _showCurrencyChangeDialog(
+  BuildContext context,
+  String currentCurrency,
+  String vacationCurrency,
+  CurrencyProvider currencyProvider,
+) async {
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Currency Change'),
+        content: Text(
+          'Do you want to change currencies because your old currency ($currentCurrency) differs from vacation currency ($vacationCurrency)?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              // Show currency picker
+              showCurrencyPicker(
+                context: context,
+                showFlag: true,
+                showSearchField: true,
+                onSelect: (Currency currency) async {
+                  final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                  await currencyProvider.setCurrency(currency, 1.0);
+                },
+              );
+            },
+            child: const Text('Yes'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// Helper function to show vacation mode currency change dialog
+Future<void> _showVacationCurrencyDialog(
+  BuildContext context,
+  CurrencyProvider currencyProvider,
+) async {
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        title: const Text('Vacation Mode'),
+        content: const Text(
+          'You can change currencies for your vacation transactions. Would you like to change the currency now?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Keep Current'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              // Show currency picker
+              showCurrencyPicker(
+                context: context,
+                showFlag: true,
+                showSearchField: true,
+                onSelect: (Currency currency) async {
+                  final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                  await currencyProvider.setCurrency(currency, 1.0);
+                },
+              );
+            },
+            child: const Text('Change Currency'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -2036,44 +2118,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 vacationProvider.isVacationMode;
 
                             if (currentVacationMode) {
-                              // Turning OFF vacation mode: show keep/revert dialog
+                              // Turning OFF vacation mode: show currency change dialog
                               await vacationProvider.setVacationMode(false);
 
-                              // Show keep/revert dialog for currency
+                              // Show currency change dialog
                               if (context.mounted) {
-                                  final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-                                  final currentCode = currencyProvider.selectedCurrencyCode;
+                                final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                                final currentCode = currencyProvider.selectedCurrencyCode;
                                 
                                 // Get the pre-vacation currency
                                 final prefs = await SharedPreferences.getInstance();
                                 final preVacationCode = prefs.getString('preVacationCurrencyCode');
                                 
                                 if (preVacationCode != null && preVacationCode != currentCode) {
-                                    await showDialog<void>(
-                                      context: context,
-                                      builder: (ctx) {
-                                        return AlertDialog(
-                                          title: const Text('Currency Preference'),
-                                        content: Text('Do you want to keep $currentCode or revert to $preVacationCode?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.of(ctx).pop(),
-                                              child: const Text('Keep'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () async {
-                                              final currency = CurrencyService().findByCode(preVacationCode);
-                                              if (currency != null) {
-                                                await currencyProvider.setCurrency(currency, 1.0);
-                                                }
-                                                if (ctx.mounted) Navigator.of(ctx).pop();
-                                              },
-                                              child: const Text('Revert'),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
+                                  await _showCurrencyChangeDialog(
+                                    context,
+                                    preVacationCode,
+                                    currentCode,
+                                    currencyProvider,
+                                  );
                                 } else {
                                   // Show simple informational dialog if no currency change
                                   await showDialog<void>(
@@ -2098,6 +2161,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               await vacationProvider.checkAndShowVacationDialog(
                                 context,
                               );
+                              
+                              // Show currency change dialog after vacation mode is enabled
+                              if (context.mounted && vacationProvider.isVacationMode) {
+                                final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                                await _showVacationCurrencyDialog(
+                                  context,
+                                  currencyProvider,
+                                );
+                              }
                             }
 
                             // It's crucial to read the new state *after* the async operations.

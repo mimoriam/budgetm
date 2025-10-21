@@ -19,7 +19,7 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
   
   // Load accounts to get fresh data every time the dialog is shown
   final all = await firestoreService.getAllAccounts();
-  final vacationAccounts = all.where((a) => a.isVacationAccount == true && a.currency != 'MULTI').toList();
+  final vacationAccounts = all.where((a) => a.isVacationAccount == true).toList();
 
   if (!context.mounted) return;
 

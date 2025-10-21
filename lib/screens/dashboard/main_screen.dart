@@ -39,6 +39,13 @@ class _MainScreenState extends State<MainScreen> {
     _controller = PersistentTabController(initialIndex: 0);
     _controller.addListener(() {
       setState(() {});
+      // Ensure navbar is always visible when on home screen (index 0)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+        if (_controller.index == 0) {
+          navbarProvider.setNavBarVisibility(true);
+        }
+      });
     });
   }
 
@@ -143,6 +150,13 @@ class _MainScreenState extends State<MainScreen> {
     if (navbarVisibility.currentIndex != _controller.index) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         navbarVisibility.setCurrentIndex(_controller.index);
+      });
+    }
+    
+    // Additional safety check: ensure navbar is visible when on home screen
+    if (_controller.index == 0 && !navbarVisibility.isNavBarVisible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navbarVisibility.setNavBarVisibility(true);
       });
     }
     return Scaffold(
