@@ -39,10 +39,10 @@ class _MainScreenState extends State<MainScreen> {
     _controller = PersistentTabController(initialIndex: 0);
     _controller.addListener(() {
       setState(() {});
-      // Ensure navbar is always visible when on home screen (index 0)
+      // Ensure navbar is always visible when on home screen (index 0) unless in dialog mode
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
-        if (_controller.index == 0) {
+        if (_controller.index == 0 && !navbarProvider.isDialogMode) {
           navbarProvider.setNavBarVisibility(true);
         }
       });
@@ -154,9 +154,9 @@ class _MainScreenState extends State<MainScreen> {
     }
     
     // Additional safety check: ensure navbar is visible when on home screen
-    if (_controller.index == 0 && !navbarVisibility.isNavBarVisible) {
+    if (_controller.index == 0 && !navbarVisibility.isNavBarVisible && !navbarVisibility.isDialogMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        navbarVisibility.setNavBarVisibility(true);
+navbarVisibility.setNavBarVisibility(true);
       });
     }
     return Scaffold(

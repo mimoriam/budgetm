@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/services/firestore_service.dart';
-import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/vacation_dialog.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
@@ -73,7 +72,8 @@ class VacationProvider with ChangeNotifier {
     final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
     
     try {
-      // Hide the navbar before showing any dialog
+      // Enable dialog mode to allow navbar hiding on home screen
+      navbarProvider.setDialogMode(true);
       navbarProvider.setNavBarVisibility(false);
       
       final allAccounts = await firestoreService.getAllAccounts();
@@ -125,9 +125,10 @@ class VacationProvider with ChangeNotifier {
       // Fail silently, could show a generic error dialog if desired
       print('Error checking for vacation accounts: $e');
     } finally {
-      // Always restore navbar visibility, even if an error occurred
+      // Always restore navbar visibility and disable dialog mode, even if an error occurred
       if (context.mounted) {
         navbarProvider.setNavBarVisibility(true);
+        navbarProvider.setDialogMode(false);
       }
     }
   }

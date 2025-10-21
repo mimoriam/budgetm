@@ -132,6 +132,152 @@ class FirestoreService {
     }
   }
 
+  // Create vacation budgets for multiple currencies for a specific category
+  Future<void> createVacationBudgetsForCategoryMultiCurrency({
+    required String categoryId,
+    required List<String> currencies,
+    required DateTime transactionDate,
+    BudgetType type = BudgetType.monthly
+  }) async {
+    try {
+      print('createVacationBudgetsForCategoryMultiCurrency: categoryId=$categoryId currencies=$currencies transactionDate=$transactionDate type=$type');
+      
+      // Validate inputs
+      if (categoryId.isEmpty) {
+        print('createVacationBudgetsForCategoryMultiCurrency: skipping - categoryId is empty');
+        return;
+      }
+      
+      if (currencies.isEmpty) {
+        print('createVacationBudgetsForCategoryMultiCurrency: skipping - no currencies provided');
+        return;
+      }
+      
+      // Create budgets for each currency
+      final futures = currencies.map((currency) => 
+        createVacationBudgetForCategory(
+          categoryId: categoryId,
+          currency: currency,
+          transactionDate: transactionDate,
+          type: type,
+        )
+      );
+      
+      // Wait for all budget creations to complete
+      await Future.wait(futures);
+      print('createVacationBudgetsForCategoryMultiCurrency: completed for category=$categoryId with currencies=$currencies');
+    } catch (e) {
+      print('Error creating vacation budgets for category multi-currency: $e');
+      // Don't rethrow - this is a convenience method
+    }
+  }
+
+  // Create vacation budget for a specific category and currency
+  Future<void> createVacationBudgetForCategory({
+    required String categoryId,
+    required String currency,
+    required DateTime transactionDate,
+    BudgetType type = BudgetType.monthly
+  }) async {
+    try {
+      print('createVacationBudgetForCategory: categoryId=$categoryId currency=$currency transactionDate=$transactionDate type=$type');
+      
+      // Validate inputs
+      if (categoryId.isEmpty) {
+        print('createVacationBudgetForCategory: skipping - categoryId is empty');
+        return;
+      }
+      
+      if (currency.isEmpty) {
+        print('createVacationBudgetForCategory: skipping - currency is empty');
+        return;
+      }
+      
+      // Get current user ID
+      if (_userId == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      // Determine year and period based on transaction date and budget type
+      int year;
+      int period;
+      
+      switch (type) {
+        case BudgetType.weekly:
+          year = transactionDate.year;
+          // Encode weekly period as (month * 10 + weekOfMonth) so weeks are scoped to a month
+          final weekOfMonth = Budget.getWeekOfMonth(transactionDate);
+          period = transactionDate.month * 10 + weekOfMonth;
+          break;
+        case BudgetType.monthly:
+          year = transactionDate.year;
+          period = transactionDate.month;
+          break;
+        case BudgetType.yearly:
+          year = transactionDate.year;
+          period = 1; // For yearly, period is always 1
+          break;
+      }
+      
+      print('createVacationBudgetForCategory: calculated year=$year period=$period');
+      
+      // Check if budget already exists for this category, currency, and period
+      final existingBudgets = await getBudgetsByType(type, isVacation: true);
+      final existingBudget = existingBudgets.firstWhere(
+        (budget) => budget.categoryId == categoryId &&
+                   budget.currency == currency &&
+                   budget.year == year &&
+                   budget.period == period,
+        orElse: () => Budget(
+          id: '',
+          categoryId: '',
+          limit: 0.0,
+          type: type,
+          year: 0,
+          period: 0,
+          startDate: DateTime.now(),
+          endDate: DateTime.now(),
+          userId: '',
+          currency: currency,
+        ),
+      );
+      
+      if (existingBudget.id.isNotEmpty) {
+        print('createVacationBudgetForCategory: budget already exists for category=$categoryId currency=$currency year=$year period=$period (ID: ${existingBudget.id})');
+        return; // Budget already exists, no need to create
+      }
+      
+      // Generate a unique ID for the budget
+      final budgetId = Budget.generateId(_userId!, categoryId, type, year, period, true, false, currency: currency);
+      
+      // Get date range for the budget
+      final dateRange = Budget.getDateRange(type, year, period);
+      
+      // Create the new budget with limit = 0.0 and isVacation = true
+      final newBudget = Budget(
+        id: budgetId,
+        categoryId: categoryId,
+        limit: 0.0,
+        type: type,
+        year: year,
+        period: period,
+        startDate: dateRange['startDate']!,
+        endDate: dateRange['endDate']!,
+        userId: _userId!,
+        currency: currency,
+        isVacation: true,
+      );
+      
+      // Add the budget to Firestore
+      await addBudget(newBudget);
+      print('createVacationBudgetForCategory: successfully created vacation budget for category=$categoryId currency=$currency (ID: $budgetId)');
+    } catch (e) {
+      print('Error creating vacation budget for category: $e');
+      // Don't rethrow - we don't want budget creation failures to break transaction creation
+      // The budget can be created manually later if needed
+    }
+  }
+
   // Create vacation budgets for all expense categories
   Future<void> createVacationBudgetsForAllExpenseCategories({
     required String currency,
@@ -479,6 +625,21 @@ class FirestoreService {
     try {
       final toSave = transaction.copyWith(isVacation: isVacation);
       final docRef = await _transactionsCollection.add(toSave);
+      
+      // If this is a vacation expense transaction, create automatic budget
+      if (isVacation && transaction.type == 'expense' && transaction.categoryId != null && transaction.categoryId!.isNotEmpty) {
+        try {
+          await createVacationBudgetForCategory(
+            categoryId: transaction.categoryId!,
+            currency: transaction.currency,
+            transactionDate: transaction.date,
+          );
+        } catch (e) {
+          // Log error but don't fail the transaction creation
+          print('Error creating automatic vacation budget: $e');
+        }
+      }
+      
       return docRef.id;
     } catch (e) {
       print('Error creating transaction: $e');
@@ -492,7 +653,7 @@ class FirestoreService {
     required FirestoreTransaction normalTransaction,
   }) async {
     try {
-      return await _firestore.runTransaction((transaction) async {
+      final result = await _firestore.runTransaction((transaction) async {
         // 1. Get new document references for both transactions (no writes yet)
         final vacationRef = _transactionsCollection.doc();
         final normalRef = _transactionsCollection.doc();
@@ -555,6 +716,20 @@ class FirestoreService {
           'normalTransactionId': normalRef.id,
         };
       });
+      
+      // After the transaction completes successfully, create vacation budget if needed
+      try {
+        await createVacationBudgetForCategory(
+          categoryId: vacationTransaction.categoryId ?? '',
+          currency: vacationTransaction.currency,
+          transactionDate: vacationTransaction.date,
+        );
+      } catch (e) {
+        // Log error but don't fail the transaction creation
+        print('Error creating automatic vacation budget: $e');
+      }
+      
+      return result;
     } catch (e) {
       print('Error creating linked vacation expense: $e');
       rethrow;

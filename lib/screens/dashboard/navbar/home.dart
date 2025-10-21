@@ -13,11 +13,12 @@ import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter/rendering.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -668,7 +669,7 @@ class _MonthPageViewState extends State<MonthPageView> {
     // Use the provider passed from the parent widget
     _provider = widget.provider;
 
-    // Set up scroll listener for pagination
+    // Set up scroll listener for pagination only
     _scrollController.addListener(() {
       if (!_scrollController.hasClients) return;
 
@@ -1474,39 +1475,56 @@ Future<void> _showCurrencyChangeDialog(
   String vacationCurrency,
   CurrencyProvider currencyProvider,
 ) async {
-  return showDialog<void>(
-    context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: const Text('Currency Change'),
-        content: Text(
-          'Do you want to change currencies because your old currency ($currentCurrency) differs from vacation currency ($vacationCurrency)?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('No'),
+  final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+  
+  // Enable dialog mode to allow navbar hiding on home screen
+  navbarProvider.setDialogMode(true);
+  navbarProvider.setNavBarVisibility(false);
+  
+  // Add a small delay to ensure navbar is hidden before showing dialog
+  await Future.delayed(const Duration(milliseconds: 100));
+  
+  try {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Currency Change'),
+          content: Text(
+            'Do you want to change currencies because your old currency ($currentCurrency) differs from vacation currency ($vacationCurrency)?',
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              // Show currency picker
-              showCurrencyPicker(
-                context: context,
-                showFlag: true,
-                showSearchField: true,
-                onSelect: (Currency currency) async {
-                  final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-                  await currencyProvider.setCurrency(currency, 1.0);
-                },
-              );
-            },
-            child: const Text('Yes'),
-          ),
-        ],
-      );
-    },
-  );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                // Show currency picker
+                showCurrencyPicker(
+                  context: context,
+                  showFlag: true,
+                  showSearchField: true,
+                  onSelect: (Currency currency) async {
+                    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                    await currencyProvider.setCurrency(currency, 1.0);
+                  },
+                );
+              },
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+  } finally {
+    // Always restore navbar visibility and disable dialog mode, even if an error occurred
+    if (context.mounted) {
+      navbarProvider.setNavBarVisibility(true);
+      navbarProvider.setDialogMode(false);
+    }
+  }
 }
 
 // Helper function to show vacation mode currency change dialog
@@ -1514,39 +1532,56 @@ Future<void> _showVacationCurrencyDialog(
   BuildContext context,
   CurrencyProvider currencyProvider,
 ) async {
-  return showDialog<void>(
-    context: context,
-    builder: (ctx) {
-      return AlertDialog(
-        title: const Text('Vacation Mode'),
-        content: const Text(
-          'You can change currencies for your vacation transactions. Would you like to change the currency now?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Keep Current'),
+  final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+  
+  // Enable dialog mode to allow navbar hiding on home screen
+  navbarProvider.setDialogMode(true);
+  navbarProvider.setNavBarVisibility(false);
+  
+  // Add a small delay to ensure navbar is hidden before showing dialog
+  await Future.delayed(const Duration(milliseconds: 100));
+  
+  try {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Vacation Mode'),
+          content: const Text(
+            'You can change currencies for your vacation transactions. Would you like to change the currency now?',
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              // Show currency picker
-              showCurrencyPicker(
-                context: context,
-                showFlag: true,
-                showSearchField: true,
-                onSelect: (Currency currency) async {
-                  final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-                  await currencyProvider.setCurrency(currency, 1.0);
-                },
-              );
-            },
-            child: const Text('Change Currency'),
-          ),
-        ],
-      );
-    },
-  );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Keep Current'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                // Show currency picker
+                showCurrencyPicker(
+                  context: context,
+                  showFlag: true,
+                  showSearchField: true,
+                  onSelect: (Currency currency) async {
+                    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                    await currencyProvider.setCurrency(currency, 1.0);
+                  },
+                );
+              },
+              child: const Text('Change Currency'),
+            ),
+          ],
+        );
+      },
+    );
+  } finally {
+    // Always restore navbar visibility and disable dialog mode, even if an error occurred
+    if (context.mounted) {
+      navbarProvider.setNavBarVisibility(true);
+      navbarProvider.setDialogMode(false);
+    }
+  }
 }
 
 class HomeScreen extends StatefulWidget {
@@ -2139,21 +2174,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   );
                                 } else {
                                   // Show simple informational dialog if no currency change
-                                  await showDialog<void>(
-                                    context: context,
-                                    builder: (ctx) {
-                                      return AlertDialog(
-                                        title: const Text('Normal Mode'),
-                                        content: Text('You are now in Normal Mode with currency: $currentCode'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(ctx).pop(),
-                                            child: const Text('OK'),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
+                                  final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+                                  navbarProvider.setDialogMode(true);
+                                  navbarProvider.setNavBarVisibility(false);
+                                  
+                                  // Add a small delay to ensure navbar is hidden before showing dialog
+                                  await Future.delayed(const Duration(milliseconds: 100));
+                                  
+                                  try {
+                                    await showDialog<void>(
+                                      context: context,
+                                      builder: (ctx) {
+                                        return AlertDialog(
+                                          title: const Text('Normal Mode'),
+                                          content: Text('You are now in Normal Mode with currency: $currentCode'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(ctx).pop(),
+                                              child: const Text('OK'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  } finally {
+                                    if (context.mounted) {
+                                      navbarProvider.setNavBarVisibility(true);
+                                      navbarProvider.setDialogMode(false);
+                                    }
+                                  }
                                 }
                               }
                             } else {

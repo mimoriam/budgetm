@@ -2,6 +2,7 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
@@ -16,14 +17,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// to be dismissible even when isDismissible is set to false.
 Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}) async {
   final firestoreService = FirestoreService.instance;
+  final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
   
-  // Load accounts to get fresh data every time the dialog is shown
-  final all = await firestoreService.getAllAccounts();
-  final vacationAccounts = all.where((a) => a.isVacationAccount == true).toList();
+  // Enable dialog mode to allow navbar hiding on home screen
+  navbarProvider.setDialogMode(true);
+  navbarProvider.setNavBarVisibility(false);
+  
+  // Add a small delay to ensure navbar is hidden before showing dialog
+  await Future.delayed(const Duration(milliseconds: 100));
+  
+  try {
+    // Load accounts to get fresh data every time the dialog is shown
+    final all = await firestoreService.getAllAccounts();
+    final vacationAccounts = all.where((a) => a.isVacationAccount == true).toList();
 
-  if (!context.mounted) return;
+    if (!context.mounted) return;
 
-  final result = await showGeneralDialog<FirestoreAccount>(
+    final result = await showGeneralDialog<FirestoreAccount>(
     context: context,
     barrierDismissible: !isMandatory,
     barrierLabel: isMandatory ? 'Vacation Mode Dialog' : '',
@@ -213,20 +223,27 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
     },
   );
 
-  // If user selected an account, handle it.
-  if (result != null && context.mounted) {
-    final provider = Provider.of<VacationProvider>(context, listen: false);
-    await provider.setActiveVacationAccountId(result.id);
-    await provider.setVacationMode(true);
+    // If user selected an account, handle it.
+    if (result != null && context.mounted) {
+      final provider = Provider.of<VacationProvider>(context, listen: false);
+      await provider.setActiveVacationAccountId(result.id);
+      await provider.setVacationMode(true);
 
-    // Store the current currency before switching to vacation mode for reference
-    try {
-      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('preVacationCurrencyCode', currencyProvider.selectedCurrencyCode);
-    } catch (e) {
-      // Non-fatal: currency storage failed
-      // ignore
+      // Store the current currency before switching to vacation mode for reference
+      try {
+        final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('preVacationCurrencyCode', currencyProvider.selectedCurrencyCode);
+      } catch (e) {
+        // Non-fatal: currency storage failed
+        // ignore
+      }
+    }
+  } finally {
+    // Always restore navbar visibility and disable dialog mode, even if an error occurred
+    if (context.mounted) {
+      navbarProvider.setNavBarVisibility(true);
+      navbarProvider.setDialogMode(false);
     }
   }
 }
