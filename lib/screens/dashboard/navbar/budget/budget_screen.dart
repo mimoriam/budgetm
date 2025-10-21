@@ -618,6 +618,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     final showingAll = selectedCategory == null;
 
     // Filter data: show budgets with limit>0 OR spentAmount>0
+    // For vacation mode, also show budgets with spentAmount>0 even if limit=0
     // This ensures newly created budgets (with limit but no spending yet) are visible
     final totalCount = provider.categoryBudgetData.length;
     final displayData = showingAll
@@ -651,9 +652,18 @@ class _BudgetScreenState extends State<BudgetScreen>
     // Get available currencies from the data
     final availableCurrencies = _getAvailableCurrencies(displayData);
     
-    // Set default chart currency if not set
-    if (_selectedChartCurrency == null && availableCurrencies.isNotEmpty) {
-      _selectedChartCurrency = availableCurrencies.first;
+    // Debug logging for currency selection
+    print('BudgetScreen: availableCurrencies=$availableCurrencies, _selectedChartCurrency=$_selectedChartCurrency');
+    
+    // Set default chart currency if not set or if current selection is not available
+    if (_selectedChartCurrency == null || !availableCurrencies.contains(_selectedChartCurrency)) {
+      if (availableCurrencies.isNotEmpty) {
+        _selectedChartCurrency = availableCurrencies.first;
+        print('BudgetScreen: reset _selectedChartCurrency to ${_selectedChartCurrency}');
+      } else {
+        _selectedChartCurrency = null;
+        print('BudgetScreen: set _selectedChartCurrency to null (no available currencies)');
+      }
     }
 
     return Container(
@@ -680,18 +690,23 @@ class _BudgetScreenState extends State<BudgetScreen>
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
-              if (!showingAll)
-                TextButton(
-                  onPressed: provider.clearCategorySelection,
-                  child: const Text('View All'),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Currency dropdown
+                  if (availableCurrencies.length > 1)
+                    _buildCompactCurrencyDropdown(availableCurrencies),
+                  if (!showingAll) ...[
+                    if (availableCurrencies.length > 1) const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: provider.clearCategorySelection,
+                      child: const Text('View All'),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
-          // Currency dropdown
-          if (availableCurrencies.length > 1) ...[
-            const SizedBox(height: 12),
-            _buildCurrencyDropdown(availableCurrencies),
-          ],
           const SizedBox(height: 20),
           SizedBox(
             height: 120,
@@ -1422,58 +1437,44 @@ class _BudgetScreenState extends State<BudgetScreen>
     return currencies;
   }
 
-  // Helper method to build currency dropdown
-  Widget _buildCurrencyDropdown(List<String> availableCurrencies) {
+  // Helper method to build compact currency dropdown
+  Widget _buildCompactCurrencyDropdown(List<String> availableCurrencies) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade300),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.currency_exchange, size: 16, color: Colors.grey),
-          const SizedBox(width: 8),
-          Text(
-            'Currency:',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedChartCurrency,
+          isDense: true,
+          isExpanded: false,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
-          const SizedBox(width: 8),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedChartCurrency,
-              isDense: true,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-              items: availableCurrencies.map((String currency) {
-                final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
-                return DropdownMenuItem<String>(
-                  value: currency,
-                  child: Text('$currencySymbol $currency'),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedChartCurrency = newValue;
-                  });
-                }
-              },
-            ),
-          ),
-        ],
+          items: availableCurrencies.map((String currency) {
+            final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
+            return DropdownMenuItem<String>(
+              value: currency,
+              child: Text('$currencySymbol $currency'),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _selectedChartCurrency = newValue;
+              });
+            }
+          },
+        ),
       ),
     );
   }
+
 }
 
 // Reusable Period Selector Widget

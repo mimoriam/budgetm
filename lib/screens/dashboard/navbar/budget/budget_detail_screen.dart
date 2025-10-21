@@ -6,7 +6,6 @@ import 'package:budgetm/models/transaction.dart' as model;
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
-import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -92,14 +91,30 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     final start = provider.selectedPeriodStart ?? widget.budget.startDate;
     final end = provider.selectedPeriodEnd ?? widget.budget.endDate;
 
-    final allTransactions = await _firestoreService
-      .getTransactionsForDateRange(start, end);
+    // Check if we're in vacation mode and get the vacation account ID
+    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+    final isVacationMode = vacationProvider.isVacationMode;
+    final vacationAccountId = vacationProvider.activeVacationAccountId;
 
-      // Debug logging for currency filtering
-      print('BudgetDetail: Loading transactions for budget currency=${widget.budget.currency}, category=${widget.category.id}');
+    // Debug logging for vacation mode
+    print('BudgetDetail: Loading transactions for budget currency=${widget.budget.currency}, category=${widget.category.id}');
+    print('BudgetDetail: isVacationMode=$isVacationMode, vacationAccountId=$vacationAccountId');
+
+    final allTransactions = await _firestoreService
+      .getTransactionsForDateRange(start, end, isVacation: isVacationMode);
+
       print('BudgetDetail: Total transactions found: ${allTransactions.length}');
       
-      final categoryTransactions = allTransactions
+      // For vacation mode, also filter by vacation account ID if available
+      List<FirestoreTransaction> filteredTransactions = allTransactions;
+      if (isVacationMode && vacationAccountId != null && vacationAccountId.isNotEmpty) {
+        filteredTransactions = allTransactions
+            .where((t) => t.accountId == vacationAccountId)
+            .toList();
+        print('BudgetDetail: After vacation account filter: ${filteredTransactions.length}');
+      }
+      
+      final categoryTransactions = filteredTransactions
           .where(
             (t) => t.type == 'expense' && 
                    t.categoryId == widget.category.id &&
@@ -147,7 +162,6 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
   @override
   Widget build(BuildContext context) {
     // Determine the correct currency symbol for the budget being viewed
-    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
     _budgetCurrencyCode = widget.budget.currency;
     final currency = CurrencyService().findByCode(_budgetCurrencyCode);
     _currencySymbol = currency?.symbol ?? '\$';

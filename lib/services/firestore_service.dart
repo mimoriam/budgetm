@@ -403,10 +403,8 @@ class FirestoreService {
       Query<Budget> query = _budgetsCollection
           .where('isVacation', isEqualTo: true);
       
-      // Add vacationAccountId filter if provided
-      if (vacationAccountId != null) {
-        query = query.where('vacationAccountId', isEqualTo: vacationAccountId);
-      }
+      // Note: vacationAccountId filter removed since Budget model doesn't have this field
+      // Vacation budgets are identified by isVacation=true only
       
       final querySnapshot = await query.get();
       return querySnapshot.docs.map((doc) => doc.data()).toList();
@@ -752,9 +750,9 @@ class FirestoreService {
     try {
       Query<FirestoreTransaction> query = _transactionsCollection.where('isVacation', isEqualTo: isVacation);
       
-      // Add vacationAccountId filter if provided
-      if (vacationAccountId != null) {
-        query = query.where('vacationAccountId', isEqualTo: vacationAccountId);
+      // Add accountId filter if provided (for vacation transactions, filter by the vacation account)
+      if (vacationAccountId != null && isVacation) {
+        query = query.where('accountId', isEqualTo: vacationAccountId);
       }
       
       final querySnapshot = await query.get();
@@ -956,9 +954,9 @@ class FirestoreService {
       Query<FirestoreTransaction> query = _transactionsCollection
           .orderBy('date', descending: true);
       
-      // Add vacationAccountId filter if provided
+      // Add accountId filter if provided (for vacation transactions, filter by the vacation account)
       if (vacationAccountId != null) {
-        query = query.where('vacationAccountId', isEqualTo: vacationAccountId);
+        query = query.where('accountId', isEqualTo: vacationAccountId);
       }
       
       return query
