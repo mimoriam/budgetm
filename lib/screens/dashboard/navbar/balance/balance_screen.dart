@@ -63,6 +63,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   // re-evaluate filtering when vacation mode changes.
   VacationProvider? _vacationProvider;
   VoidCallback? _vacationListener;
+  
+  String? _selectedChartCurrency; // For chart currency selection
 
   @override
   void initState() {
@@ -140,9 +142,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     for (var transaction in transactions) {
       final accId = transaction.accountId;
       if (accId == null || defaultAccountIds.contains(accId)) continue;
-      if (transaction.paid ?? true) {
+      if (transaction.paid == true) {
         final isIncome =
-            transaction.type != null &&
             transaction.type.toString().toLowerCase().contains('income');
         final txnAmount = isIncome ? transaction.amount : -transaction.amount;
         transactionAmounts.update(
@@ -165,7 +166,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final accId = transaction.accountId;
       if (accId == null || defaultAccountIds.contains(accId)) continue;
       final isExpense =
-          transaction.type != null &&
           transaction.type.toString().toLowerCase().contains('expense');
       if (isExpense) {
         expenseSums.update(
@@ -604,45 +604,101 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       return const SizedBox(height: 250);
     }
 
-    // If there's only one account, show the app logo instead of the pie chart
-    if (accountsWithData.length == 1) {
-      return SizedBox(
-        height: 250,
-        child: Center(
-          child: SizedBox(
-            width: 150,
-            height: 150,
-            child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
+    // Get available currencies from the data
+    final availableCurrencies = _getAvailableCurrencies(accountsWithData);
+    
+    // Set default chart currency if not set
+    if (_selectedChartCurrency == null && availableCurrencies.isNotEmpty) {
+      _selectedChartCurrency = availableCurrencies.first;
+    }
+
+    // Filter data to only include accounts with the selected currency
+    final filteredData = _selectedChartCurrency != null
+        ? accountsWithData.where((accountData) {
+            final account = accountData['account'] as FirestoreAccount;
+            return account.currency == _selectedChartCurrency;
+          }).toList()
+        : accountsWithData;
+
+    if (filteredData.isEmpty) {
+      return Column(
+        children: [
+          // Currency dropdown
+          if (availableCurrencies.length > 1) ...[
+            const SizedBox(height: 12),
+            _buildCurrencyDropdown(availableCurrencies),
+            const SizedBox(height: 12),
+          ],
+          const SizedBox(height: 200),
+          Center(
+            child: Text(
+              'No accounts found for selected currency',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
           ),
-        ),
+        ],
+      );
+    }
+
+    // If there's only one account, show the app logo instead of the pie chart
+    if (filteredData.length == 1) {
+      return Column(
+        children: [
+          // Currency dropdown
+          if (availableCurrencies.length > 1) ...[
+            const SizedBox(height: 12),
+            _buildCurrencyDropdown(availableCurrencies),
+            const SizedBox(height: 12),
+          ],
+          SizedBox(
+            height: 200,
+            child: Center(
+              child: SizedBox(
+                width: 150,
+                height: 150,
+                child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
     // For two or more accounts, show the pie chart as before
-    return SizedBox(
-      height: 250,
-      child: PieChart(
-        PieChartData(
-          pieTouchData: PieTouchData(
-            touchCallback: (FlTouchEvent event, pieTouchResponse) {
-              setState(() {
-                if (!event.isInterestedForInteractions ||
-                    pieTouchResponse == null ||
-                    pieTouchResponse.touchedSection == null) {
-                  touchedIndex = -1;
-                  return;
-                }
-                touchedIndex =
-                    pieTouchResponse.touchedSection!.touchedSectionIndex;
-              });
-            },
+    return Column(
+      children: [
+        // Currency dropdown
+        if (availableCurrencies.length > 1) ...[
+          const SizedBox(height: 12),
+          _buildCurrencyDropdown(availableCurrencies),
+          const SizedBox(height: 12),
+        ],
+        SizedBox(
+          height: 200,
+          child: PieChart(
+            PieChartData(
+              pieTouchData: PieTouchData(
+                touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                  setState(() {
+                    if (!event.isInterestedForInteractions ||
+                        pieTouchResponse == null ||
+                        pieTouchResponse.touchedSection == null) {
+                      touchedIndex = -1;
+                      return;
+                    }
+                    touchedIndex =
+                        pieTouchResponse.touchedSection!.touchedSectionIndex;
+                  });
+                },
+              ),
+              borderData: FlBorderData(show: false),
+              sectionsSpace: 0,
+              centerSpaceRadius: 0,
+              sections: showingSections(filteredData),
+            ),
           ),
-          borderData: FlBorderData(show: false),
-          sectionsSpace: 0,
-          centerSpaceRadius: 0,
-          sections: showingSections(accountsWithData),
         ),
-      ),
+      ],
     );
   }
 
@@ -685,6 +741,18 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       return const SizedBox.shrink();
     }
 
+    // Filter data to only include accounts with the selected currency
+    final filteredData = _selectedChartCurrency != null
+        ? accountsWithData.where((accountData) {
+            final account = accountData['account'] as FirestoreAccount;
+            return account.currency == _selectedChartCurrency;
+          }).toList()
+        : accountsWithData;
+
+    if (filteredData.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     // Define a list of colors for the legend items
     final colors = [
       const Color(0xFF2563EB),
@@ -697,7 +765,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
     return Column(
       children: [
-        ...accountsWithData.asMap().entries.map((entry) {
+        ...filteredData.asMap().entries.map((entry) {
           final index = entry.key;
           final accountData = entry.value;
           final account = accountData['account'] as FirestoreAccount;
@@ -710,7 +778,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 finalBalance,
                 _getAccountCurrencySymbol(account),
               ),
-              if (index < accountsWithData.length - 1)
+              if (index < filteredData.length - 1)
                 const SizedBox(height: 12),
             ],
           );
@@ -745,16 +813,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: AppColors.secondaryTextColorLight,
-        fontWeight: FontWeight.bold,
-      ),
     );
   }
 
@@ -925,6 +983,69 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to get available currencies from account data
+  List<String> _getAvailableCurrencies(List<Map<String, dynamic>> accountsWithData) {
+    final currencies = accountsWithData.map((accountData) {
+      final account = accountData['account'] as FirestoreAccount;
+      return account.currency;
+    }).toSet().toList();
+    currencies.sort(); // Sort for consistent ordering
+    return currencies;
+  }
+
+  // Helper method to build currency dropdown
+  Widget _buildCurrencyDropdown(List<String> availableCurrencies) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.currency_exchange, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            'Currency:',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedChartCurrency,
+              isDense: true,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+              items: availableCurrencies.map((String currency) {
+                final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
+                return DropdownMenuItem<String>(
+                  value: currency,
+                  child: Text('$currencySymbol $currency'),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedChartCurrency = newValue;
+                  });
+                }
+              },
+            ),
           ),
         ],
       ),

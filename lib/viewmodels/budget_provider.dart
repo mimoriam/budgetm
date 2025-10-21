@@ -76,24 +76,95 @@ class BudgetProvider with ChangeNotifier {
     }
   }
   
-  // Vacation mode: show categories with transactions and create placeholder budgets
+  // Vacation mode: show categories with transactions and create placeholder budgets per currency
   List<CategoryBudgetData> _getVacationModeBudgetData() {
-    // Sort categories by displayOrder
-    final sortedCategories = [..._expenseCategories]..sort((a, b) {
-      return a.displayOrder.compareTo(b.displayOrder);
-    });
-
-    return sortedCategories.map((category) {
-      // Find budget for this category with selected type and period
-      Budget? matchingBudget;
+    // Get categories and currencies that have transactions in vacation mode
+    final categoryCurrencyMap = <String, Set<String>>{};
+    
+    // Collect all category IDs and their currencies that have transactions in vacation mode
+    for (final transaction in _allTransactions) {
+      if (transaction.type == 'expense' && 
+          transaction.isVacation == _vacationProvider.isVacationMode &&
+          transaction.categoryId != null &&
+          transaction.categoryId!.isNotEmpty &&
+          transaction.currency.isNotEmpty) {
+        
+        if (!categoryCurrencyMap.containsKey(transaction.categoryId!)) {
+          categoryCurrencyMap[transaction.categoryId!] = <String>{};
+        }
+        categoryCurrencyMap[transaction.categoryId!]!.add(transaction.currency);
+      }
+    }
+    
+    // Create budget data for each category-currency combination
+    final budgetDataList = <CategoryBudgetData>[];
+    
+    for (final entry in categoryCurrencyMap.entries) {
+      final categoryId = entry.key;
+      final currencies = entry.value;
       
-      switch (_selectedBudgetType) {
-        case BudgetType.weekly:
-          // First try to find a non-recurring budget for the selected week
-          matchingBudget = _budgets.firstWhere(
+      // Find the category
+      final category = _expenseCategories.firstWhere(
+        (c) => c.id == categoryId,
+        orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+      );
+      
+      // Create budget data for each currency
+      for (final currency in currencies) {
+        final budgetData = _createVacationBudgetForCategoryCurrency(category, currency);
+        budgetDataList.add(budgetData);
+      }
+    }
+    
+    // Sort by category display order, then by currency
+    budgetDataList.sort((a, b) {
+      final categoryComparison = a.category.displayOrder.compareTo(b.category.displayOrder);
+      if (categoryComparison != 0) return categoryComparison;
+      return a.budget.currency.compareTo(b.budget.currency);
+    });
+    
+    return budgetDataList;
+  }
+  
+  // Create vacation budget data for a specific category and currency
+  CategoryBudgetData _createVacationBudgetForCategoryCurrency(Category category, String currency) {
+    // Find budget for this category with selected type, period, and currency
+    Budget? matchingBudget;
+    
+    switch (_selectedBudgetType) {
+      case BudgetType.weekly:
+        // First try to find a non-recurring budget for the selected week
+        matchingBudget = _budgets.firstWhere(
+          (b) => b.categoryId == category.id &&
+                 b.type == _selectedBudgetType &&
+                 b.currency == currency &&
+                 b.isVacation == true &&
+                 _isWeekInSelectedPeriod(b),
+          orElse: () => Budget(
+            id: '',
+            categoryId: category.id,
+            limit: 0.0,
+            type: _selectedBudgetType,
+            year: DateTime.now().year,
+            period: 0,
+            startDate: DateTime.now(),
+            endDate: DateTime.now(),
+            userId: '',
+            currency: currency,
+            spentAmount: 0.0,
+            isRecurring: false,
+            isVacation: true,
+          ),
+        );
+        
+        // If no non-recurring budget found, try to find a recurring budget
+        if (matchingBudget.id.isEmpty) {
+          final recurringBudget = _budgets.firstWhere(
             (b) => b.categoryId == category.id &&
                    b.type == _selectedBudgetType &&
-                   _isWeekInSelectedPeriod(b),
+                   b.currency == currency &&
+                   b.isVacation == true &&
+                   b.isRecurring,
             orElse: () => Budget(
               id: '',
               categoryId: category.id,
@@ -104,54 +175,59 @@ class BudgetProvider with ChangeNotifier {
               startDate: DateTime.now(),
               endDate: DateTime.now(),
               userId: '',
-              currency: _currencyProvider.selectedCurrencyCode,
+              currency: currency,
               spentAmount: 0.0,
               isRecurring: false,
+              isVacation: true,
             ),
           );
           
-          // If no non-recurring budget found, try to find a recurring budget
-          if (matchingBudget.id.isEmpty) {
-            final recurringBudget = _budgets.firstWhere(
-              (b) => b.categoryId == category.id &&
-                     b.type == _selectedBudgetType &&
-                     b.isRecurring,
-              orElse: () => Budget(
-                id: '',
-                categoryId: category.id,
-                limit: 0.0,
-                type: _selectedBudgetType,
-                year: DateTime.now().year,
-                period: 0,
-                startDate: DateTime.now(),
-                endDate: DateTime.now(),
-                userId: '',
-                currency: _currencyProvider.selectedCurrencyCode,
-                spentAmount: 0.0,
-                isRecurring: false,
-              ),
+          // If a recurring budget is found, create a temporary budget with the correct date range
+          if (recurringBudget.id.isNotEmpty) {
+            final periodRange = _getSelectedPeriodRange();
+            // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
+            matchingBudget = recurringBudget.copyWith(
+              id: recurringBudget.id, // Use real ID for recurring budget instance
+              startDate: periodRange['start'],
+              endDate: periodRange['end'],
             );
-            
-            // If a recurring budget is found, create a temporary budget with the correct date range
-            if (recurringBudget.id.isNotEmpty) {
-              final periodRange = _getSelectedPeriodRange();
-              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
-              matchingBudget = recurringBudget.copyWith(
-                id: recurringBudget.id, // Use real ID for recurring budget instance
-                startDate: periodRange['start'],
-                endDate: periodRange['end'],
-              );
-            }
           }
-          break;
-          
-        case BudgetType.monthly:
-          // First try to find a non-recurring budget for the selected month
-          matchingBudget = _budgets.firstWhere(
+        }
+        break;
+      case BudgetType.monthly:
+        // First try to find a non-recurring budget for the selected month
+        matchingBudget = _budgets.firstWhere(
+          (b) => b.categoryId == category.id &&
+                 b.type == _selectedBudgetType &&
+                 b.currency == currency &&
+                 b.isVacation == true &&
+                 b.year == _selectedMonth.year &&
+                 b.period == _selectedMonth.month,
+          orElse: () => Budget(
+            id: '',
+            categoryId: category.id,
+            limit: 0.0,
+            type: _selectedBudgetType,
+            year: _selectedMonth.year,
+            period: _selectedMonth.month,
+            startDate: DateTime(_selectedMonth.year, _selectedMonth.month, 1),
+            endDate: DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59),
+            userId: '',
+            currency: currency,
+            spentAmount: 0.0,
+            isRecurring: false,
+            isVacation: true,
+          ),
+        );
+        
+        // If no non-recurring budget found, try to find a recurring budget
+        if (matchingBudget.id.isEmpty) {
+          final recurringBudget = _budgets.firstWhere(
             (b) => b.categoryId == category.id &&
                    b.type == _selectedBudgetType &&
-                   b.year == _selectedMonth.year && 
-                   b.period == _selectedMonth.month,
+                   b.currency == currency &&
+                   b.isVacation == true &&
+                   b.isRecurring,
             orElse: () => Budget(
               id: '',
               categoryId: category.id,
@@ -162,53 +238,58 @@ class BudgetProvider with ChangeNotifier {
               startDate: DateTime(_selectedMonth.year, _selectedMonth.month, 1),
               endDate: DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59),
               userId: '',
-              currency: _currencyProvider.selectedCurrencyCode,
+              currency: currency,
               spentAmount: 0.0,
               isRecurring: false,
+              isVacation: true,
             ),
           );
           
-          // If no non-recurring budget found, try to find a recurring budget
-          if (matchingBudget.id.isEmpty) {
-            final recurringBudget = _budgets.firstWhere(
-              (b) => b.categoryId == category.id &&
-                     b.type == _selectedBudgetType &&
-                     b.isRecurring,
-              orElse: () => Budget(
-                id: '',
-                categoryId: category.id,
-                limit: 0.0,
-                type: _selectedBudgetType,
-                year: _selectedMonth.year,
-                period: _selectedMonth.month,
-                startDate: DateTime(_selectedMonth.year, _selectedMonth.month, 1),
-                endDate: DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59),
-                userId: '',
-                currency: _currencyProvider.selectedCurrencyCode,
-                spentAmount: 0.0,
-                isRecurring: false,
-              ),
+          // If a recurring budget is found, create a temporary budget with the correct date range
+          if (recurringBudget.id.isNotEmpty) {
+            final periodRange = _getSelectedPeriodRange();
+            // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
+            matchingBudget = recurringBudget.copyWith(
+              id: recurringBudget.id, // Use real ID for recurring budget instance
+              startDate: periodRange['start'],
+              endDate: periodRange['end'],
             );
-            
-            // If a recurring budget is found, create a temporary budget with the correct date range
-            if (recurringBudget.id.isNotEmpty) {
-              final periodRange = _getSelectedPeriodRange();
-              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
-              matchingBudget = recurringBudget.copyWith(
-                id: recurringBudget.id, // Use real ID for recurring budget instance
-                startDate: periodRange['start'],
-                endDate: periodRange['end'],
-              );
-            }
           }
-          break;
-          
-        case BudgetType.yearly:
-          // First try to find a non-recurring budget for the selected year
-          matchingBudget = _budgets.firstWhere(
+        }
+        break;
+      case BudgetType.yearly:
+        // First try to find a non-recurring budget for the selected year
+        matchingBudget = _budgets.firstWhere(
+          (b) => b.categoryId == category.id &&
+                 b.type == _selectedBudgetType &&
+                 b.currency == currency &&
+                 b.isVacation == true &&
+                 b.year == _selectedYear.year,
+          orElse: () => Budget(
+            id: '',
+            categoryId: category.id,
+            limit: 0.0,
+            type: _selectedBudgetType,
+            year: _selectedYear.year,
+            period: _selectedYear.year,
+            startDate: DateTime(_selectedYear.year, 1, 1),
+            endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
+            userId: '',
+            currency: currency,
+            spentAmount: 0.0,
+            isRecurring: false,
+            isVacation: true,
+          ),
+        );
+        
+        // If no non-recurring budget found, try to find a recurring budget
+        if (matchingBudget.id.isEmpty) {
+          final recurringBudget = _budgets.firstWhere(
             (b) => b.categoryId == category.id &&
                    b.type == _selectedBudgetType &&
-                   b.year == _selectedYear.year,
+                   b.currency == currency &&
+                   b.isVacation == true &&
+                   b.isRecurring,
             orElse: () => Budget(
               id: '',
               categoryId: category.id,
@@ -219,270 +300,335 @@ class BudgetProvider with ChangeNotifier {
               startDate: DateTime(_selectedYear.year, 1, 1),
               endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
               userId: '',
-              currency: _currencyProvider.selectedCurrencyCode,
+              currency: currency,
               spentAmount: 0.0,
               isRecurring: false,
+              isVacation: true,
             ),
           );
           
-          // If no non-recurring budget found, try to find a recurring budget
-          if (matchingBudget.id.isEmpty) {
-            final recurringBudget = _budgets.firstWhere(
-              (b) => b.categoryId == category.id &&
-                     b.type == _selectedBudgetType &&
-                     b.isRecurring,
-              orElse: () => Budget(
-                id: '',
-                categoryId: category.id,
-                limit: 0.0,
-                type: _selectedBudgetType,
-                year: _selectedYear.year,
-                period: _selectedYear.year,
-                startDate: DateTime(_selectedYear.year, 1, 1),
-                endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
-                userId: '',
-                currency: _currencyProvider.selectedCurrencyCode,
-                spentAmount: 0.0,
-                isRecurring: false,
-              ),
+          // If a recurring budget is found, create a temporary budget with the correct date range
+          if (recurringBudget.id.isNotEmpty) {
+            final periodRange = _getSelectedPeriodRange();
+            // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
+            matchingBudget = recurringBudget.copyWith(
+              id: recurringBudget.id, // Use real ID for recurring budget instance
+              startDate: periodRange['start'],
+              endDate: periodRange['end'],
             );
-            
-            // If a recurring budget is found, create a temporary budget with the correct date range
-            if (recurringBudget.id.isNotEmpty) {
-              final periodRange = _getSelectedPeriodRange();
-              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
-              matchingBudget = recurringBudget.copyWith(
-                id: recurringBudget.id, // Use real ID for recurring budget instance
-                startDate: periodRange['start'],
-                endDate: periodRange['end'],
-              );
-            }
           }
-          break;
-      }
-      
-      // Always calculate spent amount from transactions, even for placeholder budgets
-      // Ensure the isVacation flag is set correctly for placeholder budgets
-      final adjustedBudget = matchingBudget.copyWith(isVacation: _vacationProvider.isVacationMode);
-      final spentAmount = _calculateSpentAmount(adjustedBudget);
-      
-      return CategoryBudgetData(
-        category: category,
-        budget: matchingBudget.copyWith(spentAmount: spentAmount),
-      );
+        }
+        break;
+    }
+    
+    // Always calculate spent amount from transactions for this specific currency
+    final adjustedBudget = matchingBudget.copyWith(isVacation: true);
+    final spentAmount = _calculateSpentAmountForCurrency(adjustedBudget, currency);
+    
+    return CategoryBudgetData(
+      category: category,
+      budget: matchingBudget.copyWith(spentAmount: spentAmount),
+    );
+  }
+  
+  // Calculate spent amount for a specific currency in vacation mode
+  double _calculateSpentAmountForCurrency(Budget budget, String currency) {
+    final transactions = _allTransactions.where((t) {
+      return t.type == 'expense' &&
+             t.isVacation == _vacationProvider.isVacationMode &&
+             t.categoryId == budget.categoryId &&
+             t.currency == currency &&
+             t.date.isAfter(budget.startDate.subtract(const Duration(days: 1))) &&
+             t.date.isBefore(budget.endDate.add(const Duration(days: 1)));
     }).toList();
+    
+    return transactions.fold(0.0, (sum, transaction) => sum + transaction.amount);
   }
   
   // Normal mode: only show categories that have real budgets created by user
   List<CategoryBudgetData> _getNormalModeBudgetData() {
-    // Get categories that have real budgets (not placeholder budgets)
-    final categoriesWithBudgets = <String>{};
+    // Get categories and currencies that have real budgets (not placeholder budgets)
+    final categoryCurrencyMap = <String, Set<String>>{};
     
-    // Collect all category IDs that have real budgets
+    // Collect all category IDs and their currencies that have real budgets
     for (final budget in _budgets) {
-      if (budget.id.isNotEmpty) { // Only real budgets, not placeholders
-        categoriesWithBudgets.add(budget.categoryId);
+      if (budget.id.isNotEmpty && budget.isVacation == false) { // Only real budgets in normal mode
+        if (!categoryCurrencyMap.containsKey(budget.categoryId)) {
+          categoryCurrencyMap[budget.categoryId] = <String>{};
+        }
+        categoryCurrencyMap[budget.categoryId]!.add(budget.currency);
       }
     }
     
-    // Filter categories to only include those with real budgets
-    final sortedCategories = _expenseCategories
-        .where((category) => categoriesWithBudgets.contains(category.id))
-        .toList()
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-
-    return sortedCategories.map((category) {
-      // Find budget for this category with selected type and period
-      Budget? matchingBudget;
+    // Create budget data for each category-currency combination
+    final budgetDataList = <CategoryBudgetData>[];
+    
+    for (final entry in categoryCurrencyMap.entries) {
+      final categoryId = entry.key;
+      final currencies = entry.value;
       
-      switch (_selectedBudgetType) {
-        case BudgetType.weekly:
-          // First try to find a non-recurring budget for the selected week
-          matchingBudget = _budgets.firstWhere(
-            (b) => b.categoryId == category.id &&
-                   b.type == _selectedBudgetType &&
-                   b.id.isNotEmpty && // Only real budgets
-                   _isWeekInSelectedPeriod(b),
-            orElse: () => Budget(
-              id: '',
-              categoryId: category.id,
-              limit: 0.0,
-              type: _selectedBudgetType,
-              year: DateTime.now().year,
-              period: 0,
-              startDate: DateTime.now(),
-              endDate: DateTime.now(),
-              userId: '',
-              currency: _currencyProvider.selectedCurrencyCode,
-              spentAmount: 0.0,
-              isRecurring: false,
-            ),
-          );
-          
-          // If no non-recurring budget found, try to find a recurring budget
-          if (matchingBudget.id.isEmpty) {
-            final recurringBudget = _budgets.firstWhere(
-              (b) => b.categoryId == category.id &&
-                     b.type == _selectedBudgetType &&
-                     b.isRecurring &&
-                     b.id.isNotEmpty, // Only real budgets
-              orElse: () => Budget(
-                id: '',
-                categoryId: category.id,
-                limit: 0.0,
-                type: _selectedBudgetType,
-                year: DateTime.now().year,
-                period: 0,
-                startDate: DateTime.now(),
-                endDate: DateTime.now(),
-                userId: '',
-                currency: _currencyProvider.selectedCurrencyCode,
-                spentAmount: 0.0,
-                isRecurring: false,
-              ),
-            );
-            
-            // If a recurring budget is found, create a temporary budget with the correct date range
-            if (recurringBudget.id.isNotEmpty) {
-              final periodRange = _getSelectedPeriodRange();
-              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
-              matchingBudget = recurringBudget.copyWith(
-                id: recurringBudget.id, // Use real ID for recurring budget instance
-                startDate: periodRange['start'],
-                endDate: periodRange['end'],
-              );
-            }
-          }
-          break;
-        case BudgetType.monthly:
-          // First try to find a non-recurring budget for the selected month
-          matchingBudget = _budgets.firstWhere(
-            (b) => b.categoryId == category.id &&
-                   b.type == _selectedBudgetType &&
-                   b.id.isNotEmpty && // Only real budgets
-                   b.year == _selectedMonth.year &&
-                   b.period == _selectedMonth.month,
-            orElse: () => Budget(
-              id: '',
-              categoryId: category.id,
-              limit: 0.0,
-              type: _selectedBudgetType,
-              year: _selectedMonth.year,
-              period: _selectedMonth.month,
-              startDate: DateTime(_selectedMonth.year, _selectedMonth.month, 1),
-              endDate: DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59),
-              userId: '',
-              currency: _currencyProvider.selectedCurrencyCode,
-              spentAmount: 0.0,
-              isRecurring: false,
-            ),
-          );
-          
-          // If no non-recurring budget found, try to find a recurring budget
-          if (matchingBudget.id.isEmpty) {
-            final recurringBudget = _budgets.firstWhere(
-              (b) => b.categoryId == category.id &&
-                     b.type == _selectedBudgetType &&
-                     b.isRecurring &&
-                     b.id.isNotEmpty, // Only real budgets
-              orElse: () => Budget(
-                id: '',
-                categoryId: category.id,
-                limit: 0.0,
-                type: _selectedBudgetType,
-                year: _selectedMonth.year,
-                period: _selectedMonth.month,
-                startDate: DateTime(_selectedMonth.year, _selectedMonth.month, 1),
-                endDate: DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59),
-                userId: '',
-                currency: _currencyProvider.selectedCurrencyCode,
-                spentAmount: 0.0,
-                isRecurring: false,
-              ),
-            );
-            
-            // If a recurring budget is found, create a temporary budget with the correct date range
-            if (recurringBudget.id.isNotEmpty) {
-              final periodRange = _getSelectedPeriodRange();
-              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
-              matchingBudget = recurringBudget.copyWith(
-                id: recurringBudget.id, // Use real ID for recurring budget instance
-                startDate: periodRange['start'],
-                endDate: periodRange['end'],
-              );
-            }
-          }
-          break;
-        case BudgetType.yearly:
-          // First try to find a non-recurring budget for the selected year
-          matchingBudget = _budgets.firstWhere(
-            (b) => b.categoryId == category.id &&
-                   b.type == _selectedBudgetType &&
-                   b.id.isNotEmpty && // Only real budgets
-                   b.year == _selectedYear.year,
-            orElse: () => Budget(
-              id: '',
-              categoryId: category.id,
-              limit: 0.0,
-              type: _selectedBudgetType,
-              year: _selectedYear.year,
-              period: _selectedYear.year,
-              startDate: DateTime(_selectedYear.year, 1, 1),
-              endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
-              userId: '',
-              currency: _currencyProvider.selectedCurrencyCode,
-              spentAmount: 0.0,
-              isRecurring: false,
-            ),
-          );
-          
-          // If no non-recurring budget found, try to find a recurring budget
-          if (matchingBudget.id.isEmpty) {
-            final recurringBudget = _budgets.firstWhere(
-              (b) => b.categoryId == category.id &&
-                     b.type == _selectedBudgetType &&
-                     b.isRecurring &&
-                     b.id.isNotEmpty, // Only real budgets
-              orElse: () => Budget(
-                id: '',
-                categoryId: category.id,
-                limit: 0.0,
-                type: _selectedBudgetType,
-                year: _selectedYear.year,
-                period: _selectedYear.year,
-                startDate: DateTime(_selectedYear.year, 1, 1),
-                endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
-                userId: '',
-                currency: _currencyProvider.selectedCurrencyCode,
-                spentAmount: 0.0,
-                isRecurring: false,
-              ),
-            );
-            
-            // If a recurring budget is found, create a temporary budget with the correct date range
-            if (recurringBudget.id.isNotEmpty) {
-              final periodRange = _getSelectedPeriodRange();
-              // Preserve the underlying recurring budget's ID so operations (e.g., delete) have a valid document path.
-              matchingBudget = recurringBudget.copyWith(
-                id: recurringBudget.id, // Use real ID for recurring budget instance
-                startDate: periodRange['start'],
-                endDate: periodRange['end'],
-              );
-            }
-          }
-          break;
-      }
-      
-      // Always calculate spent amount from transactions, even for placeholder budgets
-      // Ensure the isVacation flag is set correctly for placeholder budgets
-      final adjustedBudget = matchingBudget.copyWith(isVacation: _vacationProvider.isVacationMode);
-      final spentAmount = _calculateSpentAmount(adjustedBudget);
-      
-      return CategoryBudgetData(
-        category: category,
-        budget: matchingBudget.copyWith(spentAmount: spentAmount),
+      // Find the category
+      final category = _expenseCategories.firstWhere(
+        (c) => c.id == categoryId,
+        orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
       );
-    }).toList();
+      
+      // Create budget data for each currency
+      for (final currency in currencies) {
+        final budgetData = _createNormalBudgetForCategoryCurrency(category, currency);
+        budgetDataList.add(budgetData);
+      }
+    }
+    
+    // Sort by category display order, then by currency
+    budgetDataList.sort((a, b) {
+      final categoryComparison = a.category.displayOrder.compareTo(b.category.displayOrder);
+      if (categoryComparison != 0) return categoryComparison;
+      return a.budget.currency.compareTo(b.budget.currency);
+    });
+    
+    return budgetDataList;
+  }
+  
+  // Create normal budget data for a specific category and currency with hierarchical display
+  CategoryBudgetData _createNormalBudgetForCategoryCurrency(Category category, String currency) {
+    // Find the most relevant budget for this category and currency
+    // Priority: Exact match > Recurring match > Placeholder
+    Budget? matchingBudget;
+    
+    // Get all budgets for this category and currency
+    final relevantBudgets = _budgets.where((b) => 
+      b.categoryId == category.id &&
+      b.currency == currency &&
+      b.isVacation == false &&
+      b.id.isNotEmpty
+    ).toList();
+    
+    // Find the best matching budget based on selected period
+    switch (_selectedBudgetType) {
+      case BudgetType.weekly:
+        matchingBudget = _findBestWeeklyBudget(relevantBudgets);
+        break;
+      case BudgetType.monthly:
+        matchingBudget = _findBestMonthlyBudget(relevantBudgets);
+        break;
+      case BudgetType.yearly:
+        matchingBudget = _findBestYearlyBudget(relevantBudgets);
+        break;
+    }
+    
+    // If no budget found, create a placeholder
+    if (matchingBudget == null || matchingBudget.id.isEmpty) {
+      final periodRange = _getSelectedPeriodRange();
+      matchingBudget = Budget(
+        id: '',
+        categoryId: category.id,
+        limit: 0.0,
+        type: _selectedBudgetType,
+        year: _getCurrentYear(),
+        period: _getCurrentPeriod(),
+        startDate: periodRange['start'] ?? DateTime.now(),
+        endDate: periodRange['end'] ?? DateTime.now(),
+        userId: '',
+        currency: currency,
+        spentAmount: 0.0,
+        isRecurring: false,
+        isVacation: false,
+      );
+    }
+    
+    // Calculate spent amount for this specific currency and period
+    final spentAmount = _calculateSpentAmountForCurrency(matchingBudget, currency);
+    
+    return CategoryBudgetData(
+      category: category,
+      budget: matchingBudget.copyWith(spentAmount: spentAmount),
+    );
+  }
+  
+  // Find the best weekly budget for the selected week
+  Budget? _findBestWeeklyBudget(List<Budget> budgets) {
+    // Priority 1: Exact weekly budget for the selected week
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.weekly && _isWeekInSelectedPeriod(budget)) {
+        return budget;
+      }
+    }
+    
+    // Priority 2: Recurring weekly budget
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.weekly && budget.isRecurring) {
+        final periodRange = _getSelectedPeriodRange();
+        return budget.copyWith(
+          id: budget.id, // Keep original ID for deletion
+          startDate: periodRange['start'],
+          endDate: periodRange['end'],
+        );
+      }
+    }
+    
+    // Priority 3: Monthly budget that covers this week
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.monthly && _isWeekInMonthlyPeriod(budget)) {
+        return budget.copyWith(
+          id: budget.id, // Keep original ID for deletion
+          type: BudgetType.weekly, // Mark as weekly for display
+        );
+      }
+    }
+    
+    // Priority 4: Yearly budget that covers this week
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.yearly && _isWeekInYearlyPeriod(budget)) {
+        return budget.copyWith(
+          id: budget.id, // Keep original ID for deletion
+          type: BudgetType.weekly, // Mark as weekly for display
+        );
+      }
+    }
+    
+    return null;
+  }
+  
+  // Find the best monthly budget for the selected month
+  Budget? _findBestMonthlyBudget(List<Budget> budgets) {
+    // Priority 1: Exact monthly budget for the selected month
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.monthly && 
+          budget.year == _selectedMonth.year && 
+          budget.period == _selectedMonth.month) {
+        return budget;
+      }
+    }
+    
+    // Priority 2: Recurring monthly budget
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.monthly && budget.isRecurring) {
+        final periodRange = _getSelectedPeriodRange();
+        return budget.copyWith(
+          id: budget.id, // Keep original ID for deletion
+          startDate: periodRange['start'],
+          endDate: periodRange['end'],
+        );
+      }
+    }
+    
+    // Priority 3: Weekly budgets that fall within this month
+    final weeklyBudgets = budgets.where((b) => 
+      b.type == BudgetType.weekly && _isWeekInMonthlyPeriod(b)
+    ).toList();
+    
+    if (weeklyBudgets.isNotEmpty) {
+      // Combine weekly budgets or return the first one
+      final firstWeekly = weeklyBudgets.first;
+      return firstWeekly.copyWith(
+        id: firstWeekly.id, // Keep original ID for deletion
+        type: BudgetType.monthly, // Mark as monthly for display
+      );
+    }
+    
+    // Priority 4: Yearly budget that covers this month
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.yearly && _isMonthInYearlyPeriod(budget)) {
+        return budget.copyWith(
+          id: budget.id, // Keep original ID for deletion
+          type: BudgetType.monthly, // Mark as monthly for display
+        );
+      }
+    }
+    
+    return null;
+  }
+  
+  // Find the best yearly budget for the selected year
+  Budget? _findBestYearlyBudget(List<Budget> budgets) {
+    // Priority 1: Exact yearly budget for the selected year
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.yearly && budget.year == _selectedYear.year) {
+        return budget;
+      }
+    }
+    
+    // Priority 2: Recurring yearly budget
+    for (final budget in budgets) {
+      if (budget.type == BudgetType.yearly && budget.isRecurring) {
+        final periodRange = _getSelectedPeriodRange();
+        return budget.copyWith(
+          id: budget.id, // Keep original ID for deletion
+          startDate: periodRange['start'],
+          endDate: periodRange['end'],
+        );
+      }
+    }
+    
+    // Priority 3: Monthly budgets that fall within this year
+    final monthlyBudgets = budgets.where((b) => 
+      b.type == BudgetType.monthly && _isMonthInYearlyPeriod(b)
+    ).toList();
+    
+    if (monthlyBudgets.isNotEmpty) {
+      // Combine monthly budgets or return the first one
+      final firstMonthly = monthlyBudgets.first;
+      return firstMonthly.copyWith(
+        id: firstMonthly.id, // Keep original ID for deletion
+        type: BudgetType.yearly, // Mark as yearly for display
+      );
+    }
+    
+    // Priority 4: Weekly budgets that fall within this year
+    final weeklyBudgets = budgets.where((b) => 
+      b.type == BudgetType.weekly && _isWeekInYearlyPeriod(b)
+    ).toList();
+    
+    if (weeklyBudgets.isNotEmpty) {
+      // Combine weekly budgets or return the first one
+      final firstWeekly = weeklyBudgets.first;
+      return firstWeekly.copyWith(
+        id: firstWeekly.id, // Keep original ID for deletion
+        type: BudgetType.yearly, // Mark as yearly for display
+      );
+    }
+    
+    return null;
+  }
+  
+  // Helper methods for period checking
+  bool _isWeekInMonthlyPeriod(Budget budget) {
+    if (budget.type != BudgetType.weekly) return false;
+    return budget.startDate.year == _selectedMonth.year && 
+           budget.startDate.month == _selectedMonth.month;
+  }
+  
+  bool _isWeekInYearlyPeriod(Budget budget) {
+    if (budget.type != BudgetType.weekly) return false;
+    return budget.startDate.year == _selectedYear.year;
+  }
+  
+  bool _isMonthInYearlyPeriod(Budget budget) {
+    if (budget.type != BudgetType.monthly) return false;
+    return budget.year == _selectedYear.year;
+  }
+  
+  int _getCurrentYear() {
+    switch (_selectedBudgetType) {
+      case BudgetType.weekly:
+        return _selectedWeeklyMonth.year;
+      case BudgetType.monthly:
+        return _selectedMonth.year;
+      case BudgetType.yearly:
+        return _selectedYear.year;
+    }
+  }
+  
+  int _getCurrentPeriod() {
+    switch (_selectedBudgetType) {
+      case BudgetType.weekly:
+        return _selectedWeek;
+      case BudgetType.monthly:
+        return _selectedMonth.month;
+      case BudgetType.yearly:
+        return _selectedYear.year;
+    }
   }
   
   // Helper method to check if a weekly budget falls within the selected week period
@@ -944,15 +1090,17 @@ class BudgetProvider with ChangeNotifier {
       // Use provided currency or fall back to provider's currency
       final budgetCurrency = currency ?? _currencyProvider.selectedCurrencyCode;
       
-      final budgetId = Budget.generateId(userId, categoryId, type, year, period, isVacation, isRecurring);
+      final budgetId = Budget.generateId(userId, categoryId, type, year, period, isVacation, isRecurring, currency: budgetCurrency);
       print('BudgetProvider.addBudget: generated budgetId=$budgetId');
       
-      // Check for duplicate budget
+      // Check for duplicate budget (same category, type, period, AND currency)
       final existingBudget = _budgets.firstWhere(
         (b) => b.categoryId == categoryId &&
                b.type == type &&
                b.year == year &&
-               b.period == period,
+               b.period == period &&
+               b.currency == budgetCurrency &&
+               b.isVacation == isVacation, // Also check vacation mode to prevent conflicts
         orElse: () => Budget(
           id: '',
           categoryId: '',
@@ -968,8 +1116,8 @@ class BudgetProvider with ChangeNotifier {
       );
       
       if (existingBudget.id.isNotEmpty) {
-        print('BudgetProvider.addBudget: duplicate budget found for category=$categoryId, type=$type, year=$year, period=$period');
-        throw Exception('A budget for this category already exists for this period.');
+        print('BudgetProvider.addBudget: duplicate budget found for category=$categoryId, type=$type, year=$year, period=$period, currency=$budgetCurrency, isVacation=$isVacation');
+        throw Exception('A budget for this category and currency already exists for this period.');
       }
       
       final newBudget = Budget(

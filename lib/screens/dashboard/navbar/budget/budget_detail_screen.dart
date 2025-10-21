@@ -13,6 +13,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:intl/intl.dart';
@@ -252,26 +253,56 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                           
                           // If budget ID is empty (placeholder budget), try to find a real budget
                           if (effectiveBudgetId.isEmpty) {
-                            // First, try to find any budget for this category and type
-                            final realBudget = provider.budgets.firstWhere(
-                              (b) => b.categoryId == widget.category.id &&
-                                     b.type == widget.budget.type &&
-                                     b.id.isNotEmpty,
-                              orElse: () => Budget(
-                                id: '',
-                                categoryId: '',
-                                limit: 0.0,
-                                type: BudgetType.monthly,
-                                year: 0,
-                                period: 0,
-                                startDate: DateTime.now(),
-                                endDate: DateTime.now(),
-                                userId: '',
-                                currency: '',
-                                spentAmount: 0.0,
-                                isRecurring: false,
-                              ),
-                            );
+                            // For vacation mode, be more specific about which budget to find
+                            final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+                            Budget realBudget;
+                            
+                            if (vacationProvider.isVacationMode) {
+                              // In vacation mode, look for vacation budgets specifically
+                              realBudget = provider.budgets.firstWhere(
+                                (b) => b.categoryId == widget.category.id &&
+                                       b.type == widget.budget.type &&
+                                       b.id.isNotEmpty &&
+                                       b.isVacation == true &&
+                                       b.currency == widget.budget.currency,
+                                orElse: () => Budget(
+                                  id: '',
+                                  categoryId: '',
+                                  limit: 0.0,
+                                  type: BudgetType.monthly,
+                                  year: 0,
+                                  period: 0,
+                                  startDate: DateTime.now(),
+                                  endDate: DateTime.now(),
+                                  userId: '',
+                                  currency: '',
+                                  spentAmount: 0.0,
+                                  isRecurring: false,
+                                ),
+                              );
+                            } else {
+                              // In normal mode, look for normal budgets
+                              realBudget = provider.budgets.firstWhere(
+                                (b) => b.categoryId == widget.category.id &&
+                                       b.type == widget.budget.type &&
+                                       b.id.isNotEmpty &&
+                                       b.isVacation == false,
+                                orElse: () => Budget(
+                                  id: '',
+                                  categoryId: '',
+                                  limit: 0.0,
+                                  type: BudgetType.monthly,
+                                  year: 0,
+                                  period: 0,
+                                  startDate: DateTime.now(),
+                                  endDate: DateTime.now(),
+                                  userId: '',
+                                  currency: '',
+                                  spentAmount: 0.0,
+                                  isRecurring: false,
+                                ),
+                              );
+                            }
                             
                             if (realBudget.id.isNotEmpty) {
                               effectiveBudgetId = realBudget.id;

@@ -754,26 +754,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           final accountId = await _firestoreService
                              .createAccount(newAccount);
 
-                          // Create vacation budgets for all expense categories if this is a vacation account
-                          if (widget.isCreatingVacationAccount == true && newAccount.isVacationAccount == true) {
-                            try {
-                              // Create vacation budgets for all expense categories (no specific currency for vacation accounts)
-                              await _firestoreService.createVacationBudgetsForAllExpenseCategories(
-                                currency: 'MULTI', // Use special flag for multi-currency vacation accounts
-                                type: BudgetType.monthly,
-                              );
-                            } catch (e) {
-                              // Show error message but don't block the UI flow
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to create vacation budgets: $e'),
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                );
-                              }
-                            }
-                          }
+                          // Note: Vacation budgets are now created dynamically based on transactions per currency per category
+                          // No need to create budgets upfront during vacation account creation
 
                           // Check if 'include_in_total' is enabled and create initial balance transaction
                           // final includeInTotal =

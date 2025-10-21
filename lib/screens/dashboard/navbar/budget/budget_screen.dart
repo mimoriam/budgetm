@@ -13,7 +13,6 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/add_budget_screen.dart';
 import 'dart:ui';
-import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:currency_picker/currency_picker.dart';
 
 class BudgetScreen extends StatefulWidget {
@@ -26,9 +25,9 @@ class BudgetScreen extends StatefulWidget {
 class _BudgetScreenState extends State<BudgetScreen>
     with WidgetsBindingObserver {
   late ScrollController _scrollController;
-  double _lastScrollOffset = 0.0;
 
   VacationProvider? _vacationProvider;
+  String? _selectedChartCurrency; // For chart currency selection
 
   @override
   void initState() {
@@ -36,7 +35,6 @@ class _BudgetScreenState extends State<BudgetScreen>
     WidgetsBinding.instance.addObserver(this);
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
-    _lastScrollOffset = 0.0;
 
     // Initialize budget provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -397,64 +395,6 @@ class _BudgetScreenState extends State<BudgetScreen>
     );
   }
 
-  Future<void> _showQuickJumpPicker(
-    BuildContext context,
-    BudgetProvider provider,
-    DatePickerMode mode,
-  ) async {
-    DateTime initialDate;
-    String helpText;
-
-    switch (provider.selectedBudgetType) {
-      case BudgetType.weekly:
-        initialDate = DateTime.now();
-        helpText = 'Select Date';
-        break;
-      case BudgetType.monthly:
-        initialDate = provider.selectedMonth;
-        helpText = 'Select Month';
-        break;
-      case BudgetType.yearly:
-        initialDate = provider.selectedYear;
-        helpText = 'Select Year';
-        break;
-    }
-
-    print(
-      'DEBUG _showQuickJumpPicker: type=${provider.selectedBudgetType}, mode=$mode, initialDate=$initialDate, helpText=$helpText',
-    );
-
-    final navbarProvider = Provider.of<NavbarVisibilityProvider>(
-      context,
-      listen: false,
-    );
-    navbarProvider.setNavBarVisibility(false);
-
-    try {
-      final pickedDate = await showDatePicker(
-        context: context,
-        initialDate: initialDate,
-        firstDate: DateTime(2020),
-        lastDate: DateTime(2100),
-        initialDatePickerMode: mode,
-        helpText: helpText,
-      );
-
-      print('DEBUG _showQuickJumpPicker: pickedDate=$pickedDate');
-
-      if (pickedDate != null) {
-        provider.setSelectedDate(pickedDate);
-        print(
-          'DEBUG _showQuickJumpPicker: called setSelectedDate with $pickedDate',
-        );
-      }
-    } finally {
-      if (context.mounted) {
-        navbarProvider.setNavBarVisibility(true);
-      }
-    }
-  }
-
   Future<void> _showPrettyCalendarPicker(
     BuildContext context,
     BudgetProvider provider,
@@ -708,6 +648,14 @@ class _BudgetScreenState extends State<BudgetScreen>
       return _buildEmptyState(context);
     }
 
+    // Get available currencies from the data
+    final availableCurrencies = _getAvailableCurrencies(displayData);
+    
+    // Set default chart currency if not set
+    if (_selectedChartCurrency == null && availableCurrencies.isNotEmpty) {
+      _selectedChartCurrency = availableCurrencies.first;
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -739,6 +687,11 @@ class _BudgetScreenState extends State<BudgetScreen>
                 ),
             ],
           ),
+          // Currency dropdown
+          if (availableCurrencies.length > 1) ...[
+            const SizedBox(height: 12),
+            _buildCurrencyDropdown(availableCurrencies),
+          ],
           const SizedBox(height: 20),
           SizedBox(
             height: 120,
@@ -774,16 +727,25 @@ class _BudgetScreenState extends State<BudgetScreen>
   List<PieChartSectionData> _buildPieChartSections(
     List<CategoryBudgetData> data,
   ) {
-    final total = data.fold(0.0, (sum, item) => sum + item.spentAmount);
+    // Filter data to only include items with the selected currency
+    final filteredData = _selectedChartCurrency != null
+        ? data.where((item) => item.budget.currency == _selectedChartCurrency).toList()
+        : data;
+    
+    if (filteredData.isEmpty) {
+      return [];
+    }
+    
+    final total = filteredData.fold(0.0, (sum, item) => sum + item.spentAmount);
     final useEqualSlices = total <= 0;
     if (useEqualSlices) {
       // Diagnostic: total is zero (no spending yet). Render equal slices and avoid division by zero.
       print(
-        'BudgetScreen: totalSpent==0 - rendering equal slices for ${data.length} categories',
+        'BudgetScreen: totalSpent==0 - rendering equal slices for ${filteredData.length} categories',
       );
     }
 
-    return data.map((item) {
+    return filteredData.map((item) {
       final value = useEqualSlices ? 1.0 : item.spentAmount;
       final percentage = useEqualSlices
           ? 0.0
@@ -804,8 +766,13 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   Widget _buildPieChartLegend(List<CategoryBudgetData> data) {
+    // Filter data to only include items with the selected currency
+    final filteredData = _selectedChartCurrency != null
+        ? data.where((item) => item.budget.currency == _selectedChartCurrency).toList()
+        : data;
+    
     return Column(
-      children: data.map((item) {
+      children: filteredData.map((item) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(
@@ -996,7 +963,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              data.categoryName,
+                              vacationProvider.isVacationMode 
+                                ? '${data.categoryName} (${data.budget.currency})'
+                                : data.categoryName,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1006,12 +975,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                               overflow: TextOverflow.visible,
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              '$transactionCount transactions',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  '$transactionCount transactions',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                if (!vacationProvider.isVacationMode && _shouldShowBudgetTypeTag(data.budget)) ...[
+                                  const SizedBox(width: 8),
+                                  _buildBudgetTypeTag(data.budget),
+                                ],
+                              ],
                             ),
                           ],
                         ),
@@ -1066,12 +1043,20 @@ class _BudgetScreenState extends State<BudgetScreen>
                                   overflow: TextOverflow.visible,
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  '$transactionCount transactions',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '$transactionCount transactions',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    if (_shouldShowBudgetTypeTag(data.budget)) ...[
+                                      const SizedBox(width: 8),
+                                      _buildBudgetTypeTag(data.budget),
+                                    ],
+                                  ],
                                 ),
                               ],
                             ),
@@ -1383,6 +1368,111 @@ class _BudgetScreenState extends State<BudgetScreen>
       default:
         return Icons.category;
     }
+  }
+  
+  // Helper method to determine if budget type tag should be shown
+  bool _shouldShowBudgetTypeTag(Budget budget) {
+    // Show tag if the budget's original type is different from current view
+    final currentProvider = Provider.of<BudgetProvider>(context, listen: false);
+    return budget.type != currentProvider.selectedBudgetType;
+  }
+  
+  // Helper method to build budget type tag
+  Widget _buildBudgetTypeTag(Budget budget) {
+    String tagText;
+    Color tagColor;
+    
+    switch (budget.type) {
+      case BudgetType.weekly:
+        tagText = 'Weekly';
+        tagColor = Colors.blue;
+        break;
+      case BudgetType.monthly:
+        tagText = 'Monthly';
+        tagColor = Colors.green;
+        break;
+      case BudgetType.yearly:
+        tagText = 'Yearly';
+        tagColor = Colors.purple;
+        break;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: tagColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: tagColor.withOpacity(0.3), width: 1),
+      ),
+      child: Text(
+        tagText,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: tagColor,
+        ),
+      ),
+    );
+  }
+
+  // Helper method to get available currencies from budget data
+  List<String> _getAvailableCurrencies(List<CategoryBudgetData> data) {
+    final currencies = data.map((item) => item.budget.currency).toSet().toList();
+    currencies.sort(); // Sort for consistent ordering
+    return currencies;
+  }
+
+  // Helper method to build currency dropdown
+  Widget _buildCurrencyDropdown(List<String> availableCurrencies) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.currency_exchange, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            'Currency:',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedChartCurrency,
+              isDense: true,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+              items: availableCurrencies.map((String currency) {
+                final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
+                return DropdownMenuItem<String>(
+                  value: currency,
+                  child: Text('$currencySymbol $currency'),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedChartCurrency = newValue;
+                  });
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
