@@ -1,4 +1,3 @@
-import 'package:budgetm/screens/auth/first_time_settings/choose_theme_screen.dart';
 import 'package:budgetm/screens/auth/first_time_settings/select_currency_screen.dart';
 import 'package:budgetm/screens/auth/login/login_screen.dart';
 import 'package:budgetm/screens/dashboard/main_screen.dart';
@@ -19,12 +18,8 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   // SharedPreferences keys
   static const String _ONBOARDING_DONE_KEY = 'onboardingDone';
-  static const String _THEME_CHOSEN_KEY = 'theme_chosen';
-  static const String _USER_CURRENCY_KEY = 'selectedCurrencyCode';
 
   final FirebaseAuthService _authService = FirebaseAuthService();
-  bool? _cachedAuthStatus;
-  Map<String, bool>? _cachedSetupStatus;
   bool? _cachedOnboardingStatus;
   bool _preferencesLoaded = false;
   Future<bool>? _isInitializedFuture;
@@ -44,14 +39,6 @@ class _AuthGateState extends State<AuthGate> {
     final prefs = await SharedPreferences.getInstance();
     _cachedOnboardingStatus = prefs.getBool(_ONBOARDING_DONE_KEY) ?? false;
     
-    final bool themeChosen = prefs.getBool(_THEME_CHOSEN_KEY) ?? false;
-    final bool currencyChosen = (prefs.getString(_USER_CURRENCY_KEY) != null);
-    
-    _cachedSetupStatus = {
-      'themeChosen': themeChosen,
-      'currencyChosen': currencyChosen,
-    };
-    
     // Note: Category initialization moved to SelectCurrencyScreen to ensure user is authenticated
     
     setState(() {
@@ -63,28 +50,6 @@ class _AuthGateState extends State<AuthGate> {
     return _cachedOnboardingStatus ?? false;
   }
 
-  Map<String, bool> _checkSetupStatus() {
-    return _cachedSetupStatus ?? {'themeChosen': false, 'currencyChosen': false};
-  }
-
-  // Check if user is authenticated without triggering loading indicators
-  bool _isUserAuthenticated() {
-    // Return cached auth status if available
-    if (_cachedAuthStatus != null) {
-      return _cachedAuthStatus!;
-    }
-    
-    final currentUser = FirebaseAuth.instance.currentUser;
-    _cachedAuthStatus = currentUser != null;
-    return _cachedAuthStatus!;
-  }
-
-  // Reset cache when needed (e.g., after login/logout)
-  void _resetCache() {
-    _cachedAuthStatus = null;
-    _cachedSetupStatus = null;
-    _isInitializedFuture = null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,12 +82,10 @@ class _AuthGateState extends State<AuthGate> {
         if (!authSnapshot.hasData) {
           // User logged out, reset the future
           _isInitializedFuture = null;
-          _cachedAuthStatus = false;
           return const LoginScreen();
         }
         
         // If user is logged in, check Firestore initialization status via FutureBuilder
-        _cachedAuthStatus = true;
         final user = authSnapshot.data!;
         
         // If future is not set or belongs to a different user, create a new one
@@ -143,15 +106,11 @@ class _AuthGateState extends State<AuthGate> {
               return const MainScreen();
             }
             // Not initialized yet: send user to first-time setup flow
-            return const ChooseThemeScreen();
+            return const SelectCurrencyScreen();
           },
         );
       },
     );
   }
   
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-  }
 }

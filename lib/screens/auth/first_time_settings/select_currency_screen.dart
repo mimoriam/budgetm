@@ -18,7 +18,6 @@ class SelectCurrencyScreen extends StatefulWidget {
 class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
   Currency? _selectedCurrency;
   bool _isLoading = false;
-  final FirestoreService _firestoreService = FirestoreService.instance;
 
   @override
   void initState() {
@@ -41,51 +40,11 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Custom AppBar
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.gradientEnd.withOpacity(0.8),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.black87,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Back',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20), // Added padding here
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
