@@ -300,13 +300,29 @@ class _CategoryScreenState extends State<CategoryScreen> {
           category.name ?? 'Unnamed Category',
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
-        trailing: IconButton(
-          icon: const HugeIcon(
-            icon: HugeIcons.strokeRoundedDragDropVertical,
-            color: Colors.grey,
-            size: 24,
-          ),
-          onPressed: null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Show delete icon only for user-created categories
+            if (!category.isDefault)
+              IconButton(
+                icon: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedDelete01,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                onPressed: () => _showDeleteConfirmationDialog(category),
+              ),
+            // Always show drag handle
+            IconButton(
+              icon: const HugeIcon(
+                icon: HugeIcons.strokeRoundedDragDropVertical,
+                color: Colors.grey,
+                size: 24,
+              ),
+              onPressed: null,
+            ),
+          ],
         ),
       ),
     );
@@ -367,15 +383,94 @@ class _CategoryScreenState extends State<CategoryScreen> {
     }
   }
 
+  Future<void> _showDeleteConfirmationDialog(Category category) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Category'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Are you sure you want to delete "${category.name}"?'),
+              const SizedBox(height: 12),
+              const Text(
+                '⚠️ Warning: This will also delete ALL transactions that use this category, including both normal and vacation mode transactions.',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await _deleteCategory(category);
+    }
+  }
+
   Future<void> _deleteCategory(Category category) async {
     try {
-      await _firestoreService.deleteCategory(category.id);
-      await _loadCategories(); // Reload categories after deletion
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Deleting category and transactions...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      await _firestoreService.deleteCategoryWithTransactions(category.id);
+      
+      // Reload categories and refresh provider
+      await _loadCategories();
+      Provider.of<BudgetProvider>(context, listen: false).refreshCategories();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Category and associated transactions deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       print('Error deleting category: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete category: $e')),
+          SnackBar(
+            content: Text('Failed to delete category: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

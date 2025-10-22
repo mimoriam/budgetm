@@ -93,4 +93,10 @@ class Category {
   int get hashCode {
     return Object.hash(id, name, type, icon, color, displayOrder);
   }
+
+  /// Returns true if this is a default category (cannot be deleted)
+  /// Default categories have IDs starting with "expense-" or "income-"
+  bool get isDefault {
+    return id.startsWith('expense-') || id.startsWith('income-');
+  }
 }

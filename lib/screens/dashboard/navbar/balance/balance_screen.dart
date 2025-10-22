@@ -1044,12 +1044,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           color: AppColors.secondaryTextColorLight,
                         ),
                   ),
-                  Text(
-                    '$transactionCount transactions',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                        ),
-                  ),
+                  // Text(
+                  //   '$transactionCount transactions',
+                  //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  //         color: AppColors.secondaryTextColorLight,
+                  //       ),
+                  // ),
                   if (creditLimit != null)
                     Text(
                       'Credit Limit: ${_getAccountCurrencySymbol(account)}${creditLimit.toStringAsFixed(2)}',

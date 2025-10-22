@@ -1351,6 +1351,42 @@ class FirestoreService {
     }
   }
 
+  // Delete category and all associated transactions
+  Future<void> deleteCategoryWithTransactions(String categoryId) async {
+    try {
+      // First, get all transactions that use this category
+      final normalTransactionsQuery = await _transactionsCollection
+          .where('categoryId', isEqualTo: categoryId)
+          .where('isVacation', isEqualTo: false)
+          .get();
+      
+      final vacationTransactionsQuery = await _transactionsCollection
+          .where('categoryId', isEqualTo: categoryId)
+          .where('isVacation', isEqualTo: true)
+          .get();
+      
+      final allTransactions = [
+        ...normalTransactionsQuery.docs.map((doc) => doc.data()),
+        ...vacationTransactionsQuery.docs.map((doc) => doc.data()),
+      ];
+      
+      print('Found ${allTransactions.length} transactions to delete for category $categoryId');
+      
+      // Delete all transactions first (this will handle account balance updates)
+      for (final transaction in allTransactions) {
+        await deleteTransaction(transaction.id);
+      }
+      
+      // Finally, delete the category
+      await _categoriesCollection.doc(categoryId).delete();
+      
+      print('Successfully deleted category $categoryId and ${allTransactions.length} associated transactions');
+    } catch (e) {
+      print('Error deleting category with transactions: $e');
+      rethrow;
+    }
+  }
+
   // Stream categories (real-time updates)
   Stream<List<Category>> streamCategories() {
     try {
