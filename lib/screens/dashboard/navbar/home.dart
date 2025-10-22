@@ -56,27 +56,27 @@ class MonthPageData {
 
   // Create a loading state
   factory MonthPageData.loading() => MonthPageData(
-    transactions: [],
-    totalIncome: 0.0,
-    totalExpenses: 0.0,
-    transactionsWithAccounts: [],
-    upcomingTasks: [],
-    incomeByCurrency: {},
-    expensesByCurrency: {},
-    isLoading: true,
-  );
+        transactions: [],
+        totalIncome: 0.0,
+        totalExpenses: 0.0,
+        transactionsWithAccounts: [],
+        upcomingTasks: [],
+        incomeByCurrency: {},
+        expensesByCurrency: {},
+        isLoading: true,
+      );
 
   // Create an error state
   factory MonthPageData.error(String error) => MonthPageData(
-    transactions: [],
-    totalIncome: 0.0,
-    totalExpenses: 0.0,
-    transactionsWithAccounts: [],
-    upcomingTasks: [],
-    incomeByCurrency: {},
-    expensesByCurrency: {},
-    error: error,
-  );
+        transactions: [],
+        totalIncome: 0.0,
+        totalExpenses: 0.0,
+        transactionsWithAccounts: [],
+        upcomingTasks: [],
+        incomeByCurrency: {},
+        expensesByCurrency: {},
+        error: error,
+      );
 }
 
 // Data structure to hold a transaction with its associated account and category
@@ -180,7 +180,8 @@ class MonthPageProvider extends ChangeNotifier {
           .map((tx) => tx.transaction.id)
           .take(8)
           .toList();
-      print('DEBUG: MonthPageProvider.initialize - txWithAccounts=${data.transactionsWithAccounts.length}, newHash=$currentDataHash, lastHash=$_lastDataHash, isInitialized=$_isInitialized, hasReachedEnd=$_hasReachedEnd, currentPage=$_currentPage, sampleIds=$sampleIds');
+      print(
+          'DEBUG: MonthPageProvider.initialize - txWithAccounts=${data.transactionsWithAccounts.length}, newHash=$currentDataHash, lastHash=$_lastDataHash, isInitialized=$_isInitialized, hasReachedEnd=$_hasReachedEnd, currentPage=$_currentPage, sampleIds=$sampleIds');
     } catch (e) {
       print('DEBUG: MonthPageProvider.initialize - logging error: $e');
     }
@@ -324,11 +325,11 @@ class MonthPageDataManager {
   MonthPageDataManager(this._vacationProvider) {
     // Initialize the shared streams immediately.
     _allAccountsStream = _firestoreService.streamAccounts().shareReplay(
-      maxSize: 1,
-    );
+          maxSize: 1,
+        );
     _allCategoriesStream = _firestoreService.streamCategories().shareReplay(
-      maxSize: 1,
-    );
+          maxSize: 1,
+        );
   }
 
   Stream<MonthPageData> getStreamForMonth(
@@ -337,21 +338,22 @@ class MonthPageDataManager {
     bool isVacation,
   ) {
     // Get the active vacation account ID when in vacation mode
-    final activeVacationAccountId = isVacation
-        ? _vacationProvider.activeVacationAccountId
-        : null;
+    final activeVacationAccountId =
+        isVacation ? _vacationProvider.activeVacationAccountId : null;
 
     // Create a composite key that includes monthIndex, isVacation status, and accountId
     final cacheKey =
         '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}';
 
-    print('DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId');
+    print(
+        'DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId');
     print('DEBUG: Cache key: $cacheKey');
 
     // In vacation mode without an active account, bypass caching to avoid stale 'all' cache reuse.
     final bool bypassCache = isVacation && (activeVacationAccountId == null);
     if (bypassCache) {
-      print('DEBUG: Bypassing cache for vacation mode without active account (key=$cacheKey)');
+      print(
+          'DEBUG: Bypassing cache for vacation mode without active account (key=$cacheKey)');
     }
 
     // If a stream for this specific combination is already in the cache, return it.
@@ -359,7 +361,7 @@ class MonthPageDataManager {
       print('DEBUG: Using cached stream for key: $cacheKey');
       return _pageStreamCache[cacheKey]!;
     }
-    
+
     print('DEBUG: Creating new stream for key: $cacheKey');
 
     // If not cached, create a new stream for the month.
@@ -386,119 +388,125 @@ class MonthPageDataManager {
               endOfMonth,
               isVacation: true,
             ),
-            (List<FirestoreTransaction> normalTxns, List<FirestoreTransaction> vacationTxns) {
+            (List<FirestoreTransaction> normalTxns,
+                List<FirestoreTransaction> vacationTxns) {
               // Combine both normal and vacation transactions
               return [...normalTxns, ...vacationTxns];
             },
           );
 
-    final stream =
-        Rx.combineLatest4(
-              transactionStream,
-              _firestoreService.streamUpcomingTasksForDateRange(
-                startOfMonth,
-                endOfMonth,
-              ),
-              _allAccountsStream, // <-- Use the shared/replayed stream
-              _allCategoriesStream, // <-- Use the shared/replayed stream
-              (
-                List<FirestoreTransaction> transactions,
-                List<FirestoreTask> tasks,
-                List<FirestoreAccount> accounts,
-                List<Category> categories,
-              ) {
-                // Sort transactions by date in descending order (newest first)
-                transactions.sort((a, b) => b.date.compareTo(a.date));
+    final stream = Rx.combineLatest4(
+      transactionStream,
+      _firestoreService.streamUpcomingTasksForDateRange(
+        startOfMonth,
+        endOfMonth,
+      ),
+      _allAccountsStream, // <-- Use the shared/replayed stream
+      _allCategoriesStream, // <-- Use the shared/replayed stream
+      (
+        List<FirestoreTransaction> transactions,
+        List<FirestoreTask> tasks,
+        List<FirestoreAccount> accounts,
+        List<Category> categories,
+      ) {
+        // Sort transactions by date in descending order (newest first)
+        transactions.sort((a, b) => b.date.compareTo(a.date));
 
-                // Create maps for accounts and categories
-                final accountMap = {
-                  for (var account in accounts) account.id: account,
-                };
-                final categoryMap = {
-                  for (var category in categories) category.id: category,
-                };
+        // Create maps for accounts and categories
+        final accountMap = {
+          for (var account in accounts) account.id: account,
+        };
+        final categoryMap = {
+          for (var category in categories) category.id: category,
+        };
 
-                // Create TransactionWithAccount objects
-                final transactionsWithAccounts = transactions.map((
-                  transaction,
-                ) {
-                  return TransactionWithAccount(
-                    transaction: transaction,
-                    account: transaction.accountId != null
-                        ? accountMap[transaction.accountId]
-                        : null,
-                    category: transaction.categoryId != null
-                        ? categoryMap[transaction.categoryId]
-                        : null,
-                  );
-                }).toList();
+        // Create TransactionWithAccount objects
+        final transactionsWithAccounts = transactions.map((
+          transaction,
+        ) {
+          return TransactionWithAccount(
+            transaction: transaction,
+            account: transaction.accountId != null
+                ? accountMap[transaction.accountId]
+                : null,
+            category: transaction.categoryId != null
+                ? categoryMap[transaction.categoryId]
+                : null,
+          );
+        }).toList();
 
-                // Sort transactions within each date group by time in descending order
-                transactionsWithAccounts.sort(
-                  (a, b) => b.transaction.date.compareTo(a.transaction.date),
-                );
+        // Sort transactions within each date group by time in descending order
+        transactionsWithAccounts.sort(
+          (a, b) => b.transaction.date.compareTo(a.transaction.date),
+        );
 
-                // Calculate totals client-side.
-                // The 'paid' status of a transaction is for informational purposes only and does not
-                // affect the calculation of total income and expenses. All transactions, paid or unpaid,
-                // are included in these totals.
-                // IMPORTANT: Only include transactions that match the current mode (vacation vs normal)
-                final totalIncome = transactions
-                    .where((transaction) => transaction.type == 'income')
-                    .fold<double>(
-                        0.0, (sum, transaction) => sum + transaction.amount);
+        // Calculate totals client-side.
+        // The 'paid' status of a transaction is for informational purposes only and does not
+        // affect the calculation of total income and expenses. All transactions, paid or unpaid,
+        // are included in these totals.
+        // IMPORTANT: Only include transactions that match the current mode (vacation vs normal)
+        final totalIncome = transactions
+            .where((transaction) => transaction.type == 'income')
+            .fold<double>(
+                0.0, (sum, transaction) => sum + transaction.amount);
 
-                final totalExpenses = transactions
-                    .where((transaction) => transaction.type == 'expense')
-                    .fold<double>(
-                        0.0, (sum, transaction) => sum + transaction.amount);
+        final totalExpenses = transactions
+            .where((transaction) => transaction.type == 'expense')
+            .fold<double>(
+                0.0, (sum, transaction) => sum + transaction.amount);
 
-                // Group transactions by currency and calculate totals for each currency
-                final Map<String, double> incomeByCurrency = {};
-                final Map<String, double> expensesByCurrency = {};
+        // Group transactions by currency and calculate totals for each currency
+        final Map<String, double> incomeByCurrency = {};
+        final Map<String, double> expensesByCurrency = {};
 
-                for (final transaction in transactions) {
-                  final currency = transaction.currency;
-                  if (currency.isEmpty) continue;
+        for (final transaction in transactions) {
+          final currency = transaction.currency;
+          if (currency.isEmpty) continue;
 
-                  if (transaction.type == 'income') {
-                    incomeByCurrency[currency] = (incomeByCurrency[currency] ?? 0.0) + transaction.amount;
-                  } else if (transaction.type == 'expense') {
-                    expensesByCurrency[currency] = (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
-                  }
-                }
+          if (transaction.type == 'income') {
+            incomeByCurrency[currency] =
+                (incomeByCurrency[currency] ?? 0.0) + transaction.amount;
+          } else if (transaction.type == 'expense') {
+            expensesByCurrency[currency] =
+                (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
+          }
+        }
 
-                // DEBUG: emit stats before returning MonthPageData to validate stream updates
-                try {
-                  final linkedCount = transactions.where((transaction) => transaction.linkedTransactionId != null).length;
-                  final vacationCount = transactions.where((transaction) => transaction.isVacation == true).length;
-                  final normalCount = transactions.where((transaction) => transaction.isVacation != true).length;
-                  final sampleIds = transactions.map((t) => t.id).take(6).toList();
-                  print('DEBUG: MonthPageDataManager.combine - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, txCount=${transactions.length}, normalCount=$normalCount, vacationCount=$vacationCount, linkedCount=$linkedCount, totalIncome=$totalIncome, totalExpenses=$totalExpenses, sampleIds=$sampleIds');
-                } catch (e) {
-                  print('DEBUG: MonthPageDataManager.combine - logging error: $e');
-                }
+        // DEBUG: emit stats before returning MonthPageData to validate stream updates
+        try {
+          final linkedCount = transactions
+              .where((transaction) => transaction.linkedTransactionId != null)
+              .length;
+          final vacationCount =
+              transactions.where((transaction) => transaction.isVacation == true).length;
+          final normalCount =
+              transactions.where((transaction) => transaction.isVacation != true).length;
+          final sampleIds = transactions.map((t) => t.id).take(6).toList();
+          print(
+              'DEBUG: MonthPageDataManager.combine - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, txCount=${transactions.length}, normalCount=$normalCount, vacationCount=$vacationCount, linkedCount=$linkedCount, totalIncome=$totalIncome, totalExpenses=$totalExpenses, sampleIds=$sampleIds');
+        } catch (e) {
+          print('DEBUG: MonthPageDataManager.combine - logging error: $e');
+        }
 
-                return MonthPageData(
-                  transactions: transactions,
-                  totalIncome: totalIncome,
-                  totalExpenses: totalExpenses,
-                  transactionsWithAccounts: transactionsWithAccounts,
-                  upcomingTasks: tasks,
-                  incomeByCurrency: incomeByCurrency,
-                  expensesByCurrency: expensesByCurrency,
-                );
-              },
-            )
-            .startWith(
-              MonthPageData.loading(),
-            ) // Immediately emit a loading state.
-            .handleError((error) {
-              return MonthPageData.error(error.toString());
-            })
-            .shareReplay(
-              maxSize: 1,
-            ); // Cache the result of this month's stream.
+        return MonthPageData(
+          transactions: transactions,
+          totalIncome: totalIncome,
+          totalExpenses: totalExpenses,
+          transactionsWithAccounts: transactionsWithAccounts,
+          upcomingTasks: tasks,
+          incomeByCurrency: incomeByCurrency,
+          expensesByCurrency: expensesByCurrency,
+        );
+      },
+    )
+        .startWith(
+          MonthPageData.loading(),
+        ) // Immediately emit a loading state.
+        .handleError((error) {
+      return MonthPageData.error(error.toString());
+    }).shareReplay(
+      maxSize: 1,
+    ); // Cache the result of this month's stream.
 
     // Store the newly created stream in the cache with the composite key if not bypassing the cache, then return it.
     if (!bypassCache) {
@@ -516,11 +524,13 @@ class MonthPageDataManager {
     final cacheKey = 'vacation-all-${activeVacationAccountId ?? 'all'}';
 
     if (_vacationCurrencyStreamCache.containsKey(cacheKey)) {
-      print('DEBUG: Using cached vacation all currencies stream for key: $cacheKey');
+      print(
+          'DEBUG: Using cached vacation all currencies stream for key: $cacheKey');
       return _vacationCurrencyStreamCache[cacheKey]!;
     }
 
-    print('DEBUG: Creating vacation all currencies stream for accountId=$activeVacationAccountId');
+    print(
+        'DEBUG: Creating vacation all currencies stream for accountId=$activeVacationAccountId');
 
     final stream = Rx.combineLatest3(
       _firestoreService.streamTransactionsForDateRange(
@@ -542,11 +552,13 @@ class MonthPageDataManager {
         final accountMap = {for (var a in accounts) a.id: a};
         final categoryMap = {for (var c in categories) c.id: c};
 
-        final transactionsWithAccounts = transactions.map((t) => TransactionWithAccount(
-              transaction: t,
-              account: t.accountId != null ? accountMap[t.accountId] : null,
-              category: t.categoryId != null ? categoryMap[t.categoryId] : null,
-            ))
+        final transactionsWithAccounts = transactions
+            .map((t) => TransactionWithAccount(
+                  transaction: t,
+                  account: t.accountId != null ? accountMap[t.accountId] : null,
+                  category:
+                      t.categoryId != null ? categoryMap[t.categoryId] : null,
+                ))
             .toList();
 
         // Multi-currency totals
@@ -558,19 +570,25 @@ class MonthPageDataManager {
           if (currency.isEmpty) continue;
 
           if (transaction.type == 'income') {
-            incomeByCurrency[currency] = (incomeByCurrency[currency] ?? 0.0) + transaction.amount;
+            incomeByCurrency[currency] =
+                (incomeByCurrency[currency] ?? 0.0) + transaction.amount;
           } else if (transaction.type == 'expense') {
-            expensesByCurrency[currency] = (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
+            expensesByCurrency[currency] =
+                (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
           }
         }
 
-        final totalIncome = incomeByCurrency.values.fold<double>(0.0, (sum, amount) => sum + amount);
-        final totalExpenses = expensesByCurrency.values.fold<double>(0.0, (sum, amount) => sum + amount);
+        final totalIncome = incomeByCurrency.values
+            .fold<double>(0.0, (sum, amount) => sum + amount);
+        final totalExpenses = expensesByCurrency.values
+            .fold<double>(0.0, (sum, amount) => sum + amount);
 
         try {
           final sampleIds = transactions.map((t) => t.id).take(6).toList();
-          final vacationTxCount = transactions.where((t) => t.isVacation == true).length;
-          print('DEBUG: VacationAllCurrencies.combine - txCount=${transactions.length}, vacationTxCount=$vacationTxCount, currencies=${incomeByCurrency.keys.toSet().union(expensesByCurrency.keys.toSet()).toList()}, sampleIds=$sampleIds');
+          final vacationTxCount =
+              transactions.where((t) => t.isVacation == true).length;
+          print(
+              'DEBUG: VacationAllCurrencies.combine - txCount=${transactions.length}, vacationTxCount=$vacationTxCount, currencies=${incomeByCurrency.keys.toSet().union(expensesByCurrency.keys.toSet()).toList()}, sampleIds=$sampleIds');
         } catch (_) {}
 
         return MonthPageData(
@@ -591,13 +609,14 @@ class MonthPageDataManager {
 
   // Method to invalidate cache for a specific month and vacation mode combination
   void invalidateMonth(int monthIndex, [bool? isVacation]) {
-    print('DEBUG: Invalidating cache for monthIndex=$monthIndex, isVacation=$isVacation');
-    print('DEBUG: Active vacation accountId=${_vacationProvider.activeVacationAccountId}');
+    print(
+        'DEBUG: Invalidating cache for monthIndex=$monthIndex, isVacation=$isVacation');
+    print(
+        'DEBUG: Active vacation accountId=${_vacationProvider.activeVacationAccountId}');
 
     // Build the prefix to match keys to remove
-    final String prefix = isVacation == null
-        ? '$monthIndex-'
-        : '$monthIndex-${isVacation}-';
+    final String prefix =
+        isVacation == null ? '$monthIndex-' : '$monthIndex-${isVacation}-';
 
     // Collect keys to remove based on the computed prefix
     final keysToRemove = <String>[];
@@ -606,7 +625,8 @@ class MonthPageDataManager {
         keysToRemove.add(key);
       }
     });
-    print('DEBUG: invalidateMonth -> removing keys by prefix "$prefix": $keysToRemove');
+    print(
+        'DEBUG: invalidateMonth -> removing keys by prefix "$prefix": $keysToRemove');
     for (final key in keysToRemove) {
       _pageStreamCache.remove(key);
     }
@@ -620,13 +640,15 @@ class MonthPageDataManager {
           otherKeysToRemove.add(key);
         }
       });
-      print('DEBUG: invalidateMonth -> also removing other mode keys by prefix "$otherPrefix": $otherKeysToRemove');
+      print(
+          'DEBUG: invalidateMonth -> also removing other mode keys by prefix "$otherPrefix": $otherKeysToRemove');
       for (final key in otherKeysToRemove) {
         _pageStreamCache.remove(key);
       }
     }
 
-    print('DEBUG: Cache invalidation complete. Remaining cache keys: ${_pageStreamCache.keys.toList()}');
+    print(
+        'DEBUG: Cache invalidation complete. Remaining cache keys: ${_pageStreamCache.keys.toList()}');
   }
 
   // Method to clear the cache if a full refresh is needed (e.g., on user logout/login).
@@ -694,10 +716,10 @@ class _MonthPageViewState extends State<MonthPageView> {
           )
           .first
           .then((data) {
-            if (mounted) {
-              _provider.initialize(data);
-            }
-          });
+        if (mounted) {
+          _provider.initialize(data);
+        }
+      });
     }
   }
 
@@ -730,10 +752,14 @@ class _MonthPageViewState extends State<MonthPageView> {
                 // DEBUG: log incoming snapshot before provider.initialize to trace refresh
                 try {
                   final txCount = snapshot.data!.transactionsWithAccounts.length;
-                  final linkedCount = snapshot.data!.transactions.where((t) => t.linkedTransactionId != null).length;
-                  print('DEBUG: MonthPageView.StreamBuilder - monthIndex=${widget.monthIndex}, isVacation=${widget.isVacation}, txCount=$txCount, linkedCount=$linkedCount, providerInitialized=${provider.isInitialized}, paginatedCount=${provider.paginatedTransactions.length}');
+                  final linkedCount = snapshot.data!.transactions
+                      .where((t) => t.linkedTransactionId != null)
+                      .length;
+                  print(
+                      'DEBUG: MonthPageView.StreamBuilder - monthIndex=${widget.monthIndex}, isVacation=${widget.isVacation}, txCount=$txCount, linkedCount=$linkedCount, providerInitialized=${provider.isInitialized}, paginatedCount=${provider.paginatedTransactions.length}');
                 } catch (e) {
-                  print('DEBUG: MonthPageView.StreamBuilder - logging error: $e');
+                  print(
+                      'DEBUG: MonthPageView.StreamBuilder - logging error: $e');
                 }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   provider.initialize(snapshot.data!);
@@ -792,13 +818,9 @@ class _MonthPageViewState extends State<MonthPageView> {
             topRight: Radius.circular(30),
           ),
         ),
-        child: SizedBox(
-          height: double.infinity,
+        child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 30.0,
-              vertical: 130.0,
-            ),
+            padding: const EdgeInsets.all(20.0),
             child: _buildEmptyState(),
           ),
         ),
@@ -838,8 +860,7 @@ class _MonthPageViewState extends State<MonthPageView> {
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.only(top: 16),
-              itemCount:
-                  sortedKeys.length +
+              itemCount: sortedKeys.length +
                   (provider.hasReachedEnd ? 1 : 0) +
                   (provider.isLoading ? 1 : 0),
               itemBuilder: (context, index) {
@@ -1190,35 +1211,39 @@ class _MonthPageViewState extends State<MonthPageView> {
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'images/launcher/logo.png',
-            width: 80,
-            height: 80,
-            color: Colors.grey.shade300,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No transactions recorded for this period.',
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min, // Make column take minimum space
+      children: [
+        Image.asset(
+          'images/launcher/logo.png',
+          width: 80,
+          height: 80,
+          color: Colors.grey.shade300,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'No transactions recorded',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Start by adding transactions to see your spending breakdown here.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+        ),
+        const SizedBox(height: 50),
+      ],
     );
   }
 
-  Color _getTransactionBackgroundColor(FirestoreTransaction transaction, FirestoreAccount? account) {
-    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+  Color _getTransactionBackgroundColor(
+      FirestoreTransaction transaction, FirestoreAccount? account) {
+    final vacationProvider =
+        Provider.of<VacationProvider>(context, listen: false);
     final isVacationTransaction = transaction.isVacation == true;
-    
+
     if (vacationProvider.isVacationMode) {
       // In vacation mode: all transactions are vacation transactions, use normal white background
       return Colors.white;
@@ -1233,9 +1258,10 @@ class _MonthPageViewState extends State<MonthPageView> {
   }
 
   Color _getTransactionBorderColor(FirestoreTransaction transaction) {
-    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+    final vacationProvider =
+        Provider.of<VacationProvider>(context, listen: false);
     final isVacationTransaction = transaction.isVacation == true;
-    
+
     if (vacationProvider.isVacationMode) {
       // In vacation mode: use normal grey border
       return Colors.grey.shade200;
@@ -1269,7 +1295,8 @@ class _MonthPageViewState extends State<MonthPageView> {
     final bool isVacationTransaction = transaction.isVacation;
     // DEBUG: Log each transaction item render (may be verbose)
     try {
-      print('DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}');
+      print(
+          'DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}');
     } catch (e) {
       print('DEBUG: BuildTransactionItem - logging error: $e');
     }
@@ -1294,7 +1321,8 @@ class _MonthPageViewState extends State<MonthPageView> {
         decoration: BoxDecoration(
           color: _getTransactionBackgroundColor(transaction, account),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _getTransactionBorderColor(transaction), width: 1),
+          border:
+              Border.all(color: _getTransactionBorderColor(transaction), width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.05),
@@ -1352,7 +1380,9 @@ class _MonthPageViewState extends State<MonthPageView> {
                   size: 16,
                 ),
                 // Add vacation icon for vacation transactions in normal mode
-                if (transaction.isVacation == true && !Provider.of<VacationProvider>(context, listen: false).isVacationMode) ...[
+                if (transaction.isVacation == true &&
+                    !Provider.of<VacationProvider>(context, listen: false)
+                        .isVacationMode) ...[
                   const SizedBox(width: 4),
                   Icon(
                     Icons.flight_takeoff,
@@ -1475,15 +1505,16 @@ Future<void> _showCurrencyChangeDialog(
   String vacationCurrency,
   CurrencyProvider currencyProvider,
 ) async {
-  final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
-  
+  final navbarProvider =
+      Provider.of<NavbarVisibilityProvider>(context, listen: false);
+
   // Enable dialog mode to allow navbar hiding on home screen
   navbarProvider.setDialogMode(true);
   navbarProvider.setNavBarVisibility(false);
-  
+
   // Add a small delay to ensure navbar is hidden before showing dialog
   await Future.delayed(const Duration(milliseconds: 100));
-  
+
   try {
     await showDialog<void>(
       context: context,
@@ -1507,7 +1538,8 @@ Future<void> _showCurrencyChangeDialog(
                   showFlag: true,
                   showSearchField: true,
                   onSelect: (Currency currency) async {
-                    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                    final currencyProvider =
+                        Provider.of<CurrencyProvider>(context, listen: false);
                     await currencyProvider.setCurrency(currency, 1.0);
                   },
                 );
@@ -1532,15 +1564,16 @@ Future<void> _showVacationCurrencyDialog(
   BuildContext context,
   CurrencyProvider currencyProvider,
 ) async {
-  final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
-  
+  final navbarProvider =
+      Provider.of<NavbarVisibilityProvider>(context, listen: false);
+
   // Enable dialog mode to allow navbar hiding on home screen
   navbarProvider.setDialogMode(true);
   navbarProvider.setNavBarVisibility(false);
-  
+
   // Add a small delay to ensure navbar is hidden before showing dialog
   await Future.delayed(const Duration(milliseconds: 100));
-  
+
   try {
     // Get the previous currency from SharedPreferences
     String previousCurrency = 'USD'; // Default fallback
@@ -1550,11 +1583,11 @@ Future<void> _showVacationCurrencyDialog(
     } catch (e) {
       // Non-fatal: use default currency
     }
-    
+
     // Get currency symbol for display
     final currency = CurrencyService().findByCode(previousCurrency);
     final currencySymbol = currency?.symbol ?? '\$';
-    
+
     await showDialog<void>(
       context: context,
       builder: (ctx) {
@@ -1577,7 +1610,8 @@ Future<void> _showVacationCurrencyDialog(
                   showFlag: true,
                   showSearchField: true,
                   onSelect: (Currency currency) async {
-                    final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                    final currencyProvider =
+                        Provider.of<CurrencyProvider>(context, listen: false);
                     await currencyProvider.setCurrency(currency, 1.0);
                   },
                 );
@@ -1642,7 +1676,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _monthScrollController.dispose();
     _pageController.dispose();
-
 
     // Dispose all providers
     for (final provider in _monthProviders.values) {
@@ -1807,8 +1840,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_selectedMonthIndex != -1) {
       final screenWidth = MediaQuery.of(context).size.width;
       const itemWidth = 85.0; // Adjusted width
-      final offset =
-          (_selectedMonthIndex * itemWidth) -
+      final offset = (_selectedMonthIndex * itemWidth) -
           (screenWidth / 2) +
           (itemWidth / 2);
       _monthScrollController.animateTo(
@@ -1823,7 +1855,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
-
 
     // Prioritize transaction-specific refresh; also handle month jump if date provided
     if (homeScreenProvider.shouldRefreshTransactions) {
@@ -1947,49 +1978,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       child: vacationProvider.isVacationMode
                           ? _buildVacationCurrencyList()
                           : PageView.builder(
-                        controller: _pageController,
-                        itemCount: _months.length,
-                        onPageChanged: (index) {
-                          if (!mounted) return;
-                          if (index < 0 || index >= _months.length) return;
+                              controller: _pageController,
+                              itemCount: _months.length,
+                              onPageChanged: (index) {
+                                if (!mounted) return;
+                                if (index < 0 || index >= _months.length)
+                                  return;
 
-                          setState(() {
-                            _selectedMonthIndex = index;
-                          });
+                                setState(() {
+                                  _selectedMonthIndex = index;
+                                });
 
-                          // Update the selected date in HomeScreenProvider
-                          final homeScreenProvider =
-                              Provider.of<HomeScreenProvider>(
-                                context,
-                                listen: false,
-                              );
-                          homeScreenProvider.setSelectedDate(_months[index]);
+                                // Update the selected date in HomeScreenProvider
+                                final homeScreenProvider =
+                                    Provider.of<HomeScreenProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                homeScreenProvider.setSelectedDate(_months[index]);
 
-                          _scrollToSelectedMonth();
+                                _scrollToSelectedMonth();
 
-                          // Pre-load adjacent months after the page change is complete
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _preloadAdjacentMonths(index);
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          // Watch VacationProvider so that changes to activeVacationAccountId also rebuild
-                          final vacationProvider = context.watch<VacationProvider>();
-                          final isVacation = vacationProvider.isVacationMode;
-                          final activeVacationAccountId = vacationProvider.activeVacationAccountId;
-                          // Get or create provider for this month and pass it to MonthPageView
-                          final provider = _getOrCreateProvider(index);
-                          return MonthPageView(
-                            // Include activeVacationAccountId in the key to avoid stale cached children when account changes
-                            key: ValueKey<String>('$index-$isVacation-${activeVacationAccountId ?? 'all'}'),
-                            monthIndex: index,
-                            month: _months[index],
-                            isVacation: isVacation,
-                            dataManager: _pageDataManager,
-                            provider: provider,
-                          );
-                        },
-                      ),
+                                // Pre-load adjacent months after the page change is complete
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  _preloadAdjacentMonths(index);
+                                });
+                              },
+                              itemBuilder: (context, index) {
+                                // Watch VacationProvider so that changes to activeVacationAccountId also rebuild
+                                final vacationProvider =
+                                    context.watch<VacationProvider>();
+                                final isVacation =
+                                    vacationProvider.isVacationMode;
+                                final activeVacationAccountId =
+                                    vacationProvider.activeVacationAccountId;
+                                // Get or create provider for this month and pass it to MonthPageView
+                                final provider = _getOrCreateProvider(index);
+                                return MonthPageView(
+                                  // Include activeVacationAccountId in the key to avoid stale cached children when account changes
+                                  key: ValueKey<String>(
+                                      '$index-$isVacation-${activeVacationAccountId ?? 'all'}'),
+                                  monthIndex: index,
+                                  month: _months[index],
+                                  isVacation: isVacation,
+                                  dataManager: _pageDataManager,
+                                  provider: provider,
+                                );
+                              },
+                            ),
                     ),
                   ],
                 ),
@@ -2004,8 +2040,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Vacation Mode content: currency-only list with infinite scroll, reusing MonthPageProvider
   Widget _buildVacationCurrencyList() {
     final vacationProvider = context.watch<VacationProvider>();
-    
-    print('DEBUG: _buildVacationCurrencyList - isVacationMode=${vacationProvider.isVacationMode}, activeVacationAccountId=${vacationProvider.activeVacationAccountId}');
+
+    print(
+        'DEBUG: _buildVacationCurrencyList - isVacationMode=${vacationProvider.isVacationMode}, activeVacationAccountId=${vacationProvider.activeVacationAccountId}');
 
     // Reuse a single MonthPageProvider under key -1 for vacation currency list
     final provider = _monthProviders.putIfAbsent(-1, () => MonthPageProvider());
@@ -2013,14 +2050,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return StreamBuilder<MonthPageData>(
       stream: _pageDataManager.getVacationAllCurrenciesStream(),
       builder: (context, snapshot) {
-        if (snapshot.hasData && !snapshot.data!.isLoading && snapshot.data!.error == null) {
+        if (snapshot.hasData &&
+            !snapshot.data!.isLoading &&
+            snapshot.data!.error == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             provider.initialize(snapshot.data!);
           });
         }
 
         return MonthPageView(
-          key: ValueKey<String>('vacation-all-${vacationProvider.activeVacationAccountId ?? 'all'}'),
+          key: ValueKey<String>(
+              'vacation-all-${vacationProvider.activeVacationAccountId ?? 'all'}'),
           monthIndex: -1,
           month: DateTime.now(), // Unused in vacation view
           isVacation: true,
@@ -2076,23 +2116,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             // Compute top balance
             final selectedCurrency = currencyProvider.selectedCurrencyCode;
             double topBalance;
-            
+
             if (vacationProvider.isVacationMode) {
               // In vacation mode: show total budget minus all expenses across all currencies
-              final totalExpenses = snapshot.data?.expensesByCurrency.values.fold<double>(0.0, (sum, amount) => sum + amount) ?? 0.0;
+              final totalExpenses = snapshot.data?.expensesByCurrency.values
+                      .fold<double>(0.0, (sum, amount) => sum + amount) ??
+                  0.0;
               topBalance = totalBudget - totalExpenses;
             } else {
               // In normal mode: show selected currency balance (includes both normal and vacation transactions)
-              final incomeSelected = (snapshot.data?.incomeByCurrency[selectedCurrency] ?? 0.0);
-              final expensesSelected = (snapshot.data?.expensesByCurrency[selectedCurrency] ?? 0.0);
+              final incomeSelected =
+                  (snapshot.data?.incomeByCurrency[selectedCurrency] ?? 0.0);
+              final expensesSelected =
+                  (snapshot.data?.expensesByCurrency[selectedCurrency] ?? 0.0);
               topBalance = incomeSelected - expensesSelected;
             }
 
             return Container(
-              height:
-                  statusBarHeight +
+              height: statusBarHeight +
                   80, // Match the toolbarHeight from SliverAppBar plus status bar height
-              padding: EdgeInsets.only(
+              padding: const EdgeInsets.only(
                 top: 20,
                 left: 10,
                 right: 6,
@@ -2132,7 +2175,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       'MMMM',
                                     ).format(_months[_selectedMonthIndex])
                                   : 'Balance',
-                              style: Theme.of(context).textTheme.bodySmall
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
                                   ?.copyWith(
                                     color: Colors.black54,
                                     fontWeight: FontWeight.w500,
@@ -2159,9 +2204,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           onPressed: () async {
                             final vacationProvider =
                                 Provider.of<VacationProvider>(
-                                  context,
-                                  listen: false,
-                                );
+                              context,
+                              listen: false,
+                            );
                             final currentVacationMode =
                                 vacationProvider.isVacationMode;
 
@@ -2171,14 +2216,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                               // Show currency change dialog
                               if (context.mounted) {
-                                final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-                                final currentCode = currencyProvider.selectedCurrencyCode;
-                                
+                                final currencyProvider =
+                                    Provider.of<CurrencyProvider>(context,
+                                        listen: false);
+                                final currentCode =
+                                    currencyProvider.selectedCurrencyCode;
+
                                 // Get the pre-vacation currency
-                                final prefs = await SharedPreferences.getInstance();
-                                final preVacationCode = prefs.getString('preVacationCurrencyCode');
-                                
-                                if (preVacationCode != null && preVacationCode != currentCode) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                final preVacationCode =
+                                    prefs.getString('preVacationCurrencyCode');
+
+                                if (preVacationCode != null &&
+                                    preVacationCode != currentCode) {
                                   await _showCurrencyChangeDialog(
                                     context,
                                     preVacationCode,
@@ -2187,23 +2238,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   );
                                 } else {
                                   // Show simple informational dialog if no currency change
-                                  final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+                                  final navbarProvider =
+                                      Provider.of<NavbarVisibilityProvider>(
+                                          context,
+                                          listen: false);
                                   navbarProvider.setDialogMode(true);
                                   navbarProvider.setNavBarVisibility(false);
-                                  
+
                                   // Add a small delay to ensure navbar is hidden before showing dialog
-                                  await Future.delayed(const Duration(milliseconds: 100));
-                                  
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 100));
+
                                   try {
                                     await showDialog<void>(
                                       context: context,
                                       builder: (ctx) {
                                         return AlertDialog(
                                           title: const Text('Normal Mode'),
-                                          content: Text('You are now in Normal Mode with currency: $currentCode'),
+                                          content: Text(
+                                              'You are now in Normal Mode with currency: $currentCode'),
                                           actions: [
                                             TextButton(
-                                              onPressed: () => Navigator.of(ctx).pop(),
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(),
                                               child: const Text('OK'),
                                             ),
                                           ],
@@ -2212,7 +2269,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     );
                                   } finally {
                                     if (context.mounted) {
-                                      navbarProvider.setNavBarVisibility(true);
+                                      navbarProvider
+                                          .setNavBarVisibility(true);
                                       navbarProvider.setDialogMode(false);
                                     }
                                   }
@@ -2220,13 +2278,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               }
                             } else {
                               // Turning ON vacation mode: go through selection flow
-                              await vacationProvider.checkAndShowVacationDialog(
+                              await vacationProvider
+                                  .checkAndShowVacationDialog(
                                 context,
                               );
-                              
+
                               // Show currency change dialog after vacation mode is enabled
-                              if (context.mounted && vacationProvider.isVacationMode) {
-                                final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+                              if (context.mounted &&
+                                  vacationProvider.isVacationMode) {
+                                final currencyProvider =
+                                    Provider.of<CurrencyProvider>(context,
+                                        listen: false);
                                 await _showVacationCurrencyDialog(
                                   context,
                                   currencyProvider,
@@ -2243,12 +2305,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               // Trigger rebuild and data refresh.
                               setState(() {
                                 // Reset all providers and clear the data manager cache to force fresh streams.
-                                for (final provider in _monthProviders.values) {
+                                for (final provider
+                                    in _monthProviders.values) {
                                   provider.reset();
                                 }
                                 // Prefer clearing cached page streams instead of recreating the manager
                                 _pageDataManager.clearCache();
-                                print('DEBUG: Vacation mode changed -> cleared MonthPageDataManager cache and reset all MonthPageProviders');
+                                print(
+                                    'DEBUG: Vacation mode changed -> cleared MonthPageDataManager cache and reset all MonthPageProviders');
                               });
                             }
                           },
@@ -2376,7 +2440,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 )
               : Stream.value(MonthPageData.loading())),
       builder: (context, monthSnapshot) {
-
         // Get vacation accounts to find the active one
         return StreamBuilder<List<FirestoreAccount>>(
           stream: _firestoreService.streamAccounts(),
@@ -2560,7 +2623,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ...amountsByCurrency.entries.map((entry) {
                     final currency = entry.key;
                     final amount = entry.value;
-                    final isSelectedCurrency = currency == currencyProvider.selectedCurrencyCode;
+                    final isSelectedCurrency =
+                        currency == currencyProvider.selectedCurrencyCode;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Text(
@@ -2568,7 +2632,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         style: TextStyle(
                           color: color,
                           fontSize: isSelectedCurrency ? 16 : 14,
-                          fontWeight: isSelectedCurrency ? FontWeight.bold : FontWeight.w600,
+                          fontWeight: isSelectedCurrency
+                              ? FontWeight.bold
+                              : FontWeight.w600,
                         ),
                       ),
                     );
@@ -2580,5 +2646,5 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
-
 }
+
