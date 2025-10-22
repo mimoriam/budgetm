@@ -63,7 +63,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   // re-evaluate filtering when vacation mode changes.
   VacationProvider? _vacationProvider;
   VoidCallback? _vacationListener;
-  
   String? _selectedChartCurrency; // For chart currency selection
 
   @override
@@ -179,9 +178,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           (v) => v + 1,
           ifAbsent: () => 1,
         );
-        
         // If this is a vacation transaction, also count it for the linked vacation account
-        if (transaction.isVacation == true && transaction.linkedVacationAccountId != null) {
+        if (transaction.isVacation == true &&
+            transaction.linkedVacationAccountId != null) {
           final vacationAccId = transaction.linkedVacationAccountId!;
           expenseSums.update(
             vacationAccId,
@@ -206,36 +205,35 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final normalAccounts = nonDefaultAccounts
           .where((account) => (account.isVacationAccount != true))
           .map((account) {
-            final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-            // Use account.balance directly as it's the single source of truth from Firestore
-            final finalBalance = account.balance;
-            return {
-              'account': account,
-              'transactionsAmount': transactionsAmount,
-              'finalBalance': finalBalance,
-              'transactionCount': transactionCounts[account.id] ?? 0,
-            };
-          })
-          .toList();
+        final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
+        // Use account.balance directly as it's the single source of truth from Firestore
+        final finalBalance = account.balance;
+        return {
+          'account': account,
+          'transactionsAmount': transactionsAmount,
+          'finalBalance': finalBalance,
+          'transactionCount': transactionCounts[account.id] ?? 0,
+        };
+      }).toList();
 
       final vacationAccounts = nonDefaultAccounts
           .where((account) => (account.isVacationAccount == true))
           .map((account) {
-            final totalExpenses = expenseSums[account.id] ?? 0.0;
-            final finalBalance = max(0.0, account.initialBalance - totalExpenses);
-            // Diagnostics to confirm all values are doubles at runtime
-            print('DEBUG BalanceScreen: vacationMode vacation finalBalance accountId=${account.id} '
-                  'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
-                  'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
-                  'final=$finalBalance(${finalBalance.runtimeType})');
-            return {
-              'account': account,
-              'transactionsAmount': finalBalance,
-              'finalBalance': finalBalance,
-              'transactionCount': vacationTransactionCounts[account.id] ?? 0,
-            };
-          })
-          .toList();
+        final totalExpenses = expenseSums[account.id] ?? 0.0;
+        final finalBalance = max(0.0, account.initialBalance - totalExpenses);
+        // Diagnostics to confirm all values are doubles at runtime
+        print(
+            'DEBUG BalanceScreen: vacationMode vacation finalBalance accountId=${account.id} '
+            'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
+            'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
+            'final=$finalBalance(${finalBalance.runtimeType})');
+        return {
+          'account': account,
+          'transactionsAmount': finalBalance,
+          'finalBalance': finalBalance,
+          'transactionCount': vacationTransactionCounts[account.id] ?? 0,
+        };
+      }).toList();
 
       // Emit a Map with both lists (same structure as normal mode)
       _accountsWithTransactionsController?.add({
@@ -253,36 +251,35 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     final normalAccounts = nonDefaultAccounts
         .where((account) => (account.isVacationAccount != true))
         .map((account) {
-          final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-          // Use account.balance directly as it's the single source of truth from Firestore
-          final finalBalance = account.balance;
-          return {
-            'account': account,
-            'transactionsAmount': transactionsAmount,
-            'finalBalance': finalBalance,
-            'transactionCount': transactionCounts[account.id] ?? 0,
-          };
-        })
-        .toList();
+      final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
+      // Use account.balance directly as it's the single source of truth from Firestore
+      final finalBalance = account.balance;
+      return {
+        'account': account,
+        'transactionsAmount': transactionsAmount,
+        'finalBalance': finalBalance,
+        'transactionCount': transactionCounts[account.id] ?? 0,
+      };
+    }).toList();
 
     final vacationAccounts = nonDefaultAccounts
         .where((account) => (account.isVacationAccount == true))
         .map((account) {
-          final totalExpenses = expenseSums[account.id] ?? 0.0;
-          final finalBalance = max(0.0, account.initialBalance - totalExpenses);
-          // Diagnostics to confirm all values are doubles at runtime
-          print('DEBUG BalanceScreen: normalMode vacation finalBalance accountId=${account.id} '
-                'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
-                'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
-                'final=$finalBalance(${finalBalance.runtimeType})');
-          return {
-            'account': account,
-            'transactionsAmount': finalBalance,
-            'finalBalance': finalBalance,
-            'transactionCount': vacationTransactionCounts[account.id] ?? 0,
-          };
-        })
-        .toList();
+      final totalExpenses = expenseSums[account.id] ?? 0.0;
+      final finalBalance = max(0.0, account.initialBalance - totalExpenses);
+      // Diagnostics to confirm all values are doubles at runtime
+      print(
+          'DEBUG BalanceScreen: normalMode vacation finalBalance accountId=${account.id} '
+          'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
+          'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
+          'final=$finalBalance(${finalBalance.runtimeType})');
+      return {
+        'account': account,
+        'transactionsAmount': finalBalance,
+        'finalBalance': finalBalance,
+        'transactionCount': vacationTransactionCounts[account.id] ?? 0,
+      };
+    }).toList();
 
     // Emit a Map with both lists
     _accountsWithTransactionsController?.add({
@@ -349,7 +346,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
                   // Show empty state if both lists are empty
                   if (normalAccounts.isEmpty && vacationAccounts.isEmpty) {
-                    return _buildEmptyState();
+                    return Center(
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: _buildEmptyState(),
+                      ),
+                    );
                   }
                 }
               } else {
@@ -363,7 +366,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
                   // Show empty state if both lists are empty
                   if (normalAccounts.isEmpty && vacationAccounts.isEmpty) {
-                    return _buildEmptyState();
+                    return Center(
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: _buildEmptyState(),
+                      ),
+                    );
                   }
                 }
               }
@@ -381,29 +390,33 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Show chart for all accounts combined
-                          _buildPieChart([...normalAccounts, ...vacationAccounts]),
+                          _buildPieChart(
+                              [...normalAccounts, ...vacationAccounts]),
                           const SizedBox(height: 16),
-                          _buildLegend([...normalAccounts, ...vacationAccounts]),
+                          _buildLegend(
+                              [...normalAccounts, ...vacationAccounts]),
                           const SizedBox(height: 24),
-                          
                           // My Accounts section
                           _buildSectionHeaderWithButton(
                             'MY ACCOUNTS',
                             () async {
-                              final vacationProvider = Provider.of<VacationProvider>(
+                              final vacationProvider =
+                                  Provider.of<VacationProvider>(
                                 context,
                                 listen: false,
                               );
-                              final isVacationMode = vacationProvider.isVacationMode;
-                              
+                              final isVacationMode =
+                                  vacationProvider.isVacationMode;
                               final result =
                                   await PersistentNavBarNavigator.pushNewScreen(
-                                    context,
-                                    screen: AddAccountScreen(isCreatingVacationAccount: isVacationMode),
-                                    withNavBar: false,
-                                    pageTransitionAnimation:
-                                        PageTransitionAnimation.cupertino,
-                                  );
+                                context,
+                                screen: AddAccountScreen(
+                                    isCreatingVacationAccount:
+                                        isVacationMode),
+                                withNavBar: false,
+                                pageTransitionAnimation:
+                                    PageTransitionAnimation.cupertino,
+                              );
                               if (result == true) {
                                 if (mounted) setState(() {});
                               }
@@ -414,7 +427,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             Center(
                               child: Text(
                                 'No normal accounts',
-                                style: Theme.of(context).textTheme.bodyMedium
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
                                     ?.copyWith(
                                       color: AppColors.secondaryTextColorLight,
                                     ),
@@ -422,42 +437,50 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             )
                           else
                             ...normalAccounts.asMap().entries.map(
-                              (entry) => Column(
-                                children: [
-                                  Builder(
-                                    builder: (context) {
-                                      final index = entry.key;
-                                      final accountData = entry.value;
-                                      final account =
-                                          accountData['account']
-                                              as FirestoreAccount;
-                                      final finalBalance =
-                                          accountData['finalBalance'] as double;
-                                      final isHighlighted = index == touchedIndex;
-                                      return _buildAccountCard(
-                                        context: context,
-                                        account: account,
-                                        icon: getAccountIcon(
-                                          account.accountType,
-                                        )[0][0],
-                                        iconColor: Colors.black,
-                                        iconBackgroundColor: Colors.grey.shade200,
-                                        accountName: account.name,
-                                        amount: finalBalance,
-                                        accountType: account.accountType,
-                                        creditLimit: account.creditLimit,
-                                        balanceLimit: account.balanceLimit,
-                                        currencySymbol: _getAccountCurrencySymbol(account),
-                                        isHighlighted: isHighlighted,
-                                        accountsCount: normalAccounts.length,
-                                        transactionCount: accountData['transactionCount'] as int,
-                                      );
-                                    },
+                                  (entry) => Column(
+                                    children: [
+                                      Builder(
+                                        builder: (context) {
+                                          final index = entry.key;
+                                          final accountData = entry.value;
+                                          final account =
+                                              accountData['account']
+                                                  as FirestoreAccount;
+                                          final finalBalance =
+                                              accountData['finalBalance']
+                                                  as double;
+                                          final isHighlighted =
+                                              index == touchedIndex;
+                                          return _buildAccountCard(
+                                            context: context,
+                                            account: account,
+                                            icon: getAccountIcon(
+                                              account.accountType,
+                                            )[0][0],
+                                            iconColor: Colors.black,
+                                            iconBackgroundColor:
+                                                Colors.grey.shade200,
+                                            accountName: account.name,
+                                            amount: finalBalance,
+                                            accountType: account.accountType,
+                                            creditLimit: account.creditLimit,
+                                            balanceLimit: account.balanceLimit,
+                                            currencySymbol:
+                                                _getAccountCurrencySymbol(
+                                                    account),
+                                            isHighlighted: isHighlighted,
+                                            accountsCount:
+                                                normalAccounts.length,
+                                            transactionCount:
+                                                accountData['transactionCount']
+                                                    as int,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 6),
+                                    ],
                                   ),
-                                  const SizedBox(height: 6),
-                                ],
-                              ),
-                            ),
+                                ),
 
                           // Vacation Accounts section (always shown)
                           const SizedBox(height: 24),
@@ -466,12 +489,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             () async {
                               final result =
                                   await PersistentNavBarNavigator.pushNewScreen(
-                                    context,
-                                    screen: const AddAccountScreen(isCreatingVacationAccount: true),
-                                    withNavBar: false,
-                                    pageTransitionAnimation:
-                                        PageTransitionAnimation.cupertino,
-                                  );
+                                context,
+                                screen: const AddAccountScreen(
+                                    isCreatingVacationAccount: true),
+                                withNavBar: false,
+                                pageTransitionAnimation:
+                                    PageTransitionAnimation.cupertino,
+                              );
                               if (result == true) {
                                 if (mounted) setState(() {});
                               }
@@ -482,7 +506,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             Center(
                               child: Text(
                                 'No vacation accounts',
-                                style: Theme.of(context).textTheme.bodyMedium
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
                                     ?.copyWith(
                                       color: AppColors.secondaryTextColorLight,
                                     ),
@@ -494,9 +520,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                 children: [
                                   _buildAccountCard(
                                     context: context,
-                                    account:
-                                        accountData['account']
-                                            as FirestoreAccount,
+                                    account: accountData['account']
+                                        as FirestoreAccount,
                                     icon: getAccountIcon(
                                       (accountData['account']
                                               as FirestoreAccount)
@@ -504,29 +529,27 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                     )[0][0],
                                     iconColor: Colors.black,
                                     iconBackgroundColor: Colors.grey.shade200,
-                                    accountName:
-                                        (accountData['account']
-                                                as FirestoreAccount)
-                                            .name,
+                                    accountName: (accountData['account']
+                                            as FirestoreAccount)
+                                        .name,
                                     amount:
                                         accountData['finalBalance'] as double,
-                                    accountType:
-                                        (accountData['account']
-                                                as FirestoreAccount)
-                                            .accountType,
-                                    creditLimit:
-                                        (accountData['account']
-                                                as FirestoreAccount)
-                                            .creditLimit,
-                                    balanceLimit:
-                                        (accountData['account']
-                                                as FirestoreAccount)
-                                            .balanceLimit,
+                                    accountType: (accountData['account']
+                                            as FirestoreAccount)
+                                        .accountType,
+                                    creditLimit: (accountData['account']
+                                            as FirestoreAccount)
+                                        .creditLimit,
+                                    balanceLimit: (accountData['account']
+                                            as FirestoreAccount)
+                                        .balanceLimit,
                                     currencySymbol: _getAccountCurrencySymbol(
-                                        accountData['account'] as FirestoreAccount),
+                                        accountData['account']
+                                            as FirestoreAccount),
                                     isHighlighted: false,
                                     accountsCount: vacationAccounts.length,
-                                    transactionCount: accountData['transactionCount'] as int,
+                                    transactionCount:
+                                        accountData['transactionCount'] as int,
                                   ),
                                   const SizedBox(height: 12),
                                 ],
@@ -572,9 +595,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   Text(
                     'Balance',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
                   ),
                   // Add Account button - only visible in normal mode
                   if (!vacationProvider.isVacationMode)
@@ -620,12 +643,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                         onPressed: () async {
                           final result =
                               await PersistentNavBarNavigator.pushNewScreen(
-                                context,
-                                screen: const AddAccountScreen(),
-                                withNavBar: false,
-                                pageTransitionAnimation:
-                                    PageTransitionAnimation.cupertino,
-                              );
+                            context,
+                            screen: const AddAccountScreen(),
+                            withNavBar: false,
+                            pageTransitionAnimation:
+                                PageTransitionAnimation.cupertino,
+                          );
                           if (result == true) {
                             if (mounted) setState(() {});
                           }
@@ -648,7 +671,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
     // Get available currencies from the data
     final availableCurrencies = _getAvailableCurrencies(accountsWithData);
-    
     // Set default chart currency if not set
     if (_selectedChartCurrency == null && availableCurrencies.isNotEmpty) {
       _selectedChartCurrency = availableCurrencies.first;
@@ -862,9 +884,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         Text(
           title,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.secondaryTextColorLight,
-            fontWeight: FontWeight.bold,
-          ),
+                color: AppColors.secondaryTextColorLight,
+                fontWeight: FontWeight.bold,
+              ),
         ),
         Semantics(
           button: true,
@@ -898,28 +920,26 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   }) {
     // Check if this is a vacation account
     final isVacationAccount = account.isVacationAccount == true;
-    
     // Use vacation-specific icon and styling for vacation accounts
     final vacationIcon = HugeIcons.strokeRoundedAirplaneMode;
     final displayIcon = isVacationAccount ? vacationIcon : icon;
-    final displayIconColor = isVacationAccount ? Colors.blue.shade600 : iconColor;
-    final displayIconBackgroundColor = isVacationAccount ? Colors.blue.shade50 : iconBackgroundColor;
-    
+    final displayIconColor =
+        isVacationAccount ? Colors.blue.shade600 : iconColor;
+    final displayIconBackgroundColor =
+        isVacationAccount ? Colors.blue.shade50 : iconBackgroundColor;
     // Apply vacation styling similar to home.dart
-    final cardBackgroundColor = isVacationAccount 
-        ? Colors.blue.shade50  // Light blue background for vacation accounts
-        : (isHighlighted 
+    final cardBackgroundColor = isVacationAccount
+        ? Colors.blue.shade50 // Light blue background for vacation accounts
+        : (isHighlighted
             ? AppColors.gradientStart.withOpacity(0.08)
             : Colors.white);
-    
     final cardBorderColor = isVacationAccount
-        ? Colors.blue.shade300  // Blue border for vacation accounts
+        ? Colors.blue.shade300 // Blue border for vacation accounts
         : (isHighlighted
             ? AppColors.gradientStart
             : Colors.grey.shade200);
-    
-    final cardBorderWidth = isVacationAccount ? 1.5 : (isHighlighted ? 2.0 : 1.0);
-    
+    final cardBorderWidth =
+        isVacationAccount ? 1.5 : (isHighlighted ? 2.0 : 1.0);
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
@@ -957,7 +977,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 color: displayIconBackgroundColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: HugeIcon(icon: displayIcon, size: 24, color: displayIconColor),
+              child:
+                  HugeIcon(icon: displayIcon, size: 24, color: displayIconColor),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -967,34 +988,34 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   Text(
                     accountName,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   Text(
                     accountType,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.secondaryTextColorLight,
-                    ),
+                          color: AppColors.secondaryTextColorLight,
+                        ),
                   ),
                   Text(
                     '$transactionCount transactions',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.secondaryTextColorLight,
-                    ),
+                          color: AppColors.secondaryTextColorLight,
+                        ),
                   ),
                   if (creditLimit != null)
                     Text(
                       'Credit Limit: ${_getAccountCurrencySymbol(account)}${creditLimit.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.secondaryTextColorLight,
-                      ),
+                            color: AppColors.secondaryTextColorLight,
+                          ),
                     )
                   else if (balanceLimit != null)
                     Text(
                       'Balance Limit: ${_getAccountCurrencySymbol(account)}${balanceLimit.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.secondaryTextColorLight,
-                      ),
+                            color: AppColors.secondaryTextColorLight,
+                          ),
                     ),
                 ],
               ),
@@ -1017,23 +1038,40 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min, // Make column take minimum space
         children: [
-          SizedBox(
+          Image.asset(
+            'images/launcher/logo.png',
             width: 80,
             height: 80,
-            child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
+            color: Colors.grey.shade300,
           ),
           const SizedBox(height: 16),
           Text(
-            'No accounts found. Add one to get started.',
-            textAlign: TextAlign.center,
+            'No accounts found',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start by creating an account to track your balances here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),
         ],
       ),
@@ -1041,15 +1079,15 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   }
 
   // Helper method to get available currencies from account data
-  List<String> _getAvailableCurrencies(List<Map<String, dynamic>> accountsWithData) {
+  List<String> _getAvailableCurrencies(
+      List<Map<String, dynamic>> accountsWithData) {
     final currencies = accountsWithData.map((accountData) {
       final account = accountData['account'] as FirestoreAccount;
       return account.currency;
     }).toSet().toList();
-    
     // Filter out "MULTI" currencies to prevent showing "MULTI MULTI" in vacation mode
-    currencies.removeWhere((currency) => currency.toUpperCase().contains('MULTI'));
-    
+    currencies
+        .removeWhere((currency) => currency.toUpperCase().contains('MULTI'));
     currencies.sort(); // Sort for consistent ordering
     return currencies;
   }
@@ -1074,7 +1112,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             color: Colors.black,
           ),
           items: availableCurrencies.map((String currency) {
-            final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
+            final currencySymbol =
+                CurrencyService().findByCode(currency)?.symbol ?? currency;
             return DropdownMenuItem<String>(
               value: currency,
               child: Text('$currencySymbol $currency'),

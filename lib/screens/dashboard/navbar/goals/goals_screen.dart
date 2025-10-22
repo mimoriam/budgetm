@@ -45,6 +45,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 }
                 final allGoals = snapshot.data ?? <FirestoreGoal>[];
                 
+                // Show empty state if no goals exist
+                if (allGoals.isEmpty) {
+                  return SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: _buildEmptyState(),
+                    ),
+                  );
+                }
+                
                 // No currency filtering - show all goals
                 final pendingGoals =
                     allGoals.where((g) => g.isCompleted == false).toList();
@@ -555,6 +565,46 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Image.asset(
+            'images/launcher/logo.png',
+            width: 80,
+            height: 80,
+            color: Colors.grey.shade300,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No goals created',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start by creating a goal to track your progress here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+          ),
+        ],
       ),
     );
   }
