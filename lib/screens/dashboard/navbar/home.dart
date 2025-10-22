@@ -2405,47 +2405,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Row(
-                    children: [
-                      // Total Budget card - only shown in vacation mode
-                      if (vacationProvider.isVacationMode)
-                        Expanded(
-                          child: _buildInfoCard(
-                            'Total Budget',
-                            '${currencyProvider.currencySymbol}${totalBudget.toStringAsFixed(2)}',
-                            Colors.blue,
-                            HugeIcons.strokeRoundedWallet01,
-                            Colors.blue.shade50,
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        // Total Budget card - only shown in vacation mode
+                        if (vacationProvider.isVacationMode) ...[
+                          Expanded(
+                            child: _buildInfoCard(
+                              'Total Budget',
+                              '${currencyProvider.currencySymbol}${totalBudget.toStringAsFixed(2)}',
+                              Colors.blue,
+                              HugeIcons.strokeRoundedWallet01,
+                              Colors.blue.shade50,
+                            ),
                           ),
-                        ),
-                      if (vacationProvider.isVacationMode)
-                        const SizedBox(width: 12),
-                      // Income card - only shown in normal mode
-                      if (!vacationProvider.isVacationMode)
+                          const SizedBox(width: 12),
+                        ],
+                        // Income card - only shown in normal mode
+                        if (!vacationProvider.isVacationMode) ...[
+                          Expanded(
+                            child: _buildBalanceCard(
+                              'Income',
+                              Colors.green,
+                              HugeIcons.strokeRoundedChartUp,
+                              AppColors.incomeBackground,
+                              monthSnapshot.data?.incomeByCurrency ?? {},
+                              currencyProvider,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        // Expense card - shown in both modes
                         Expanded(
                           child: _buildBalanceCard(
-                            'Income',
-                            Colors.green,
-                            HugeIcons.strokeRoundedChartUp,
-                            AppColors.incomeBackground,
-                            monthSnapshot.data?.incomeByCurrency ?? {},
+                            'Expense',
+                            Colors.red,
+                            HugeIcons.strokeRoundedChartDown,
+                            AppColors.expenseBackground,
+                            monthSnapshot.data?.expensesByCurrency ?? {},
                             currencyProvider,
                           ),
                         ),
-                      if (!vacationProvider.isVacationMode)
-                        const SizedBox(width: 12),
-                      // Expense card - shown in both modes
-                      Expanded(
-                        child: _buildBalanceCard(
-                          'Expense',
-                          Colors.red,
-                          HugeIcons.strokeRoundedChartDown,
-                          AppColors.expenseBackground,
-                          monthSnapshot.data?.expensesByCurrency ?? {},
-                          currencyProvider,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -2464,22 +2466,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Color backgroundColor,
   ) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              Expanded(
+                child: Text(
                   title,
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
-                const SizedBox(height: 4),
+              ),
+              HugeIcon(icon: icon, color: color, size: 28),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
                 Text(
                   amount,
                   style: TextStyle(
@@ -2492,8 +2505,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ],
             ),
           ),
-          const SizedBox(width: 4),
-          HugeIcon(icon: icon, color: color, size: 28),
         ],
       ),
     );
@@ -2508,6 +2519,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     CurrencyProvider currencyProvider,
   ) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -2529,32 +2542,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 8),
           // Display currency breakdown
-          if (amountsByCurrency.isEmpty)
-            Text(
-              title == 'Income' ? '+ 0.00' : '- 0.00',
-              style: TextStyle(
-                color: color,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            )
-          else
-            ...amountsByCurrency.entries.map((entry) {
-              final currency = entry.key;
-              final amount = entry.value;
-              final isSelectedCurrency = currency == currencyProvider.selectedCurrencyCode;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  '${title == 'Income' ? '+' : '-'} $currency ${amount.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: isSelectedCurrency ? 16 : 14,
-                    fontWeight: isSelectedCurrency ? FontWeight.bold : FontWeight.w600,
-                  ),
-                ),
-              );
-            }).toList(),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                if (amountsByCurrency.isEmpty)
+                  Text(
+                    title == 'Income' ? '+ 0.00' : '- 0.00',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                else
+                  ...amountsByCurrency.entries.map((entry) {
+                    final currency = entry.key;
+                    final amount = entry.value;
+                    final isSelectedCurrency = currency == currencyProvider.selectedCurrencyCode;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        '${title == 'Income' ? '+' : '-'} $currency ${amount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: color,
+                          fontSize: isSelectedCurrency ? 16 : 14,
+                          fontWeight: isSelectedCurrency ? FontWeight.bold : FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+              ],
+            ),
+          ),
         ],
       ),
     );
