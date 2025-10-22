@@ -3,6 +3,7 @@ import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_detail_screen.dart';
@@ -64,6 +65,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   VacationProvider? _vacationProvider;
   VoidCallback? _vacationListener;
   String? _selectedChartCurrency; // For chart currency selection
+  
+  // Add HomeScreenProvider listener for transaction updates
+  HomeScreenProvider? _homeScreenProvider;
+  VoidCallback? _homeScreenListener;
 
   @override
   void initState() {
@@ -96,6 +101,18 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       _tryEmitCombined();
     };
     _vacationProvider?.addListener(_vacationListener!);
+    
+    // Subscribe to HomeScreenProvider changes for transaction updates
+    _homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+    _homeScreenListener = () {
+      if (!mounted) return;
+      // Force recomputation when transactions are updated
+      if (_homeScreenProvider!.shouldRefreshTransactions || _homeScreenProvider!.shouldRefresh) {
+        _tryEmitCombined();
+        _homeScreenProvider!.completeRefresh();
+      }
+    };
+    _homeScreenProvider?.addListener(_homeScreenListener!);
   }
 
   void _initStreams() {
@@ -120,6 +137,15 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
   void _tryEmitCombined() {
     if (_latestAccounts == null || _latestTransactions == null) return;
+
+    // Check if HomeScreenProvider has refresh flags set and trigger refresh if needed
+    final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+    if (homeScreenProvider.shouldRefreshTransactions || homeScreenProvider.shouldRefresh) {
+      homeScreenProvider.completeRefresh();
+      // Force a fresh data fetch by re-emitting
+      _tryEmitCombined();
+      return;
+    }
 
     final transactions = _latestTransactions!;
     final allAccounts = _latestAccounts!;
@@ -163,20 +189,28 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     final vacationTransactionCounts = <String, int>{};
     for (var transaction in transactions) {
       final accId = transaction.accountId;
-      if (accId == null || defaultAccountIds.contains(accId)) continue;
+      if (accId == null) continue;
+      
       final isExpense =
           transaction.type.toString().toLowerCase().contains('expense');
+      
+      // For vacation mode, we need to process ALL transactions, including those on default accounts
+      // if they are linked to vacation accounts
+      
+      // Count all transactions (paid and unpaid) for transaction count
+      vacationTransactionCounts.update(
+        accId,
+        (v) => v + 1,
+        ifAbsent: () => 1,
+      );
+      
+      // Only count paid expenses for balance calculation
       if (isExpense && transaction.paid == true) {
         // For vacation transactions, count expenses for both normal and vacation accounts (only paid)
         expenseSums.update(
           accId,
           (v) => v + transaction.amount,
           ifAbsent: () => transaction.amount,
-        );
-        vacationTransactionCounts.update(
-          accId,
-          (v) => v + 1,
-          ifAbsent: () => 1,
         );
         // If this is a vacation transaction, also count it for the linked vacation account
         if (transaction.isVacation == true &&
@@ -293,6 +327,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     // Remove vacation listener if attached
     if (_vacationProvider != null && _vacationListener != null) {
       _vacationProvider!.removeListener(_vacationListener!);
+    }
+    
+    // Remove home screen listener if attached
+    if (_homeScreenProvider != null && _homeScreenListener != null) {
+      _homeScreenProvider!.removeListener(_homeScreenListener!);
     }
 
     _scrollController.dispose();

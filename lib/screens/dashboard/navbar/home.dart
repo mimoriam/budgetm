@@ -1311,6 +1311,14 @@ class _MonthPageViewState extends State<MonthPageView> {
         if (result == true) {
           // Use local state update instead of full data refresh
           _provider.togglePaidStatus(uiTransaction.id);
+          
+          // For vacation mode transactions, also trigger a full refresh to ensure
+          // all screens update properly since vacation transactions affect multiple accounts
+          final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+          if (vacationProvider.isVacationMode) {
+            final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+            homeScreenProvider.requestRefreshForBothModes();
+          }
         }
       },
       child: Container(
