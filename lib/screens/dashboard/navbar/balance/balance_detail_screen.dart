@@ -7,7 +7,6 @@ import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
-import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:flutter/material.dart';
@@ -30,28 +29,55 @@ class BalanceDetailScreen extends StatefulWidget {
 class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService.instance;
   DateTimeRange? _selectedDateRange;
+  List<_TransactionWithCategory> _detailedTransactions = [];
+  bool _isLoading = true;
 
-  // Group transactions by date
-  Map<DateTime, List<FirestoreTransaction>> _groupTransactionsByDate(List<FirestoreTransaction> transactions) {
-    final Map<DateTime, List<FirestoreTransaction>> groupedTransactions = {};
-    
-    for (final transaction in transactions) {
-      // Normalize date to midnight to ensure all transactions from the same day are grouped together
-      final normalizedDate = DateTime(
-        transaction.date.year,
-        transaction.date.month,
-        transaction.date.day,
-      );
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get transactions first
+      final transactions = await _firestoreService.getTransactionsForAccount(widget.account.id);
       
-      if (groupedTransactions.containsKey(normalizedDate)) {
-        groupedTransactions[normalizedDate]!.add(transaction);
-      } else {
-        groupedTransactions[normalizedDate] = [transaction];
+      // Create a list of futures to fetch category information
+      final detailedTransactionsFutures = transactions.map((t) async {
+        Category? category;
+        if (t.categoryId != null && t.categoryId!.isNotEmpty) {
+          category = await _firestoreService.getCategoryById(t.categoryId!);
+        }
+        return _TransactionWithCategory(
+          transaction: t,
+          category: category,
+        );
+      }).toList();
+
+      // Wait for all futures to complete
+      _detailedTransactions = await Future.wait(detailedTransactionsFutures);
+
+      // Sort by date descending
+      _detailedTransactions.sort(
+        (a, b) => b.transaction.date.compareTo(a.transaction.date),
+      );
+    } catch (e) {
+      print('Error loading transactions: $e');
+      _detailedTransactions = [];
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
-    
-    return groupedTransactions;
   }
+
 
   // Format date in a user-friendly way
   String _formatDateHeader(DateTime date) {
@@ -70,12 +96,6 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine the correct currency symbol for the account being viewed
-    final accountCurrencyCode = widget.account.currency;
-    final currency = CurrencyService().findByCode(accountCurrencyCode);
-    final currencySymbol = currency?.symbol ?? '\$';
-    final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
-    
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight),
@@ -144,349 +164,325 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
           ),
         ),
       ),
-      body: StreamBuilder<List<FirestoreTransaction>>(
-        stream: _firestoreService.getTransactionsForAccountStream(widget.account.id),
-        builder: (context, snapshot) {
-          // Handle loading state
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildBody(),
+    );
+  }
 
-          // Handle error state
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildBody() {
+    // Determine the correct currency symbol for the account being viewed
+    final accountCurrencyCode = widget.account.currency;
+    final currency = CurrencyService().findByCode(accountCurrencyCode);
+    final currencySymbol = currency?.symbol ?? '\$';
+    final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
+
+    // Calculate current balance
+    double currentBalance = widget.account.initialBalance;
+    if (_detailedTransactions.isNotEmpty) {
+      // For vacation accounts, calculate remaining balance (initial - expenses)
+      if (widget.account.isVacationAccount == true) {
+        double totalExpenses = 0.0;
+        for (final detailedTransaction in _detailedTransactions) {
+          final transaction = detailedTransaction.transaction;
+          final isExpense = transaction.type.toString().toLowerCase().contains('expense');
+          if (isExpense) {
+            totalExpenses += transaction.amount;
+          }
+        }
+        currentBalance = (widget.account.initialBalance - totalExpenses).clamp(0.0, double.infinity);
+      } else {
+        // For normal accounts, calculate balance from all transactions
+        for (final detailedTransaction in _detailedTransactions) {
+          final transaction = detailedTransaction.transaction;
+          if (transaction.type == 'income') {
+            currentBalance += transaction.amount;
+          } else {
+            currentBalance -= transaction.amount;
+          }
+        }
+      }
+    }
+    
+    // Filter transactions based on selected date range
+    List<_TransactionWithCategory> filteredTransactions = _detailedTransactions;
+    if (_selectedDateRange != null) {
+      filteredTransactions = _detailedTransactions.where((detailedTransaction) {
+        final transaction = detailedTransaction.transaction;
+        final transactionDate = DateTime(
+          transaction.date.year,
+          transaction.date.month,
+          transaction.date.day,
+        );
+        final startDate = DateTime(
+          _selectedDateRange!.start.year,
+          _selectedDateRange!.start.month,
+          _selectedDateRange!.start.day,
+        );
+        final endDate = DateTime(
+          _selectedDateRange!.end.year,
+          _selectedDateRange!.end.month,
+          _selectedDateRange!.end.day,
+        );
+        return !transactionDate.isBefore(startDate) && !transactionDate.isAfter(endDate);
+      }).toList();
+    }
+    
+    // Calculate filtered subtotal
+    double filteredSubtotal = 0;
+    for (final detailedTransaction in filteredTransactions) {
+      final transaction = detailedTransaction.transaction;
+      if (widget.account.isVacationAccount == true) {
+        // For vacation accounts, only count expenses
+        final isExpense = transaction.type.toString().toLowerCase().contains('expense');
+        if (isExpense) {
+          filteredSubtotal -= transaction.amount;
+        }
+      } else {
+        // For normal accounts, count both income and expenses
+        if (transaction.type == 'income') {
+          filteredSubtotal += transaction.amount;
+        } else {
+          filteredSubtotal -= transaction.amount;
+        }
+      }
+    }
+
+    return Column(
+      children: [
+        // Balance display section
+        Container(
+          margin: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(20.0),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.gradientStart, AppColors.gradientEnd2],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Row for Initial Balance and Current Balance
+              Row(
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 60,
+                  Expanded(
+                    child: Semantics(
+                      label: 'Initial Balance',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Initial Balance',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            currencyFormat.format(widget.account.initialBalance),
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading transactions',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Container(
+                    width: 1,
+                    height: 50,
+                    color: Colors.black.withOpacity(0.2),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    snapshot.error.toString(),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
+                  Expanded(
+                    child: Semantics(
+                      label: 'Current Balance',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Current Balance',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            currencyFormat.format(currentBalance),
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: currentBalance >= 0 ? Colors.black : Colors.red[300],
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
-            );
-          }
-
-          // Calculate current balance
-          double currentBalance = widget.account.initialBalance;
-          if (snapshot.hasData) {
-            // For vacation accounts, calculate remaining balance (initial - expenses)
-            if (widget.account.isVacationAccount == true) {
-              double totalExpenses = 0.0;
-              for (final transaction in snapshot.data!) {
-                final isExpense = transaction.type.toString().toLowerCase().contains('expense');
-                if (isExpense) {
-                  totalExpenses += transaction.amount;
-                }
-              }
-              currentBalance = (widget.account.initialBalance - totalExpenses).clamp(0.0, double.infinity);
-            } else {
-              // For normal accounts, calculate balance from all transactions
-              for (final transaction in snapshot.data!) {
-                if (transaction.type == 'income') {
-                  currentBalance += transaction.amount;
-                } else {
-                  currentBalance -= transaction.amount;
-                }
-              }
-            }
-          }
-          
-          // Filter transactions based on selected date range
-          List<FirestoreTransaction> filteredTransactions = [];
-          if (snapshot.hasData) {
-            filteredTransactions = snapshot.data!;
-            if (_selectedDateRange != null) {
-              filteredTransactions = snapshot.data!.where((transaction) {
-                final transactionDate = DateTime(
-                  transaction.date.year,
-                  transaction.date.month,
-                  transaction.date.day,
-                );
-                final startDate = DateTime(
-                  _selectedDateRange!.start.year,
-                  _selectedDateRange!.start.month,
-                  _selectedDateRange!.start.day,
-                );
-                final endDate = DateTime(
-                  _selectedDateRange!.end.year,
-                  _selectedDateRange!.end.month,
-                  _selectedDateRange!.end.day,
-                );
-                return !transactionDate.isBefore(startDate) && !transactionDate.isAfter(endDate);
-              }).toList();
-            }
-          }
-          
-          // Calculate filtered subtotal
-          double filteredSubtotal = 0;
-          for (final transaction in filteredTransactions) {
-            if (widget.account.isVacationAccount == true) {
-              // For vacation accounts, only count expenses
-              final isExpense = transaction.type.toString().toLowerCase().contains('expense');
-              if (isExpense) {
-                filteredSubtotal -= transaction.amount;
-              }
-            } else {
-              // For normal accounts, count both income and expenses
-              if (transaction.type == 'income') {
-                filteredSubtotal += transaction.amount;
-              } else {
-                filteredSubtotal -= transaction.amount;
-              }
-            }
-          }
-
-          return Column(
-            children: [
-              // Balance display section
-              Container(
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.gradientStart, AppColors.gradientEnd2],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              const SizedBox(height: 16),
+              // Display filtered subtotal if a date range is selected
+              if (_selectedDateRange != null)
+                Semantics(
+                  label: 'Filtered Total',
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Total for Selected Period',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedDateRange = null;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: Colors.red[400],
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        currencyFormat.format(filteredSubtotal),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: filteredSubtotal >= 0 ? Colors.black : Colors.red[300],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d, yyyy').format(_selectedDateRange!.end)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.3),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
                 ),
-                child: Column(
-                  children: [
-                    // Row for Initial Balance and Current Balance
-                    Row(
+            ],
+          ),
+        ),
+        
+        // Transactions list
+        Expanded(
+          child: _detailedTransactions.isEmpty
+              ? Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: Semantics(
-                            label: 'Initial Balance',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Initial Balance',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  currencyFormat.format(widget.account.initialBalance),
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    color: Colors.black,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        Icon(
+                          Icons.receipt_long,
+                          size: 80,
+                          color: Colors.grey[400],
                         ),
-                        Container(
-                          width: 1,
-                          height: 50,
-                          color: Colors.black.withOpacity(0.2),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No transactions found',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+                          textAlign: TextAlign.center,
                         ),
-                        Expanded(
-                          child: Semantics(
-                            label: 'Current Balance',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Current Balance',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  currencyFormat.format(currentBalance),
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    color: currentBalance >= 0 ? Colors.black : Colors.red[300],
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Transactions for this account will appear here',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[500],
+                              ),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    // Display filtered subtotal if a date range is selected
-                    if (_selectedDateRange != null)
-                      Semantics(
-                        label: 'Filtered Total',
+                  ),
+                )
+              : filteredTransactions.isEmpty
+                  ? Center(
+                      child: SingleChildScrollView(
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Total for Selected Period',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedDateRange = null;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      Icons.close_rounded,
-                                      color: Colors.red[400],
-                                      size: 18,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Icon(
+                              Icons.filter_list_off,
+                              size: 80,
+                              color: Colors.grey[400],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 16),
                             Text(
-                              currencyFormat.format(filteredSubtotal),
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: filteredSubtotal >= 0 ? Colors.black : Colors.red[300],
-                                fontWeight: FontWeight.bold,
-                              ),
+                              'No transactions found for the selected period',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+                              textAlign: TextAlign.center,
                             ),
+                            const SizedBox(height: 8),
                             Text(
-                              '${DateFormat('MMM d').format(_selectedDateRange!.start)} - ${DateFormat('MMM d, yyyy').format(_selectedDateRange!.end)}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.black,
+                              'Try adjusting the date range filter',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[500],
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 24),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedDateRange = null;
+                                });
+                              },
+                              icon: const Icon(Icons.refresh, color: Colors.black,),
+                              label: const Text('Clear Filter', style: TextStyle(
+                                color: Colors.black
+                              ),),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.gradientStart,
+                                side: BorderSide(color: AppColors.gradientStart),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                  ],
-                ),
-              ),
-              
-              // Transactions list
-              Expanded(
-                child: (!snapshot.hasData || snapshot.data!.isEmpty)
-                    ? Center(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long,
-                                size: 80,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No transactions found',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Transactions for this account will appear here',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Colors.grey[500],
-                                    ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : filteredTransactions.isEmpty
-                        ? Center(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.filter_list_off,
-                                    size: 80,
-                                    color: Colors.grey[400],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No transactions found for the selected period',
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Try adjusting the date range filter',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Colors.grey[500],
-                                        ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 24),
-                                  OutlinedButton.icon(
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedDateRange = null;
-                                      });
-                                    },
-                                    icon: const Icon(Icons.refresh, color: Colors.black,),
-                                    label: const Text('Clear Filter', style: TextStyle(
-                                      color: Colors.black
-                                    ),),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.gradientStart,
-                                      side: BorderSide(color: AppColors.gradientStart),
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : _buildGroupedTransactionsList(filteredTransactions),
-              ),
-            ],
-          );
-        },
-      ),
+                    )
+                  : _buildGroupedTransactionsList(filteredTransactions),
+        ),
+      ],
     );
   }
 
-  Widget _buildTransactionCard(FirestoreTransaction transaction) {
+  Widget _buildTransactionCard(_TransactionWithCategory detailedTransaction) {
+    final transaction = detailedTransaction.transaction;
+    final category = detailedTransaction.category;
     final isIncome = transaction.type == 'income';
     final isVacationTransaction = transaction.isVacation == true;
     
@@ -520,7 +516,8 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
             ),
           );
           // Check if result is true (indicating a change was made)
-          if (result == true) {
+          if (result == true && mounted) {
+            _loadTransactions(); // Refresh local data
             Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
           }
         }
@@ -548,57 +545,31 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                 color: iconBackgroundColor,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: FutureBuilder<Category?>(
-                future: transaction.categoryId != null
-                    ? _firestoreService.getCategoryById(transaction.categoryId!)
-                    : null,
-                builder: (context, categorySnapshot) {
-                  // Use category icon if available, otherwise use default income/expense icon
-                  Widget iconWidget;
-                  if (categorySnapshot.hasData && categorySnapshot.data != null) {
-                    iconWidget = HugeIcon(
-                      icon: getIcon(categorySnapshot.data!.icon),
+              child: category != null
+                  ? HugeIcon(
+                      icon: getIcon(category.icon),
                       color: iconForegroundColor,
                       size: 20,
-                    );
-                  } else {
-                    iconWidget = Icon(
+                    )
+                  : Icon(
                       isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                       color: iconForegroundColor,
                       size: 20,
-                    );
-                  }
-                  return iconWidget;
-                },
-              ),
+                    ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FutureBuilder<Category?>(
-                    future: transaction.categoryId != null
-                        ? _firestoreService.getCategoryById(transaction.categoryId!)
-                        : null,
-                    builder: (context, categorySnapshot) {
-                      String categoryName = 'Uncategorized';
-                      if (categorySnapshot.connectionState == ConnectionState.waiting) {
-                        categoryName = '...';
-                      } else if (categorySnapshot.hasData && categorySnapshot.data != null) {
-                        categoryName = categorySnapshot.data!.name ?? 'Uncategorized';
-                      }
-                      
-                      return Text(
-                        categoryName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    },
+                  Text(
+                    category?.name ?? 'Uncategorized',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -736,9 +707,25 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     );
   }
 
-  Widget _buildGroupedTransactionsList(List<FirestoreTransaction> transactions) {
+  Widget _buildGroupedTransactionsList(List<_TransactionWithCategory> detailedTransactions) {
     // Group transactions by date
-    final groupedTransactions = _groupTransactionsByDate(transactions);
+    final groupedTransactions = <DateTime, List<_TransactionWithCategory>>{};
+    
+    for (final detailedTransaction in detailedTransactions) {
+      final transaction = detailedTransaction.transaction;
+      // Normalize date to midnight to ensure all transactions from the same day are grouped together
+      final normalizedDate = DateTime(
+        transaction.date.year,
+        transaction.date.month,
+        transaction.date.day,
+      );
+      
+      if (groupedTransactions.containsKey(normalizedDate)) {
+        groupedTransactions[normalizedDate]!.add(detailedTransaction);
+      } else {
+        groupedTransactions[normalizedDate] = [detailedTransaction];
+      }
+    }
     
     // Sort dates in descending order (newest first)
     final sortedDates = groupedTransactions.keys.toList()
@@ -752,7 +739,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
         final dateTransactions = groupedTransactions[date]!;
         
         // Sort transactions for this date by date/time in descending order
-        dateTransactions.sort((a, b) => b.date.compareTo(a.date));
+        dateTransactions.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
         
        return StickyHeader(
          header: Container(
@@ -788,8 +775,8 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
             ),
           ),
           content: Column(
-            children: dateTransactions.map((transaction) {
-              return _buildTransactionCard(transaction);
+            children: dateTransactions.map((detailedTransaction) {
+              return _buildTransactionCard(detailedTransaction);
             }).toList(),
           ),
         );
@@ -827,4 +814,15 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
       });
     }
   }
+}
+
+// Helper class to hold transaction and its category
+class _TransactionWithCategory {
+  final FirestoreTransaction transaction;
+  final Category? category;
+
+  _TransactionWithCategory({
+    required this.transaction,
+    required this.category,
+  });
 }
