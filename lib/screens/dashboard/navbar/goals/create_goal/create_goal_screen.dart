@@ -11,6 +11,7 @@ import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 class CreateGoalScreen extends StatefulWidget {
   final GoalType goalType;
@@ -25,6 +26,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isMoreOptionsVisible = false;
   Color _selectedColor = Colors.grey.shade300;
+  bool _isLoading = false;
 
   void _showColorPicker() {
     showDialog(
@@ -92,36 +94,70 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                                 ),
                               ),
                             ),
-                            // const SizedBox(width: 10),
-                            // Expanded(
-                            //   child: _buildFormSection(
-                            //     context,
-                            //     'Account',
-                            //     FormBuilderDropdown(
-                            //       name: 'icon',
-                            //       decoration: _inputDecoration(
-                            //         hintText: 'Select Icon',
-                            //       ),
-                            //       isDense: true,
-                            //       items: ['Icon 1', 'Icon 2']
-                            //           .map(
-                            //             (account) => DropdownMenuItem(
-                            //               value: account,
-                            //               child: Text(
-                            //                 account,
-                            //                 style: const TextStyle(
-                            //                   fontSize: 13,
-                            //                 ),
-                            //               ),
-                            //             ),
-                            //           )
-                            //           .toList(),
-                            //       validator: FormBuilderValidators.required(
-                            //         errorText: 'Please select an icon',
-                            //       ),
-                            //     ),
-                            //   ),
-                            // ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _buildFormSection(
+                                context,
+                                'Currency',
+                                FormBuilderField<String>(
+                                  name: 'currency',
+                                  initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
+                                  validator: FormBuilderValidators.required(
+                                    errorText: 'Please select a currency',
+                                  ),
+                                  builder: (FormFieldState<String?> field) {
+                                    return Consumer<CurrencyProvider>(
+                                      builder: (context, currencyProvider, child) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            showCurrencyPicker(
+                                              context: context,
+                                              showFlag: true,
+                                              showSearchField: true,
+                                              onSelect: (Currency currency) {
+                                                field.didChange(currency.code);
+                                              },
+                                            );
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 10.0,
+                                              horizontal: 16.0,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(30.0),
+                                              border: Border.all(
+                                                color: field.hasError
+                                                    ? AppColors.errorColor
+                                                    : Colors.grey.shade300,
+                                                width: field.hasError ? 1.5 : 1.0,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  field.value ?? currencyProvider.selectedCurrencyCode,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    color: AppColors.primaryTextColorLight,
+                                                  ),
+                                                ),
+                                                Icon(
+                                                  Icons.arrow_drop_down,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -460,80 +496,105 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: () async {
+              onPressed: _isLoading ? null : () async {
                 final isValid = _formKey.currentState?.saveAndValidate() ?? false;
                 if (!isValid) return;
 
-                final values = _formKey.currentState!.value;
+                setState(() {
+                  _isLoading = true;
+                });
 
-                // Extract and transform form values
-                final String name = (values['name'] as String? ?? '').trim();
+                try {
+                  final values = _formKey.currentState!.value;
 
-                // Prevent duplicate goal names (case-insensitive)
-                final bool exists = await context.read<GoalsProvider>().doesGoalExist(name);
-                if (exists) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('A goal with this name already exists')),
+                  // Extract and transform form values
+                  final String name = (values['name'] as String? ?? '').trim();
+
+                  // Prevent duplicate goal names (case-insensitive)
+                  final bool exists = await context.read<GoalsProvider>().doesGoalExist(name);
+                  if (exists) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('A goal with this name already exists')),
+                    );
+                    return;
+                  }
+
+                  final dynamic amountRaw = values['targetAmount'];
+                  double targetAmount;
+                  if (amountRaw is num) {
+                    targetAmount = amountRaw.toDouble();
+                  } else if (amountRaw is String) {
+                    targetAmount = double.tryParse(amountRaw.replaceAll(',', '').trim()) ?? 0.0;
+                  } else {
+                    targetAmount = 0.0;
+                  }
+
+                  final DateTime targetDate = (values['targetDate'] as DateTime?) ?? DateTime.now();
+                  final String? descriptionRaw = values['description'] as String?;
+                  final String? description = (descriptionRaw == null || descriptionRaw.trim().isEmpty)
+                      ? null
+                      : descriptionRaw.trim();
+                  final String icon = (values['icon'] as String? ?? 'icon_default_goal').trim();
+                  final String selectedCurrency = values['currency'] as String? ?? Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode;
+
+                  // Convert selected color to ARGB hex string (e.g., ffRRGGBB)
+                  final String? colorString = '#${_selectedColor.value.toRadixString(16).padLeft(8, '0')}';
+
+                  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+                  final goal = FirestoreGoal(
+                    id: '', // Firestore will generate the ID
+                    name: name,
+                    description: description,
+                    targetAmount: targetAmount,
+                    creationDate: DateTime.now(),
+                    targetDate: targetDate,
+                    userId: userId,
+                    icon: icon,
+                    color: colorString,
+                    isCompleted: widget.goalType == GoalType.fulfilled,
+                    currency: selectedCurrency, // Use selected currency from form
                   );
-                  return;
+
+                  await context.read<GoalsProvider>().addGoal(goal);
+
+                  Navigator.of(context).pop();
+                } catch (e) {
+                  // Handle any errors that might occur during goal creation
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error creating goal: ${e.toString()}')),
+                  );
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _isLoading = false;
+                    });
+                  }
                 }
-
-                final dynamic amountRaw = values['targetAmount'];
-                double targetAmount;
-                if (amountRaw is num) {
-                  targetAmount = amountRaw.toDouble();
-                } else if (amountRaw is String) {
-                  targetAmount = double.tryParse(amountRaw.replaceAll(',', '').trim()) ?? 0.0;
-                } else {
-                  targetAmount = 0.0;
-                }
-
-                final DateTime targetDate = (values['targetDate'] as DateTime?) ?? DateTime.now();
-                final String? descriptionRaw = values['description'] as String?;
-                final String? description = (descriptionRaw == null || descriptionRaw.trim().isEmpty)
-                    ? null
-                    : descriptionRaw.trim();
-                final String icon = (values['icon'] as String? ?? '').trim();
-
-                // Convert selected color to ARGB hex string (e.g., ffRRGGBB)
-                final String? colorString = _selectedColor == null
-                    ? null
-                    : '#${_selectedColor.value.toRadixString(16).padLeft(8, '0')}';
-
-                final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-
-                final goal = FirestoreGoal(
-                  id: '', // Firestore will generate the ID
-                  name: name,
-                  description: description,
-                  targetAmount: targetAmount,
-                  creationDate: DateTime.now(),
-                  targetDate: targetDate,
-                  userId: userId,
-                  icon: icon,
-                  color: colorString,
-                  isCompleted: widget.goalType == GoalType.fulfilled,
-                  currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
-                );
-
-                await context.read<GoalsProvider>().addGoal(goal);
-
-                Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gradientEnd,
+                backgroundColor: _isLoading ? Colors.grey : AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
-                'Add',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Add',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
             ),
           ),
         ],

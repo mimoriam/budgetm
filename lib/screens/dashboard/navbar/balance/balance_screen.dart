@@ -869,6 +869,30 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     required int accountsCount,
     required int transactionCount,
   }) {
+    // Check if this is a vacation account
+    final isVacationAccount = account.isVacationAccount == true;
+    
+    // Use vacation-specific icon and styling for vacation accounts
+    final vacationIcon = HugeIcons.strokeRoundedAirplaneMode;
+    final displayIcon = isVacationAccount ? vacationIcon : icon;
+    final displayIconColor = isVacationAccount ? Colors.blue.shade600 : iconColor;
+    final displayIconBackgroundColor = isVacationAccount ? Colors.blue.shade50 : iconBackgroundColor;
+    
+    // Apply vacation styling similar to home.dart
+    final cardBackgroundColor = isVacationAccount 
+        ? Colors.blue.shade50  // Light blue background for vacation accounts
+        : (isHighlighted 
+            ? AppColors.gradientStart.withOpacity(0.08)
+            : Colors.white);
+    
+    final cardBorderColor = isVacationAccount
+        ? Colors.blue.shade300  // Blue border for vacation accounts
+        : (isHighlighted
+            ? AppColors.gradientStart
+            : Colors.grey.shade200);
+    
+    final cardBorderWidth = isVacationAccount ? 1.5 : (isHighlighted ? 2.0 : 1.0);
+    
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
@@ -884,15 +908,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
-          color: isHighlighted
-              ? AppColors.gradientStart.withOpacity(0.08)
-              : Colors.white,
+          color: cardBackgroundColor,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isHighlighted
-                ? AppColors.gradientStart
-                : Colors.grey.shade200,
-            width: isHighlighted ? 2.0 : 1.0,
+            color: cardBorderColor,
+            width: cardBorderWidth,
           ),
           boxShadow: [
             BoxShadow(
@@ -907,10 +927,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: iconBackgroundColor,
+                color: displayIconBackgroundColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: HugeIcon(icon: icon, size: 24, color: iconColor),
+              child: HugeIcon(icon: displayIcon, size: 24, color: displayIconColor),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -942,14 +962,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                         color: AppColors.secondaryTextColorLight,
                       ),
                     )
-                  // else if (account.isVacationAccount == true)
-                  // Text(
-                  //   'Credit Limit: Unlimited',
-                  //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  //     color: AppColors.secondaryTextColorLight,
-                  //     fontStyle: FontStyle.italic,
-                  //   ),
-                  // )
                   else if (balanceLimit != null)
                     Text(
                       'Balance Limit: ${_getAccountCurrencySymbol(account)}${balanceLimit.toStringAsFixed(2)}',

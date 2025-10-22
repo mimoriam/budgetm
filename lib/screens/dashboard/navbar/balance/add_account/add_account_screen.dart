@@ -430,6 +430,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
+                    widget.isCreatingVacationAccount ? "Add A Vacation" :
                     'Add New Account',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,

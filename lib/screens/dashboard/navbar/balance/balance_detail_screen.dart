@@ -7,7 +7,9 @@ import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
+import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/utils/icon_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -486,6 +488,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
 
   Widget _buildTransactionCard(FirestoreTransaction transaction) {
     final isIncome = transaction.type == 'income';
+    final isVacationTransaction = transaction.isVacation == true;
     
     // Determine the correct currency symbol for the account being viewed
     final accountCurrencyCode = widget.account.currency;
@@ -495,6 +498,15 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     // Get the icon color from the transaction, fallback to default if null
     final Color iconBackgroundColor = hexToColor(transaction.icon_color);
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
+
+    // Apply vacation styling similar to home.dart
+    final cardBackgroundColor = isVacationTransaction 
+        ? Colors.blue.shade50  // Light blue background for vacation transactions
+        : Colors.white;
+    
+    final cardBorderColor = isVacationTransaction
+        ? Colors.blue.shade300  // Blue border for vacation transactions
+        : Colors.grey.shade200;
 
     return GestureDetector(
       onTap: () async {
@@ -517,27 +529,47 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBackgroundColor,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
+          border: Border.all(color: cardBorderColor, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 1,
+              blurRadius: 8,
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Icon(
-              transaction.paid == true ? Icons.check_circle : Icons.circle_outlined,
-              color: transaction.paid == true ? Colors.green : Colors.grey,
-              size: 20,
-            ),
-            SizedBox(width: 2),
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: iconBackgroundColor,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                color: iconForegroundColor,
+              child: FutureBuilder<Category?>(
+                future: transaction.categoryId != null
+                    ? _firestoreService.getCategoryById(transaction.categoryId!)
+                    : null,
+                builder: (context, categorySnapshot) {
+                  // Use category icon if available, otherwise use default income/expense icon
+                  Widget iconWidget;
+                  if (categorySnapshot.hasData && categorySnapshot.data != null) {
+                    iconWidget = HugeIcon(
+                      icon: getIcon(categorySnapshot.data!.icon),
+                      color: iconForegroundColor,
+                      size: 20,
+                    );
+                  } else {
+                    iconWidget = Icon(
+                      isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                      color: iconForegroundColor,
+                      size: 20,
+                    );
+                  }
+                  return iconWidget;
+                },
               ),
             ),
             const SizedBox(width: 8),
@@ -568,7 +600,6 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                       );
                     },
                   ),
-                
                   const SizedBox(height: 2),
                   Text(
                     DateFormat('MMM d, yyyy').format(transaction.date),
@@ -577,13 +608,33 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                 ],
               ),
             ),
-            Text(
-              '${isIncome ? '+' : '-'} $currencySymbol${transaction.amount.toStringAsFixed(2)}',
-              style: TextStyle(
-                color: isIncome ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  transaction.paid == true ? Icons.check_circle : Icons.circle_outlined,
+                  color: transaction.paid == true ? Colors.green : Colors.grey,
+                  size: 16,
+                ),
+                // Add vacation icon for vacation transactions
+                if (isVacationTransaction) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.flight_takeoff,
+                    color: Colors.blue.shade600,
+                    size: 14,
+                  ),
+                ],
+                const SizedBox(width: 4),
+                Text(
+                  '${isIncome ? '+' : '-'} $currencySymbol${transaction.amount.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: isIncome ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

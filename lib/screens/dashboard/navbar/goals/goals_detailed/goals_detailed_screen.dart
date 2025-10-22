@@ -28,6 +28,44 @@ class GoalDetailScreen extends StatefulWidget {
 
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
+  // Helper function to get currency symbol for a currency code
+  String _getCurrencySymbol(String currencyCode) {
+    // Simple mapping for common currencies - can be expanded
+    final currencySymbols = {
+      'USD': '\$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'CAD': 'C\$',
+      'AUD': 'A\$',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'INR': '₹',
+      'BRL': 'R\$',
+      'MXN': '\$',
+      'KRW': '₩',
+      'SGD': 'S\$',
+      'HKD': 'HK\$',
+      'NZD': 'NZ\$',
+      'SEK': 'kr',
+      'NOK': 'kr',
+      'DKK': 'kr',
+      'PLN': 'zł',
+      'CZK': 'Kč',
+      'HUF': 'Ft',
+      'RUB': '₽',
+      'TRY': '₺',
+      'ZAR': 'R',
+      'THB': '฿',
+      'MYR': 'RM',
+      'PHP': '₱',
+      'IDR': 'Rp',
+      'VND': '₫',
+    };
+    
+    return currencySymbols[currencyCode] ?? currencyCode;
+  }
+
   // Helper function to convert Firestore transaction to UI transaction
   model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context, [Category? category]) {
     return model.Transaction(
@@ -93,13 +131,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       _buildInfoCard(
                         context,
                         'Accumulated Amount',
-                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(widget.goal.currentAmount)}',
+                        '${_getCurrencySymbol(widget.goal.currency)}${NumberFormat('#,##0').format(widget.goal.currentAmount)}',
                       ),
                       const SizedBox(width: 12),
                       _buildInfoCard(
                         context,
                         'Total',
-                        '${Provider.of<CurrencyProvider>(context).currencySymbol}${NumberFormat('#,##0').format(widget.goal.targetAmount)}',
+                        '${_getCurrencySymbol(widget.goal.currency)}${NumberFormat('#,##0').format(widget.goal.targetAmount)}',
                       ),
                     ],
                   ),
@@ -373,7 +411,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   ),
                 ),
                 Text(
-                  '${isIncome ? '+' : '-'} ${Provider.of<CurrencyProvider>(context).currencySymbol}${txn.amount.toStringAsFixed(2)}',
+                  '${isIncome ? '+' : '-'} ${_getCurrencySymbol(widget.goal.currency)}${txn.amount.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: isIncome ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,

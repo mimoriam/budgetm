@@ -29,7 +29,6 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   late bool _isPaid;
   bool _hasChanges = false;
   late Future<Map<String, dynamic>> _dataFuture;
-  FirestoreTransaction? _firestoreTransaction;
 
   @override
   void initState() {
@@ -71,21 +70,19 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       final results = await Future.wait(futures);
       
       final firestoreTxn = results[0] as FirestoreTransaction?;
-      _firestoreTransaction = firestoreTxn;
       
-      // Fetch vacation account if this is a vacation transaction and has a linked transaction
+      // Fetch vacation account for vacation transactions
       FirestoreAccount? vacationAccount;
-      if (firestoreTxn != null && firestoreTxn.isVacation && firestoreTxn.linkedTransactionId != null) {
-        // For vacation transactions, we need to find the linked normal transaction to get the vacation account
-        final linkedTxn = await _firestoreService.getTransactionById(firestoreTxn.linkedTransactionId!);
-        if (linkedTxn != null && linkedTxn.accountId != null) {
-          vacationAccount = await _firestoreService.getAccountById(linkedTxn.accountId!);
+      if (firestoreTxn != null && firestoreTxn.isVacation) {
+        // For vacation transactions, get the vacation account directly
+        if (firestoreTxn.linkedVacationAccountId != null) {
+          vacationAccount = await _firestoreService.getAccountById(firestoreTxn.linkedVacationAccountId!);
         }
       } else if (firestoreTxn != null && !firestoreTxn.isVacation && firestoreTxn.linkedTransactionId != null) {
         // For normal transactions linked to vacation, fetch the vacation transaction to get the vacation account
         final vacationTxn = await _firestoreService.getTransactionById(firestoreTxn.linkedTransactionId!);
-        if (vacationTxn != null && vacationTxn.accountId != null) {
-          vacationAccount = await _firestoreService.getAccountById(vacationTxn.accountId!);
+        if (vacationTxn != null && vacationTxn.linkedVacationAccountId != null) {
+          vacationAccount = await _firestoreService.getAccountById(vacationTxn.linkedVacationAccountId!);
         }
       }
       
@@ -254,25 +251,37 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     ?.copyWith(fontSize: 32),
                               ),
                               const SizedBox(height: 8),
-                              // Primary account display - changes based on vacation mode
-                              if (account != null && !(account.isDefault ?? false))
-                                Consumer<VacationProvider>(
-                                  builder: (context, vacationProvider, child) {
-                                    // Determine which account to show as primary
-                                    final isVacationMode = vacationProvider.isVacationMode;
-                                    final showVacationAsPrimary = isVacationMode && vacationAccount != null;
-                                    final primaryAccount = showVacationAsPrimary ? vacationAccount : account;
-                                    
+                              // Primary account display - handle vacation transactions
+                              Consumer<VacationProvider>(
+                                builder: (context, vacationProvider, child) {
+                                  // For vacation transactions, show normal account if available
+                                  if (firestoreTransaction?.isVacation == true) {
+                                    if (account != null && !(account.isDefault ?? false)) {
+                                      // Show normal account for vacation transactions
+                                      return Text(
+                                        "${account.name} - ${account.accountType}",
+                                        style: Theme.of(context).textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: AppColors.secondaryTextColorLight,
+                                            ),
+                                      );
+                                    }
+                                    // If no normal account, show nothing at top (vacation account will be shown below)
+                                  }
+                                  // For normal transactions, show normal account (but hide default cash account)
+                                  else if (account != null && !(account.isDefault ?? false)) {
                                     return Text(
-                                      "${primaryAccount!.name} - ${primaryAccount.accountType}",
+                                      "${account.name} - ${account.accountType}",
                                       style: Theme.of(context).textTheme.bodyMedium
                                           ?.copyWith(
-                                            color:
-                                                AppColors.secondaryTextColorLight,
+                                            color: AppColors.secondaryTextColorLight,
                                           ),
                                     );
-                                  },
-                                ),
+                                  }
+                                  // Fallback - no account to display
+                                  return const SizedBox.shrink();
+                                },
+                              ),
                             ],
                           ),
                         ),
@@ -370,55 +379,49 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             ],
                           ),
                         
-                        // Account Information (secondary account display)
-                        if (vacationAccount != null)
-                          Consumer<VacationProvider>(
-                            builder: (context, vacationProvider, child) {
-                              // Determine which account to show as secondary
-                              final isVacationMode = vacationProvider.isVacationMode;
-                              final showNormalAsSecondary = isVacationMode && account != null;
-                              final secondaryAccount = showNormalAsSecondary ? account : vacationAccount;
-                              
-                              return Column(
+                        // Vacation account information for vacation transactions (with or without normal account) or vacation-linked transactions
+                        if (vacationAccount != null && (
+                          firestoreTransaction?.isVacation == true ||
+                          (firestoreTransaction?.isVacation == false && firestoreTransaction?.linkedTransactionId != null)
+                        ))
+                          Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'VACATION ACCOUNT',
-                                        style: Theme.of(context).textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: AppColors.secondaryTextColorLight,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      Flexible(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              secondaryAccount!.name,
-                                              style: Theme.of(context).textTheme.bodyMedium
-                                                  ?.copyWith(fontWeight: FontWeight.bold),
-                                              textAlign: TextAlign.right,
-                                            ),
-                                            // if (secondaryAccount.accountType.isNotEmpty)
-                                            //   Text(
-                                            //     secondaryAccount.accountType,
-                                            //     style: Theme.of(context).textTheme.bodySmall
-                                            //         ?.copyWith(color: Colors.grey.shade600),
-                                            //     textAlign: TextAlign.right,
-                                            //   ),
-                                            SizedBox(height: 14),
-                                          ],
+                                  Text(
+                                    'VACATION',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.secondaryTextColorLight,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                      ),
-                                    ],
                                   ),
-                                  Divider(color: Colors.grey.shade300),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          vacationAccount.name,
+                                          style: Theme.of(context).textTheme.bodyMedium
+                                              ?.copyWith(fontWeight: FontWeight.bold),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        // Text(
+                                        //   vacationAccount.accountType,
+                                        //   style: Theme.of(context).textTheme.bodySmall
+                                        //       ?.copyWith(color: Colors.grey.shade600),
+                                        //   textAlign: TextAlign.right,
+                                        // ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
-                              );
-                            },
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(color: Colors.grey.shade300),
+                            ],
                           ),
                         
                         // Transaction Notes
@@ -513,11 +516,39 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                 onPressed: _isDeleting
                                     ? null
                                     : () async {
-                                        // Add delete logic
-                                        await _deleteTransaction();
-                                        // Navigate back to the previous screen
-                                        if (context.mounted) {
-                                          Navigator.of(context).pop(true);
+                                        // Show confirmation dialog before deleting
+                                        final bool? shouldDelete = await showDialog<bool>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title: const Text('Delete Transaction'),
+                                              content: const Text(
+                                                'Are you sure you want to delete this transaction? This action cannot be undone.',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(true),
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor: Colors.red,
+                                                  ),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                        
+                                        // Only proceed with deletion if user confirmed
+                                        if (shouldDelete == true) {
+                                          await _deleteTransaction();
+                                          // Navigate back to the previous screen
+                                          if (context.mounted) {
+                                            Navigator.of(context).pop(true);
+                                          }
                                         }
                                       },
                                 style: ElevatedButton.styleFrom(

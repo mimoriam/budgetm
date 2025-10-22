@@ -613,6 +613,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                               await currencyProvider.setCurrency(currency, 1.0);
                                               // Reload accounts when currency changes (both normal and vacation mode)
                                               _loadAccounts();
+                                              // Reset selected goal when currency changes
+                                              setState(() {
+                                                _selectedGoalId = null;
+                                              });
                                               field.didChange(currency.code);
                                             },
                                           );
@@ -794,19 +798,31 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             ],
                           ),
                         ),
-                      if (widget.transactionType == TransactionType.income)
+                        if (widget.transactionType == TransactionType.income)
                         StreamBuilder<List<FirestoreGoal>>(
                           stream: Provider.of<GoalsProvider>(
                             context,
                             listen: false,
                           ).getGoals(),
                           builder: (context, snapshot) {
-                            final pendingGoals = (snapshot.data ?? [])
+                            final allPendingGoals = (snapshot.data ?? [])
                                 .where((g) => !g.isCompleted)
                                 .toList();
+                            
+                            // Get the selected transaction currency
+                            final formData = _formKey.currentState?.value ?? {};
+                            final transactionCurrency = formData['transactionCurrency'] as String? ?? 
+                                Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode;
+                            
+                            // Filter goals to only show those matching the transaction currency
+                            final pendingGoals = allPendingGoals
+                                .where((g) => g.currency == transactionCurrency)
+                                .toList();
+                            
                             if (pendingGoals.isEmpty) {
                               return const SizedBox.shrink();
                             }
+                            
                             // Determine currently selected goal object if any
                             final FirestoreGoal? selectedGoal =
                                 _selectedGoalId != null
@@ -906,7 +922,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         ),
                       const SizedBox(height: 10),
                       _buildMoreOptionsToggle(),
-                      const SizedBox(height: 10),
+                      // const SizedBox(height: 10),
                       AnimatedSize(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
@@ -931,6 +947,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Notes field moved to the top
+        _buildFormSection(
+          context,
+          'Notes',
+          FormBuilderTextField(
+            name: 'notes',
+            style: const TextStyle(fontSize: 13),
+            decoration: _inputDecoration(hintText: 'Notes'),
+            maxLines: 2,
+          ),
+        ),
+        const SizedBox(height: 12),
         // Expense-only fields (paid) are intentionally disabled here.
         // Date and Time should be available for both income and expense inside "More"
         Row(
@@ -1014,24 +1042,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
-          'Repeat',
-          FormBuilderDropdown(
-            name: 'repeat',
-            initialValue: "Don't Repeat",
-            decoration: _inputDecoration(),
-            items: ["Don't Repeat", 'Daily', 'Weekly', 'Monthly', 'Yearly']
-                .map(
-                  (repeat) => DropdownMenuItem(
-                    value: repeat,
-                    child: Text(repeat, style: const TextStyle(fontSize: 13)),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
+        // const SizedBox(height: 8),
+        // _buildFormSection(
+        //   context,
+        //   'Repeat',
+        //   FormBuilderDropdown(
+        //     name: 'repeat',
+        //     initialValue: "Don't Repeat",
+        //     decoration: _inputDecoration(),
+        //     items: ["Don't Repeat", 'Daily', 'Weekly', 'Monthly', 'Yearly']
+        //         .map(
+        //           (repeat) => DropdownMenuItem(
+        //             value: repeat,
+        //             child: Text(repeat, style: const TextStyle(fontSize: 13)),
+        //           ),
+        //         )
+        //         .toList(),
+        //   ),
+        // ),
         if (widget.transactionType == TransactionType.income) ...[
           const SizedBox(height: 8),
           _buildFormSection(
@@ -1063,33 +1091,33 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          _buildFormSection(
-            context,
-            'Remind',
-            FormBuilderDropdown(
-              name: 'remind',
-              initialValue: "Don't Remind",
-              decoration: _inputDecoration(),
-              items:
-                  [
-                        "Don't Remind",
-                        '1 day before',
-                        '2 days before',
-                        '1 week before',
-                      ]
-                      .map(
-                        (remind) => DropdownMenuItem(
-                          value: remind,
-                          child: Text(
-                            remind,
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                      )
-                      .toList(),
-            ),
-          ),
+          // const SizedBox(height: 8),
+          // _buildFormSection(
+          //   context,
+          //   'Remind',
+          //   FormBuilderDropdown(
+          //     name: 'remind',
+          //     initialValue: "Don't Remind",
+          //     decoration: _inputDecoration(),
+          //     items:
+          //         [
+          //               "Don't Remind",
+          //               '1 day before',
+          //               '2 days before',
+          //               '1 week before',
+          //             ]
+          //             .map(
+          //               (remind) => DropdownMenuItem(
+          //                 value: remind,
+          //                 child: Text(
+          //                   remind,
+          //                   style: const TextStyle(fontSize: 13),
+          //                 ),
+          //               ),
+          //             )
+          //             .toList(),
+          //   ),
+          // ),
         ],
         const SizedBox(height: 8),
         _buildFormSection(
@@ -1129,17 +1157,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 );
               },
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
-          'Notes',
-          FormBuilderTextField(
-            name: 'notes',
-            style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(hintText: 'Notes'),
-            maxLines: 2,
           ),
         ),
       ],

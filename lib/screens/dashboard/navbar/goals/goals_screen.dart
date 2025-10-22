@@ -2,7 +2,7 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/utils/icon_utils.dart';
-import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -24,6 +24,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
   bool _isPendingSelected = true;
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -39,6 +44,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final allGoals = snapshot.data ?? <FirestoreGoal>[];
+                
+                // No currency filtering - show all goals
                 final pendingGoals =
                     allGoals.where((g) => g.isCompleted == false).toList();
                 final fulfilledGoals =
@@ -48,7 +55,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
-                      _buildInfoCards(pendingGoals, fulfilledGoals),
+                      _buildInfoCards(pendingGoals, fulfilledGoals, allGoals),
                       _isPendingSelected
                           ? _buildPendingGoalsList(pendingGoals)
                           : _buildFulfilledGoalsList(fulfilledGoals),
@@ -219,40 +226,117 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  Widget _buildInfoCards(List<FirestoreGoal> pendingGoals, List<FirestoreGoal> fulfilledGoals) {
-    final currencySymbol = context.watch<CurrencyProvider>().currencySymbol;
-    final currencyFormat = NumberFormat.currency(
-      symbol: currencySymbol,
-      decimalDigits: 2,
-    );
-
-    final double pendingTotal =
-        pendingGoals.fold(0.0, (sum, g) => sum + g.currentAmount);
-    final double fulfilledTotal =
-        fulfilledGoals.fold(0.0, (sum, g) => sum + g.currentAmount);
-
-    final String totalValue = currencyFormat.format(
-      _isPendingSelected ? pendingTotal : fulfilledTotal,
-    );
-
+  Widget _buildInfoCards(List<FirestoreGoal> pendingGoals, List<FirestoreGoal> fulfilledGoals, List<FirestoreGoal> allGoals) {
+    // Calculate totals by currency for current tab
+    final Map<String, double> totalsByCurrency = {};
+    
+    if (_isPendingSelected) {
+      // Show pending totals by currency
+      for (final goal in pendingGoals) {
+        totalsByCurrency[goal.currency] = (totalsByCurrency[goal.currency] ?? 0) + goal.currentAmount;
+      }
+    } else {
+      // Show fulfilled totals by currency
+      for (final goal in fulfilledGoals) {
+        totalsByCurrency[goal.currency] = (totalsByCurrency[goal.currency] ?? 0) + goal.currentAmount;
+      }
+    }
+    
+    // Count fulfilled/unfulfilled goals across ALL currencies
     final int fulfilledCount = fulfilledGoals.length;
-    final int totalCount = pendingGoals.length + fulfilledGoals.length;
+    final int totalCount = allGoals.length;
     final String fulfilledRatio = '$fulfilledCount / $totalCount';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
+      child: Column(
         children: [
-          _buildInfoCard(
-            context,
-            'Total',
-            totalValue,
+          // Currency totals row for current tab
+          if (totalsByCurrency.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isPendingSelected ? 'PENDING TOTALS BY CURRENCY' : 'FULFILLED TOTALS BY CURRENCY',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.secondaryTextColorLight,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      ...totalsByCurrency.entries.map((entry) => _buildCurrencyTotal(
+                        entry.key,
+                        '${_getCurrencySymbol(entry.key)}${NumberFormat('#,##0.00').format(entry.value)}',
+                        _isPendingSelected ? Colors.orange : Colors.green,
+                      )),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          // Fulfilled ratio card in row format
+          Row(
+            children: [
+              _buildInfoCard(
+                context,
+                'Fulfilled Goals',
+                fulfilledRatio,
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          _buildInfoCard(
-            context,
-            'Fulfilled Goals',
-            fulfilledRatio,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrencyTotal(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -348,13 +432,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Widget _buildGoalItem(FirestoreGoal goal) {
     final double progress =
         goal.targetAmount > 0 ? goal.currentAmount / goal.targetAmount : 0;
-    final currencySymbol = context.watch<CurrencyProvider>().currencySymbol;
+    final currencySymbol = _getCurrencySymbol(goal.currency);
     final currencyFormat = NumberFormat.currency(
       symbol: currencySymbol,
       decimalDigits: 2,
     );
     final totalFormat = NumberFormat.compactCurrency(symbol: currencySymbol);
-    final progressColor = goal.isCompleted ? Colors.green : AppColors.gradientEnd;
+    
+    // Use goal's custom color if available, otherwise fallback to default behavior
+    final Color iconBackgroundColor = goal.color != null 
+        ? hexToColor(goal.color) 
+        : (goal.isCompleted ? Colors.green : AppColors.gradientEnd);
+    final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     return GestureDetector(
       onTap: () {
@@ -387,13 +476,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: progressColor.withOpacity(0.2),
+                    color: iconBackgroundColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: HugeIcon(
                     icon: getIcon(goal.icon),
                     size: 24,
-                    color: progressColor,
+                    color: iconForegroundColor,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -440,7 +529,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 LinearProgressIndicator(
                   value: progress.clamp(0.0, 1.0),
                   backgroundColor: Colors.grey.shade200,
-                  color: progressColor,
+                  color: Colors.green,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -457,7 +546,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: goal.isCompleted ? Colors.green : Colors.black,
+                        color: iconBackgroundColor,
                       ),
                     ),
                   ],
@@ -468,5 +557,43 @@ class _GoalsScreenState extends State<GoalsScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to get currency symbol for a currency code
+  String _getCurrencySymbol(String currencyCode) {
+    // Simple mapping for common currencies - can be expanded
+    final currencySymbols = {
+      'USD': '\$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'CAD': 'C\$',
+      'AUD': 'A\$',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'INR': '₹',
+      'BRL': 'R\$',
+      'MXN': '\$',
+      'KRW': '₩',
+      'SGD': 'S\$',
+      'HKD': 'HK\$',
+      'NZD': 'NZ\$',
+      'SEK': 'kr',
+      'NOK': 'kr',
+      'DKK': 'kr',
+      'PLN': 'zł',
+      'CZK': 'Kč',
+      'HUF': 'Ft',
+      'RUB': '₽',
+      'TRY': '₺',
+      'ZAR': 'R',
+      'THB': '฿',
+      'MYR': 'RM',
+      'PHP': '₱',
+      'IDR': 'Rp',
+      'VND': '₫',
+    };
+    
+    return currencySymbols[currencyCode] ?? currencyCode;
   }
 }
