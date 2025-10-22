@@ -33,6 +33,7 @@ model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransact
     iconBackgroundColor: Colors.grey.shade100,
     accountId: firestoreTransaction.accountId,
     categoryId: firestoreTransaction.categoryId,
+    paid: firestoreTransaction.paid, // CRITICAL: Include the paid status
     currency: currencyCode,
   );
 }
@@ -109,7 +110,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
       List<FirestoreTransaction> filteredTransactions = allTransactions;
       if (isVacationMode && vacationAccountId != null && vacationAccountId.isNotEmpty) {
         filteredTransactions = allTransactions
-            .where((t) => t.accountId == vacationAccountId)
+            .where((t) => t.linkedVacationAccountId == vacationAccountId)
             .toList();
         print('BudgetDetail: After vacation account filter: ${filteredTransactions.length}');
       }
@@ -441,12 +442,22 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
 
   Widget _buildTransactionCard(_TransactionWithAccount detailedTransaction) {
     final transaction = detailedTransaction.transaction;
-    final accountName = detailedTransaction.accountName;
-    final accountType = detailedTransaction.accountType;
+    
+    // Determine if the transaction is a vacation transaction
+    final bool isVacationTransaction = transaction.isVacation == true;
     
     // Get the icon color from the transaction, fallback to default if null
     final Color iconBackgroundColor = hexToColor(transaction.icon_color);
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
+
+    // Apply vacation styling similar to balance_detail_screen.dart
+    final cardBackgroundColor = isVacationTransaction 
+        ? Colors.blue.shade50  // Light blue background for vacation transactions
+        : Colors.white;
+    
+    final cardBorderColor = isVacationTransaction
+        ? Colors.blue.shade300  // Blue border for vacation transactions
+        : Colors.grey.shade200;
 
     return GestureDetector(
       onTap: () async {
@@ -461,18 +472,27 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );
 
-        // Refresh data if transaction was deleted
+        // Refresh data if transaction was modified
         if (result == true && mounted) {
           _loadTransactions();
+          // Also trigger refresh for home screen
+          Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
         }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBackgroundColor,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
+          border: Border.all(color: cardBorderColor, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 1,
+              blurRadius: 8,
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -501,26 +521,41 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    // "Account Name - Account Type" formatted, skipping empty parts
-                    [accountName, accountType].where((s) => s.isNotEmpty).join(' - '),
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
                     DateFormat('MMM d, yyyy').format(transaction.date),
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            Text(
-              // Match home.dart amount formatting and style (sign + space + currency)
-              '${transaction.type == 'income' ? '+' : '-'} $_currencySymbol${transaction.amount.toStringAsFixed(2)}',
-              style: TextStyle(
-                color: transaction.type == 'income' ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Add paid/unpaid checkbox icon
+                Icon(
+                  transaction.paid == true ? Icons.check_circle : Icons.circle_outlined,
+                  color: transaction.paid == true ? Colors.green : Colors.grey,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                // Add vacation icon for vacation transactions
+                if (isVacationTransaction) ...[
+                  Icon(
+                    Icons.flight_takeoff,
+                    color: Colors.blue.shade600,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  // Match home.dart amount formatting and style (sign + space + currency)
+                  '${transaction.type == 'income' ? '+' : '-'} $_currencySymbol${transaction.amount.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: transaction.type == 'income' ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

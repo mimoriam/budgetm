@@ -168,16 +168,16 @@ class MonthPageProvider extends ChangeNotifier {
       return;
     }
 
-    // Create a hash of transaction IDs to detect if data has actually changed
+    // Create a hash of transaction IDs AND paid status to detect if data has actually changed
     final currentDataHash = data.transactionsWithAccounts
-        .map((tx) => tx.transaction.id)
+        .map((tx) => '${tx.transaction.id}:${tx.transaction.paid}')
         .join(',')
         .hashCode
         .toString();
     // DEBUG logging: hash and transaction IDs for initialization path
     try {
       final sampleIds = data.transactionsWithAccounts
-          .map((tx) => tx.transaction.id)
+          .map((tx) => '${tx.transaction.id}:${tx.transaction.paid}')
           .take(8)
           .toList();
       print(
