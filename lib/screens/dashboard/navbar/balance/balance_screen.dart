@@ -158,7 +158,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       }
     }
 
-    // For vacation mode: compute total expenses ever made for each account (ignore paid flag; include all expense transactions)
+    // For vacation mode: compute total expenses ever made for each account (only paid transactions)
     final expenseSums = <String, double>{};
     final vacationTransactionCounts = <String, int>{};
     for (var transaction in transactions) {
@@ -166,8 +166,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       if (accId == null || defaultAccountIds.contains(accId)) continue;
       final isExpense =
           transaction.type.toString().toLowerCase().contains('expense');
-      if (isExpense) {
-        // For vacation transactions, count expenses for both normal and vacation accounts
+      if (isExpense && transaction.paid == true) {
+        // For vacation transactions, count expenses for both normal and vacation accounts (only paid)
         expenseSums.update(
           accId,
           (v) => v + transaction.amount,
@@ -206,8 +206,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           .where((account) => (account.isVacationAccount != true))
           .map((account) {
         final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-        // Use account.balance directly as it's the single source of truth from Firestore
-        final finalBalance = account.balance;
+        // Calculate balance from initial balance + paid transactions
+        final finalBalance = account.initialBalance + transactionsAmount;
         return {
           'account': account,
           'transactionsAmount': transactionsAmount,
@@ -252,8 +252,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         .where((account) => (account.isVacationAccount != true))
         .map((account) {
       final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-      // Use account.balance directly as it's the single source of truth from Firestore
-      final finalBalance = account.balance;
+      // Calculate balance from initial balance + paid transactions
+      final finalBalance = account.initialBalance + transactionsAmount;
       return {
         'account': account,
         'transactionsAmount': transactionsAmount,

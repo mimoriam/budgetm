@@ -177,28 +177,30 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     final currencySymbol = currency?.symbol ?? '\$';
     final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
 
-    // Calculate current balance
+    // Calculate current balance (only from paid transactions)
     double currentBalance = widget.account.initialBalance;
     if (_detailedTransactions.isNotEmpty) {
-      // For vacation accounts, calculate remaining balance (initial - expenses)
+      // For vacation accounts, calculate remaining balance (initial - paid expenses)
       if (widget.account.isVacationAccount == true) {
-        double totalExpenses = 0.0;
+        double totalPaidExpenses = 0.0;
         for (final detailedTransaction in _detailedTransactions) {
           final transaction = detailedTransaction.transaction;
           final isExpense = transaction.type.toString().toLowerCase().contains('expense');
-          if (isExpense) {
-            totalExpenses += transaction.amount;
+          if (isExpense && transaction.paid == true) {
+            totalPaidExpenses += transaction.amount;
           }
         }
-        currentBalance = (widget.account.initialBalance - totalExpenses).clamp(0.0, double.infinity);
+        currentBalance = (widget.account.initialBalance - totalPaidExpenses).clamp(0.0, double.infinity);
       } else {
-        // For normal accounts, calculate balance from all transactions
+        // For normal accounts, calculate balance from paid transactions only
         for (final detailedTransaction in _detailedTransactions) {
           final transaction = detailedTransaction.transaction;
-          if (transaction.type == 'income') {
-            currentBalance += transaction.amount;
-          } else {
-            currentBalance -= transaction.amount;
+          if (transaction.paid == true) {
+            if (transaction.type == 'income') {
+              currentBalance += transaction.amount;
+            } else {
+              currentBalance -= transaction.amount;
+            }
           }
         }
       }
@@ -228,22 +230,24 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
       }).toList();
     }
     
-    // Calculate filtered subtotal
+    // Calculate filtered subtotal (only from paid transactions)
     double filteredSubtotal = 0;
     for (final detailedTransaction in filteredTransactions) {
       final transaction = detailedTransaction.transaction;
-      if (widget.account.isVacationAccount == true) {
-        // For vacation accounts, only count expenses
-        final isExpense = transaction.type.toString().toLowerCase().contains('expense');
-        if (isExpense) {
-          filteredSubtotal -= transaction.amount;
-        }
-      } else {
-        // For normal accounts, count both income and expenses
-        if (transaction.type == 'income') {
-          filteredSubtotal += transaction.amount;
+      if (transaction.paid == true) {
+        if (widget.account.isVacationAccount == true) {
+          // For vacation accounts, only count paid expenses
+          final isExpense = transaction.type.toString().toLowerCase().contains('expense');
+          if (isExpense) {
+            filteredSubtotal -= transaction.amount;
+          }
         } else {
-          filteredSubtotal -= transaction.amount;
+          // For normal accounts, count both paid income and expenses
+          if (transaction.type == 'income') {
+            filteredSubtotal += transaction.amount;
+          } else {
+            filteredSubtotal -= transaction.amount;
+          }
         }
       }
     }

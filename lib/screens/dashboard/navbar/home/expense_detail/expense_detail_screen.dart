@@ -5,13 +5,14 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
-import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/utils/account_icon_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 class ExpenseDetailScreen extends StatefulWidget {
   final Transaction transaction;
@@ -257,25 +258,61 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                   // For vacation transactions, show normal account if available
                                   if (firestoreTransaction?.isVacation == true) {
                                     if (account != null && !(account.isDefault ?? false)) {
-                                      // Show normal account for vacation transactions
-                                      return Text(
-                                        "${account.name} - ${account.accountType}",
-                                        style: Theme.of(context).textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: AppColors.secondaryTextColorLight,
+                                      // Show normal account for vacation transactions with icon
+                                      return Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade100,
+                                              borderRadius: BorderRadius.circular(8),
                                             ),
+                                            child: HugeIcon(
+                                              icon: getAccountIcon(account.accountType)[0][0],
+                                              size: 16,
+                                              color: AppColors.primaryTextColorLight,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "${account.name} - ${account.accountType}",
+                                            style: Theme.of(context).textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: AppColors.secondaryTextColorLight,
+                                                ),
+                                          ),
+                                        ],
                                       );
                                     }
                                     // If no normal account, show nothing at top (vacation account will be shown below)
                                   }
                                   // For normal transactions, show normal account (but hide default cash account)
                                   else if (account != null && !(account.isDefault ?? false)) {
-                                    return Text(
-                                      "${account.name} - ${account.accountType}",
-                                      style: Theme.of(context).textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: AppColors.secondaryTextColorLight,
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade100,
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
+                                          child: HugeIcon(
+                                            icon: getAccountIcon(account.accountType)[0][0],
+                                            size: 16,
+                                            color: AppColors.primaryTextColorLight,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "${account.name} - ${account.accountType}",
+                                          style: Theme.of(context).textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: AppColors.secondaryTextColorLight,
+                                              ),
+                                        ),
+                                      ],
                                     );
                                   }
                                   // Fallback - no account to display
@@ -291,13 +328,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             _buildInfoCard(
                               context,
                               'Accumulated Amount',
-                              '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
+                              '${_getCurrencySymbol(account?.currency ?? 'USD')}${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                             const SizedBox(width: 16),
                             _buildInfoCard(
                               context,
                               'Total',
-                              '${Provider.of<CurrencyProvider>(context).currencySymbol}${widget.transaction.amount.toStringAsFixed(2)}',
+                              '${_getCurrencySymbol(account?.currency ?? 'USD')}${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                           ],
                         ),
@@ -399,21 +436,41 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                         ),
                                   ),
                                   Flexible(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                        Text(
-                                          vacationAccount.name,
-                                          style: Theme.of(context).textTheme.bodyMedium
-                                              ?.copyWith(fontWeight: FontWeight.bold),
-                                          textAlign: TextAlign.right,
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: HugeIcon(
+                                            icon: HugeIcons.strokeRoundedAirplaneMode,
+                                            size: 16,
+                                            color: Colors.blue.shade600,
+                                          ),
                                         ),
-                                        // Text(
-                                        //   vacationAccount.accountType,
-                                        //   style: Theme.of(context).textTheme.bodySmall
-                                        //       ?.copyWith(color: Colors.grey.shade600),
-                                        //   textAlign: TextAlign.right,
-                                        // ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                vacationAccount.name,
+                                                style: Theme.of(context).textTheme.bodyMedium
+                                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                              // Text(
+                                              //   vacationAccount.accountType,
+                                              //   style: Theme.of(context).textTheme.bodySmall
+                                              //       ?.copyWith(color: Colors.grey.shade600),
+                                              //   textAlign: TextAlign.right,
+                                              // ),
+                                            ],
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -632,6 +689,12 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to get currency symbol from currency code
+  String _getCurrencySymbol(String currencyCode) {
+    final currency = CurrencyService().findByCode(currencyCode);
+    return currency?.symbol ?? '\$';
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
