@@ -29,6 +29,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Data structure to hold all data for a specific month page
 class MonthPageData {
@@ -2156,11 +2157,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   PageTransitionAnimation.slideRight,
                             );
                           },
-                          child: const CircleAvatar(
+                          child: CircleAvatar(
                             radius: 22,
-                            backgroundImage: AssetImage(
-                              'images/backgrounds/onboarding1.png',
-                            ),
+                            backgroundImage: _getProfileImage(),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -2662,6 +2661,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  // Helper method to get the appropriate profile image
+  ImageProvider _getProfileImage() {
+    final user = FirebaseAuth.instance.currentUser;
+    
+    // Check if user is logged in via Google and has a photo URL
+    if (user != null &&
+        user.providerData.any((p) => p.providerId == 'google.com') &&
+        user.photoURL != null) {
+      return NetworkImage(user.photoURL!);
+    }
+    
+    // Fall back to the default asset image
+    return const AssetImage('images/backgrounds/onboarding1.png');
   }
 }
 

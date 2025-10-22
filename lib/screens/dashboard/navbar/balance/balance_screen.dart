@@ -377,6 +377,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 }
               }
 
+              // Check if we should show charts (2+ accounts for same currency)
+              final allAccounts = [...normalAccounts, ...vacationAccounts];
+              final shouldShowCharts = _shouldShowCharts(allAccounts);
+
               return Column(
                 children: [
                   Expanded(
@@ -389,13 +393,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Show chart for all accounts combined
-                          _buildPieChart(
-                              [...normalAccounts, ...vacationAccounts]),
-                          const SizedBox(height: 16),
-                          _buildLegend(
-                              [...normalAccounts, ...vacationAccounts]),
-                          const SizedBox(height: 24),
+                          // Show chart only if 2+ accounts exist for same currency
+                          if (shouldShowCharts) ...[
+                            _buildPieChart(allAccounts),
+                            const SizedBox(height: 16),
+                            _buildLegend(allAccounts),
+                            const SizedBox(height: 24),
+                          ] else if (allAccounts.isNotEmpty) ...[
+                            // Show logo with currency picker when 1 account exists
+                            _buildSingleAccountView(allAccounts),
+                            const SizedBox(height: 24),
+                          ],
                           // My Accounts section
                           _buildSectionHeaderWithButton(
                             'MY ACCOUNTS',
@@ -1062,7 +1070,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No accounts found',
+            'No accounts',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
@@ -1127,6 +1135,100 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             }
           },
         ),
+      ),
+    );
+  }
+
+  // Helper method to determine if charts should be shown
+  bool _shouldShowCharts(List<Map<String, dynamic>> accountsWithData) {
+    if (accountsWithData.isEmpty) return false;
+    
+    // Get available currencies from the data
+    final availableCurrencies = _getAvailableCurrencies(accountsWithData);
+    
+    // Check if any currency has 2+ accounts
+    for (final currency in availableCurrencies) {
+      final accountsForCurrency = accountsWithData.where((accountData) {
+        final account = accountData['account'] as FirestoreAccount;
+        return account.currency == currency;
+      }).toList();
+      
+      if (accountsForCurrency.length >= 2) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  // Widget to show when there's only 1 account (logo with currency picker)
+  Widget _buildSingleAccountView(List<Map<String, dynamic>> accountsWithData) {
+    // Get available currencies from the data
+    final availableCurrencies = _getAvailableCurrencies(accountsWithData);
+    // Set default chart currency if not set
+    if (_selectedChartCurrency == null && availableCurrencies.isNotEmpty) {
+      _selectedChartCurrency = availableCurrencies.first;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Account Balance',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Currency dropdown
+                  if (availableCurrencies.length > 1)
+                    _buildCompactCurrencyDropdown(availableCurrencies),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Show app logo
+          Image.asset(
+            'images/launcher/logo.png',
+            width: 120,
+            height: 120,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Single Account View',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add more accounts to see charts',
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }

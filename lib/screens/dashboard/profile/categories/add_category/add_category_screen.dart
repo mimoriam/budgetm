@@ -199,17 +199,6 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildFormSection(
-                        context,
-                        'Notes',
-                        FormBuilderTextField(
-                          name: 'notes',
-                          initialValue: "Hi there, I'm designing this app.....",
-                          decoration: _inputDecoration(hintText: 'Notes'),
-                          maxLines: 3,
-                        ),
-                      ),
                     ],
                   ),
                 ),
