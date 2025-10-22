@@ -2620,25 +2620,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   )
                 else
-                  ...amountsByCurrency.entries.map((entry) {
-                    final currency = entry.key;
-                    final amount = entry.value;
-                    final isSelectedCurrency =
-                        currency == currencyProvider.selectedCurrencyCode;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Text(
-                        '${title == 'Income' ? '+' : '-'} $currency ${amount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: color,
-                          fontSize: isSelectedCurrency ? 16 : 14,
-                          fontWeight: isSelectedCurrency
-                              ? FontWeight.bold
-                              : FontWeight.w600,
+                  ...() {
+                    // Sort currencies: active currency first, then alphabetically
+                    final sortedEntries = amountsByCurrency.entries.toList()
+                      ..sort((a, b) {
+                        final activeCurrency = currencyProvider.selectedCurrencyCode;
+                        final aIsActive = a.key == activeCurrency;
+                        final bIsActive = b.key == activeCurrency;
+                        
+                        // If one is active and the other isn't, active comes first
+                        if (aIsActive && !bIsActive) return -1;
+                        if (!aIsActive && bIsActive) return 1;
+                        
+                        // If both are active or both are not active, sort alphabetically
+                        return a.key.compareTo(b.key);
+                      });
+                    
+                    return sortedEntries.map((entry) {
+                      final currency = entry.key;
+                      final amount = entry.value;
+                      final isSelectedCurrency =
+                          currency == currencyProvider.selectedCurrencyCode;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          '${title == 'Income' ? '+' : '-'} $currency ${amount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: color,
+                            fontSize: isSelectedCurrency ? 16 : 14,
+                            fontWeight: isSelectedCurrency
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    );
-                  }).toList(),
+                      );
+                    }).toList();
+                  }(),
               ],
             ),
           ),
