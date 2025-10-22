@@ -1565,6 +1565,286 @@ Future<void> _showCurrencyChangeDialog(
   }
 }
 
+// Helper function to show currency breakdown dialog
+Future<void> _showCurrencyBreakdownDialog(
+  BuildContext context,
+  Map<String, double> incomeByCurrency,
+  Map<String, double> expensesByCurrency,
+  CurrencyProvider currencyProvider,
+  bool isVacationMode,
+  double totalBudget,
+) async {
+  final navbarProvider =
+      Provider.of<NavbarVisibilityProvider>(context, listen: false);
+
+  // Enable dialog mode to allow navbar hiding on home screen
+  navbarProvider.setDialogMode(true);
+  navbarProvider.setNavBarVisibility(false);
+
+  // Add a small delay to ensure navbar is hidden before showing dialog
+  await Future.delayed(const Duration(milliseconds: 100));
+
+  try {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(isVacationMode ? 'Vacation Budget Breakdown' : 'Balance Breakdown'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: _buildCurrencyBreakdownContent(
+              incomeByCurrency,
+              expensesByCurrency,
+              currencyProvider,
+              isVacationMode,
+              totalBudget,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  } finally {
+    // Always restore navbar visibility and disable dialog mode, even if an error occurred
+    if (context.mounted) {
+      navbarProvider.setNavBarVisibility(true);
+      navbarProvider.setDialogMode(false);
+    }
+  }
+}
+
+// Helper function to build currency breakdown content
+Widget _buildCurrencyBreakdownContent(
+  Map<String, double> incomeByCurrency,
+  Map<String, double> expensesByCurrency,
+  CurrencyProvider currencyProvider,
+  bool isVacationMode,
+  double totalBudget,
+) {
+  // Get all unique currencies
+  final allCurrencies = <String>{}
+    ..addAll(incomeByCurrency.keys)
+    ..addAll(expensesByCurrency.keys);
+
+  if (allCurrencies.isEmpty) {
+    return const Padding(
+      padding: EdgeInsets.all(16.0),
+      child: Text(
+        'No transactions found',
+        style: TextStyle(color: Colors.grey),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  // Sort currencies: selected currency first, then alphabetically
+  final sortedCurrencies = allCurrencies.toList()
+    ..sort((a, b) {
+      final selectedCurrency = currencyProvider.selectedCurrencyCode;
+      final aIsSelected = a == selectedCurrency;
+      final bIsSelected = b == selectedCurrency;
+      
+      if (aIsSelected && !bIsSelected) return -1;
+      if (!aIsSelected && bIsSelected) return 1;
+      return a.compareTo(b);
+    });
+
+  return SingleChildScrollView(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isVacationMode) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.account_balance_wallet, color: Colors.blue.shade600, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Total Budget: ${currencyProvider.currencySymbol}${totalBudget.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        ...sortedCurrencies.map((currency) {
+          final income = incomeByCurrency[currency] ?? 0.0;
+          final expenses = expensesByCurrency[currency] ?? 0.0;
+          final balance = income - expenses;
+          final isSelectedCurrency = currency == currencyProvider.selectedCurrencyCode;
+          
+          // Get currency symbol
+          final currencySymbol = _getCurrencySymbol(currency);
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isSelectedCurrency ? Colors.grey.shade50 : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelectedCurrency ? Colors.grey.shade400 : Colors.grey.shade200,
+                width: isSelectedCurrency ? 2 : 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      currency,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isSelectedCurrency ? Colors.black87 : Colors.black54,
+                      ),
+                    ),
+                    if (isSelectedCurrency)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'SELECTED',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildCurrencyRow(
+                        'Income',
+                        income,
+                        currencySymbol,
+                        Colors.green,
+                        Icons.trending_up,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildCurrencyRow(
+                        'Expense',
+                        expenses,
+                        currencySymbol,
+                        Colors.red,
+                        Icons.trending_down,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: balance >= 0 ? Colors.green.shade50 : Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: balance >= 0 ? Colors.green.shade200 : Colors.red.shade200,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        balance >= 0 ? Icons.account_balance_wallet : Icons.warning,
+                        color: balance >= 0 ? Colors.green.shade600 : Colors.red.shade600,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Balance: $currencySymbol${balance.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: balance >= 0 ? Colors.green.shade700 : Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ],
+    ),
+  );
+}
+
+// Helper function to build individual currency row
+Widget _buildCurrencyRow(
+  String label,
+  double amount,
+  String currencySymbol,
+  Color color,
+  IconData icon,
+) {
+  return Row(
+    children: [
+      Icon(icon, color: color, size: 16),
+      const SizedBox(width: 4),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            Text(
+              '$currencySymbol${amount.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+// Helper function to get currency symbol
+String _getCurrencySymbol(String currencyCode) {
+  try {
+    final currency = CurrencyService().findByCode(currencyCode);
+    return currency?.symbol ?? currencyCode;
+  } catch (e) {
+    return currencyCode;
+  }
+}
+
 // Helper function to show vacation mode currency change dialog
 Future<void> _showVacationCurrencyDialog(
   BuildContext context,
@@ -2188,13 +2468,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              '${currencyProvider.currencySymbol} ${topBalance.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 22,
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${currencyProvider.currencySymbol} ${topBalance.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () => _showCurrencyBreakdownDialog(
+                                    context,
+                                    snapshot.data?.incomeByCurrency ?? {},
+                                    snapshot.data?.expensesByCurrency ?? {},
+                                    currencyProvider,
+                                    vacationProvider.isVacationMode,
+                                    totalBudget,
+                                  ),
+                                  child: Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.black54,
+                                    size: 20,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

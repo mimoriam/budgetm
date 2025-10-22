@@ -174,7 +174,8 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     // Determine the correct currency symbol for the account being viewed
     final accountCurrencyCode = widget.account.currency;
     final currency = CurrencyService().findByCode(accountCurrencyCode);
-    final currencySymbol = currency?.symbol ?? '\$';
+    // For vacation accounts, don't show currency symbol as they are multi-currency
+    final currencySymbol = widget.account.isVacationAccount == true ? '' : (currency?.symbol ?? '\$');
     final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
 
     // Calculate current balance (only from paid transactions)
@@ -339,6 +340,9 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+              // Show multi-currency expense breakdown for vacation accounts
+              if (widget.account.isVacationAccount == true)
+                _buildVacationExpenseBreakdown(),
               // Display filtered subtotal if a date range is selected
               if (_selectedDateRange != null)
                 Semantics(
@@ -816,6 +820,86 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
       setState(() {
         _selectedDateRange = picked;
       });
+    }
+  }
+
+  // Helper function to build vacation expense breakdown (similar to home.dart expense card)
+  Widget _buildVacationExpenseBreakdown() {
+    // Calculate expenses by currency
+    final Map<String, double> expensesByCurrency = {};
+    
+    for (final detailedTransaction in _detailedTransactions) {
+      final transaction = detailedTransaction.transaction;
+      final currency = transaction.currency;
+      
+      if (currency.isEmpty) continue;
+      
+      if (transaction.type == 'expense') {
+        expensesByCurrency[currency] = (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
+      }
+    }
+
+    if (expensesByCurrency.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Sort currencies alphabetically
+    final sortedCurrencies = expensesByCurrency.keys.toList()..sort();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_down, color: Colors.red.shade600, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Expenses by Currency',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...sortedCurrencies.map((currency) {
+            final amount = expensesByCurrency[currency] ?? 0.0;
+            final currencySymbol = _getCurrencySymbol(currency);
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '- $currencySymbol${amount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+
+  // Helper function to get currency symbol
+  String _getCurrencySymbol(String currencyCode) {
+    try {
+      final currency = CurrencyService().findByCode(currencyCode);
+      return currency?.symbol ?? currencyCode;
+    } catch (e) {
+      return currencyCode;
     }
   }
 }

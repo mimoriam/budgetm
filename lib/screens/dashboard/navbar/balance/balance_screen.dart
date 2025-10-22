@@ -1080,6 +1080,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   }
 
   String _getAccountCurrencySymbol(FirestoreAccount account) {
+    // For vacation accounts, don't show currency symbol as they are multi-currency
+    if (account.isVacationAccount == true) {
+      return '';
+    }
     final currency = CurrencyService().findByCode(account.currency);
     return currency?.symbol ?? '\$';
   }
