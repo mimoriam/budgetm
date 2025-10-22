@@ -676,41 +676,68 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       );
     }
 
-    // Always show the pie chart and currency dropdown for better UX
-    return Column(
-      children: [
-        // Currency dropdown - always show when there are multiple currencies
-        if (availableCurrencies.length > 1) ...[
-          const SizedBox(height: 12),
-          _buildCurrencyDropdown(availableCurrencies),
-          const SizedBox(height: 12),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
         ],
-        SizedBox(
-          height: 200,
-          child: PieChart(
-            PieChartData(
-              pieTouchData: PieTouchData(
-                touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                  setState(() {
-                    if (!event.isInterestedForInteractions ||
-                        pieTouchResponse == null ||
-                        pieTouchResponse.touchedSection == null) {
-                      touchedIndex = -1;
-                      return;
-                    }
-                    touchedIndex =
-                        pieTouchResponse.touchedSection!.touchedSectionIndex;
-                  });
-                },
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Account Balance',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
-              borderData: FlBorderData(show: false),
-              sectionsSpace: 0,
-              centerSpaceRadius: 0,
-              sections: showingSections(filteredData),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Currency dropdown
+                  if (availableCurrencies.length > 1)
+                    _buildCompactCurrencyDropdown(availableCurrencies),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 200,
+            child: PieChart(
+              PieChartData(
+                pieTouchData: PieTouchData(
+                  touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                    setState(() {
+                      if (!event.isInterestedForInteractions ||
+                          pieTouchResponse == null ||
+                          pieTouchResponse.touchedSection == null) {
+                        touchedIndex = -1;
+                        return;
+                      }
+                      touchedIndex =
+                          pieTouchResponse.touchedSection!.touchedSectionIndex;
+                    });
+                  },
+                ),
+                borderData: FlBorderData(show: false),
+                sectionsSpace: 0,
+                centerSpaceRadius: 0,
+                sections: showingSections(filteredData),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1019,59 +1046,48 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final account = accountData['account'] as FirestoreAccount;
       return account.currency;
     }).toSet().toList();
+    
+    // Filter out "MULTI" currencies to prevent showing "MULTI MULTI" in vacation mode
+    currencies.removeWhere((currency) => currency.toUpperCase().contains('MULTI'));
+    
     currencies.sort(); // Sort for consistent ordering
     return currencies;
   }
 
-  // Helper method to build currency dropdown
-  Widget _buildCurrencyDropdown(List<String> availableCurrencies) {
+  // Helper method to build compact currency dropdown
+  Widget _buildCompactCurrencyDropdown(List<String> availableCurrencies) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade300),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.currency_exchange, size: 16, color: Colors.grey),
-          const SizedBox(width: 8),
-          Text(
-            'Currency:',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedChartCurrency,
+          isDense: true,
+          isExpanded: false,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
-          const SizedBox(width: 8),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedChartCurrency,
-              isDense: true,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-              items: availableCurrencies.map((String currency) {
-                final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
-                return DropdownMenuItem<String>(
-                  value: currency,
-                  child: Text('$currencySymbol $currency'),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedChartCurrency = newValue;
-                  });
-                }
-              },
-            ),
-          ),
-        ],
+          items: availableCurrencies.map((String currency) {
+            final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
+            return DropdownMenuItem<String>(
+              value: currency,
+              child: Text('$currencySymbol $currency'),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _selectedChartCurrency = newValue;
+              });
+            }
+          },
+        ),
       ),
     );
   }
