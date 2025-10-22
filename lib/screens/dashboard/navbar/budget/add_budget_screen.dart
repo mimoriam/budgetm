@@ -239,114 +239,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                       ),
                       const SizedBox(height: 10),
                       
-                      // Recurring Budget Section
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12.0),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: CheckboxListTile(
-                          title: Text(
-                            'Recurring Budget',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.primaryTextColorLight,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Automatically renew this budget for each period',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.secondaryTextColorLight,
-                            ),
-                          ),
-                          value: _isRecurring,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _isRecurring = value ?? false;
-                            });
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          activeColor: AppColors.gradientEnd,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      
-                      // Currency Section - only show in normal mode
-                      if (!widget.isVacationMode) ...[
-                        _buildFormSection(
-                          context,
-                          'Currency',
-                          GestureDetector(
-                            onTap: () {
-                              showCurrencyPicker(
-                                context: context,
-                                showFlag: true,
-                                showSearchField: true,
-                                onSelect: (Currency currency) {
-                                  setState(() {
-                                    _selectedCurrencyCode = currency.code;
-                                    _selectedCurrencySymbol = currency.symbol;
-                                  });
-                                },
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 10.0,
-                                horizontal: 16.0,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(30.0),
-                                border: Border.all(
-                                  color: Colors.grey.shade300,
-                                  width: 1.0,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        _getCurrencyFlag(_selectedCurrencyCode),
-                                        style: const TextStyle(fontSize: 20),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        _selectedCurrencyCode,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.primaryTextColorLight,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        _selectedCurrencySymbol,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.secondaryTextColorLight,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Icon(
-                                    Icons.arrow_drop_down,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                      
                       // Category and Budget Type Section
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,6 +384,114 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 10),
+                      
+                      // Currency Section - only show in normal mode
+                      if (!widget.isVacationMode) ...[
+                        _buildFormSection(
+                          context,
+                          'Currency',
+                          GestureDetector(
+                            onTap: () {
+                              showCurrencyPicker(
+                                context: context,
+                                showFlag: true,
+                                showSearchField: true,
+                                onSelect: (Currency currency) {
+                                  setState(() {
+                                    _selectedCurrencyCode = currency.code;
+                                    _selectedCurrencySymbol = currency.symbol;
+                                  });
+                                },
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10.0,
+                                horizontal: 16.0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30.0),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _getCurrencyFlag(_selectedCurrencyCode),
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _selectedCurrencyCode,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.primaryTextColorLight,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _selectedCurrencySymbol,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.secondaryTextColorLight,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Icon(
+                                    Icons.arrow_drop_down,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      
+                      // Recurring Budget Section
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12.0),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: CheckboxListTile(
+                          title: Text(
+                            'Recurring Budget',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.primaryTextColorLight,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Automatically renew this budget for each period',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.secondaryTextColorLight,
+                            ),
+                          ),
+                          value: _isRecurring,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _isRecurring = value ?? false;
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          activeColor: AppColors.gradientEnd,
+                        ),
                       ),
                     ],
                   ),

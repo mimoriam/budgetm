@@ -132,10 +132,7 @@ model.Transaction _convertToUiTransaction(
         .accountId, // Pass accountId from Firestore transaction
     categoryId: firestoreTransaction.categoryId, // Already String in Firestore
     paid: firestoreTransaction.paid, // CRITICAL: carry paid flag into UI model
-    currency: Provider.of<CurrencyProvider>(
-      context,
-      listen: false,
-    ).selectedCurrencyCode, // New required field
+    currency: firestoreTransaction.currency, // Use the actual currency from the transaction
   );
 }
 

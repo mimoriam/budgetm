@@ -328,13 +328,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             _buildInfoCard(
                               context,
                               'Accumulated Amount',
-                              '${_getCurrencySymbol(account?.currency ?? 'USD')}${widget.transaction.amount.toStringAsFixed(2)}',
+                              '${_getCurrencySymbol(widget.transaction.currency)}${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                             const SizedBox(width: 16),
                             _buildInfoCard(
                               context,
                               'Total',
-                              '${_getCurrencySymbol(account?.currency ?? 'USD')}${widget.transaction.amount.toStringAsFixed(2)}',
+                              '${_getCurrencySymbol(widget.transaction.currency)}${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                           ],
                         ),

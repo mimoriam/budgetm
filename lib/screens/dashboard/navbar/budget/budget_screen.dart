@@ -1031,7 +1031,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Row 1: icon + category name (category name gets its own line)
+                      // Row 1: icon + category name + edit button (category name gets its own line)
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -1085,52 +1085,13 @@ class _BudgetScreenState extends State<BudgetScreen>
                               ],
                             ),
                           ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 2),
-
-                      // Row 3: amount, optional limit and edit button — amount and limit grouped on left, edit on right
-                      Row(
-                        children: [
-                          // Amount and limit aligned to start, allowed to scale down if very large
-                          Expanded(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: RichText(
-                                text: TextSpan(
-                                  text: _formatAmountForCard(spent, currencyCode: data.budget.currency),
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: _getColorFromString(
-                                      data.categoryColor,
-                                    ),
-                                  ),
-                                  children: [
-                                    if (hasLimit)
-                                      TextSpan(
-                                        text:
-                                            ' / ${_formatAmountForCard(limit, currencyCode: data.budget.currency)}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.normal,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          // Edit button stays at the end of the row
+                          // Edit button moved to the right of the category name
                           if (!vacationProvider.isVacationMode)
                             IconButton(
                               icon: Icon(
                                 Icons.edit,
                                 color: Colors.grey.shade600,
+                                size: 20,
                               ),
                               onPressed: () async {
                                 final controller = TextEditingController(
@@ -1240,6 +1201,45 @@ class _BudgetScreenState extends State<BudgetScreen>
                                 }
                               },
                             ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      // Row 3: amount and optional limit
+                      Row(
+                        children: [
+                          // Amount and limit aligned to start, allowed to scale down if very large
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: RichText(
+                                text: TextSpan(
+                                  text: _formatAmountForCard(spent, currencyCode: data.budget.currency),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: _getColorFromString(
+                                      data.categoryColor,
+                                    ),
+                                  ),
+                                  children: [
+                                    if (hasLimit)
+                                      TextSpan(
+                                        text:
+                                            ' / ${_formatAmountForCard(limit, currencyCode: data.budget.currency)}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.normal,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
 
