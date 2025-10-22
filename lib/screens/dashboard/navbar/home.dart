@@ -1266,7 +1266,7 @@ class _MonthPageViewState extends State<MonthPageView> {
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     // Determine if the transaction is a vacation transaction
-    final bool isVacationTransaction = account?.isVacationAccount ?? false;
+    final bool isVacationTransaction = transaction.isVacation;
     // DEBUG: Log each transaction item render (may be verbose)
     try {
       print('DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}');

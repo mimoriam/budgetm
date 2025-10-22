@@ -78,6 +78,8 @@ class BudgetProvider with ChangeNotifier {
   
   // Vacation mode: show categories with transactions and create placeholder budgets per currency
   List<CategoryBudgetData> _getVacationModeBudgetData() {
+    print('DEBUG BudgetProvider._getVacationModeBudgetData: start with ${_allTransactions.length} transactions');
+    
     // Get categories and currencies that have transactions in vacation mode
     final categoryCurrencyMap = <String, Set<String>>{};
     
@@ -89,12 +91,16 @@ class BudgetProvider with ChangeNotifier {
           transaction.categoryId!.isNotEmpty &&
           transaction.currency.isNotEmpty) {
         
+        print('DEBUG BudgetProvider._getVacationModeBudgetData: processing transaction ${transaction.id} - categoryId=${transaction.categoryId}, currency=${transaction.currency}, isVacation=${transaction.isVacation}');
+        
         if (!categoryCurrencyMap.containsKey(transaction.categoryId!)) {
           categoryCurrencyMap[transaction.categoryId!] = <String>{};
         }
         categoryCurrencyMap[transaction.categoryId!]!.add(transaction.currency);
       }
     }
+    
+    print('DEBUG BudgetProvider._getVacationModeBudgetData: found ${categoryCurrencyMap.length} categories with transactions');
     
     // Create budget data for each category-currency combination
     final budgetDataList = <CategoryBudgetData>[];
@@ -109,6 +115,8 @@ class BudgetProvider with ChangeNotifier {
         orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
       );
       
+      print('DEBUG BudgetProvider._getVacationModeBudgetData: creating budget data for category ${category.name} (${categoryId}) with currencies: ${currencies.toList()}');
+      
       // Create budget data for each currency
       for (final currency in currencies) {
         final budgetData = _createVacationBudgetForCategoryCurrency(category, currency);
@@ -122,6 +130,8 @@ class BudgetProvider with ChangeNotifier {
       if (categoryComparison != 0) return categoryComparison;
       return a.budget.currency.compareTo(b.budget.currency);
     });
+    
+    print('DEBUG BudgetProvider._getVacationModeBudgetData: returning ${budgetDataList.length} budget data items');
     
     return budgetDataList;
   }
@@ -796,6 +806,7 @@ class BudgetProvider with ChangeNotifier {
           vacationAccountId: _vacationProvider.isVacationMode
             ? _vacationProvider.activeVacationAccountId
             : null,
+          isVacation: _vacationProvider.isVacationMode,
         )
         .listen((transactions) {
       try {

@@ -168,6 +168,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final isExpense =
           transaction.type.toString().toLowerCase().contains('expense');
       if (isExpense) {
+        // For vacation transactions, count expenses for both normal and vacation accounts
         expenseSums.update(
           accId,
           (v) => v + transaction.amount,
@@ -178,6 +179,21 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           (v) => v + 1,
           ifAbsent: () => 1,
         );
+        
+        // If this is a vacation transaction, also count it for the linked vacation account
+        if (transaction.isVacation == true && transaction.linkedVacationAccountId != null) {
+          final vacationAccId = transaction.linkedVacationAccountId!;
+          expenseSums.update(
+            vacationAccId,
+            (v) => v + transaction.amount,
+            ifAbsent: () => transaction.amount,
+          );
+          vacationTransactionCounts.update(
+            vacationAccId,
+            (v) => v + 1,
+            ifAbsent: () => 1,
+          );
+        }
       }
     }
 
@@ -660,24 +676,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       );
     }
 
-    // If there's only one account, show the app logo instead of the pie chart
-    if (filteredData.length == 1) {
-      return SizedBox(
-        height: 200,
-        child: Center(
-          child: SizedBox(
-            width: 150,
-            height: 150,
-            child: Image.asset('images/launcher/logo.png', fit: BoxFit.contain),
-          ),
-        ),
-      );
-    }
-
-    // For two or more accounts, show the pie chart as before
+    // Always show the pie chart and currency dropdown for better UX
     return Column(
       children: [
-        // Currency dropdown - only show when there's a chart (2+ accounts)
+        // Currency dropdown - always show when there are multiple currencies
         if (availableCurrencies.length > 1) ...[
           const SizedBox(height: 12),
           _buildCurrencyDropdown(availableCurrencies),

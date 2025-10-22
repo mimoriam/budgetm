@@ -1511,6 +1511,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
         // Create the linked vacation transaction
         print('DEBUG: AddTransactionScreen - creating linked vacation transaction: type=${widget.transactionType}, categoryId=$_selectedCategoryId, currency=$selectedCurrencyCode, amount=$amount');
+        print('DEBUG: AddTransactionScreen - transaction object: isVacation=${transaction.isVacation}, linkedVacationAccountId=${transaction.linkedVacationAccountId}, accountId=${transaction.accountId}');
         if (widget.transaction != null) {
           // Update existing transaction
           print('DEBUG: AddTransactionScreen - updating existing transaction');

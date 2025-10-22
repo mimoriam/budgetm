@@ -665,6 +665,7 @@ class FirestoreService {
 
         // 2. Create the final transaction object with the generated ID
         final finalTransaction = transaction.copyWith(id: transactionRef.id);
+        print('DEBUG createLinkedVacationTransaction: finalTransaction - id=${finalTransaction.id}, isVacation=${finalTransaction.isVacation}, linkedVacationAccountId=${finalTransaction.linkedVacationAccountId}, accountId=${finalTransaction.accountId}');
 
         // 3. READS: Fetch both account documents BEFORE any writes
         final normalAccountRef = _accountsCollection.doc(finalTransaction.accountId!);
@@ -696,6 +697,7 @@ class FirestoreService {
 
         // 5. WRITES: Create the transaction document
         firestoreTransaction.set(transactionRef, finalTransaction);
+        print('DEBUG createLinkedVacationTransaction: saved transaction to Firestore - id=${transactionRef.id}, isVacation=${finalTransaction.isVacation}, linkedVacationAccountId=${finalTransaction.linkedVacationAccountId}');
 
         // 6. WRITES: Update both account balances
         firestoreTransaction.update(normalAccountRef, {'balance': newNormalBalance});
@@ -1077,19 +1079,38 @@ class FirestoreService {
   }
 
   // Stream transactions (real-time updates)
-  Stream<List<FirestoreTransaction>> streamTransactions({String? vacationAccountId}) {
+  Stream<List<FirestoreTransaction>> streamTransactions({
+    String? vacationAccountId,
+    bool? isVacation,
+  }) {
     try {
       Query<FirestoreTransaction> query = _transactionsCollection
           .orderBy('date', descending: true);
       
-      // Add accountId filter if provided (for vacation transactions, filter by the vacation account)
+      // Add vacation mode filter if specified
+      if (isVacation != null) {
+        query = query.where('isVacation', isEqualTo: isVacation);
+        print('DEBUG streamTransactions: Applied isVacation filter: $isVacation');
+      }
+      
+      // Add accountId filter if provided
       if (vacationAccountId != null) {
-        query = query.where('accountId', isEqualTo: vacationAccountId);
+        // For vacation transactions, filter by linkedVacationAccountId
+        query = query.where('linkedVacationAccountId', isEqualTo: vacationAccountId);
+        print('DEBUG streamTransactions: Applied linkedVacationAccountId filter: $vacationAccountId');
       }
       
       return query
           .snapshots()
-          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+          .map((snapshot) {
+            final transactions = snapshot.docs.map((doc) => doc.data()).toList();
+            print('DEBUG streamTransactions: Fetched ${transactions.length} transactions for vacationAccountId=$vacationAccountId, isVacation=$isVacation');
+            if (transactions.isNotEmpty) {
+              final txIds = transactions.map((tx) => '${tx.id}(isVacation:${tx.isVacation},linkedVac:${tx.linkedVacationAccountId})').take(3).join(', ');
+              print('DEBUG streamTransactions: Sample transaction IDs: $txIds${transactions.length > 3 ? '...' : ''}');
+            }
+            return transactions;
+          });
     } catch (e) {
       print('Error streaming transactions: $e');
       return Stream.empty();
@@ -1168,11 +1189,35 @@ class FirestoreService {
   // Get all transactions for a specific account
   Future<List<FirestoreTransaction>> getTransactionsForAccount(String accountId) async {
     try {
-      final querySnapshot = await _transactionsCollection
-          .where('accountId', isEqualTo: accountId)
-          .orderBy('date', descending: true)
-          .get();
-      return querySnapshot.docs.map((doc) => doc.data()).toList();
+      // First, check if this is a vacation account
+      final accountDoc = await _accountsCollection.doc(accountId).get();
+      if (!accountDoc.exists) {
+        return [];
+      }
+      
+      final account = accountDoc.data()!;
+      
+      if (account.isVacationAccount == true) {
+        // For vacation accounts, look for transactions where linkedVacationAccountId = accountId
+        print('DEBUG getTransactionsForAccount: Vacation account $accountId - filtering by linkedVacationAccountId');
+        final querySnapshot = await _transactionsCollection
+            .where('linkedVacationAccountId', isEqualTo: accountId)
+            .orderBy('date', descending: true)
+            .get();
+        final transactions = querySnapshot.docs.map((doc) => doc.data()).toList();
+        print('DEBUG getTransactionsForAccount: Found ${transactions.length} transactions for vacation account $accountId');
+        return transactions;
+      } else {
+        // For normal accounts, look for transactions where accountId = accountId
+        print('DEBUG getTransactionsForAccount: Normal account $accountId - filtering by accountId');
+        final querySnapshot = await _transactionsCollection
+            .where('accountId', isEqualTo: accountId)
+            .orderBy('date', descending: true)
+            .get();
+        final transactions = querySnapshot.docs.map((doc) => doc.data()).toList();
+        print('DEBUG getTransactionsForAccount: Found ${transactions.length} transactions for normal account $accountId');
+        return transactions;
+      }
     } catch (e) {
       print('Error getting transactions for account: $e');
       return [];
@@ -1182,11 +1227,40 @@ class FirestoreService {
   // Stream transactions for a specific account (real-time updates)
   Stream<List<FirestoreTransaction>> getTransactionsForAccountStream(String accountId) {
     try {
-      return _transactionsCollection
-          .where('accountId', isEqualTo: accountId)
-          .orderBy('date', descending: true)
-          .snapshots()
-          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+      // First, check if this is a vacation account by looking up the account
+      return _accountsCollection.doc(accountId).snapshots().asyncExpand((accountSnapshot) {
+        if (!accountSnapshot.exists) {
+          return Stream.empty();
+        }
+        
+        final account = accountSnapshot.data()!;
+        
+        if (account.isVacationAccount == true) {
+          // For vacation accounts, look for transactions where linkedVacationAccountId = accountId
+          print('DEBUG getTransactionsForAccountStream: Vacation account $accountId - filtering by linkedVacationAccountId');
+          return _transactionsCollection
+              .where('linkedVacationAccountId', isEqualTo: accountId)
+              .orderBy('date', descending: true)
+              .snapshots()
+              .map((snapshot) {
+                final transactions = snapshot.docs.map((doc) => doc.data()).toList();
+                print('DEBUG getTransactionsForAccountStream: Found ${transactions.length} transactions for vacation account $accountId');
+                return transactions;
+              });
+        } else {
+          // For normal accounts, look for transactions where accountId = accountId
+          print('DEBUG getTransactionsForAccountStream: Normal account $accountId - filtering by accountId');
+          return _transactionsCollection
+              .where('accountId', isEqualTo: accountId)
+              .orderBy('date', descending: true)
+              .snapshots()
+              .map((snapshot) {
+                final transactions = snapshot.docs.map((doc) => doc.data()).toList();
+                print('DEBUG getTransactionsForAccountStream: Found ${transactions.length} transactions for normal account $accountId');
+                return transactions;
+              });
+        }
+      });
     } catch (e) {
       print('Error streaming transactions for account: $e');
       return Stream.empty();
