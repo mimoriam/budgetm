@@ -1040,8 +1040,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             ),
             Text(
               isVacationAccount 
-                ? '${account.initialBalance.toStringAsFixed(2)}'
-                : '${_getAccountCurrencySymbol(account)}${amount.toStringAsFixed(2)}',
+                ? account.initialBalance.toStringAsFixed(2)
+                : '${_getAccountCurrencySymbol(account)} ${amount.toStringAsFixed(2)}',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
