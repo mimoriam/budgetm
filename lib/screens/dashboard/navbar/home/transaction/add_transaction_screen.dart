@@ -1675,13 +1675,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final updatedAccount = selectedAccount.copyWith(balance: newBalance);
       await _firestoreService.updateAccount(updatedAccount.id, updatedAccount);
 
-      // If income linked to a goal, update the goal progress
+      // If income linked to a goal, notify that goal data needs refresh
       if (widget.transactionType == TransactionType.income &&
           selectedGoalId != null) {
-        await Provider.of<GoalsProvider>(
-          context,
-          listen: false,
-        ).updateGoalProgress(selectedGoalId, amount);
+        print('Transaction added to goal: $selectedGoalId, amount: $amount');
+        // Notify GoalsProvider to refresh the goals screen
+        Provider.of<GoalsProvider>(context, listen: false).notifyGoalTransactionAdded();
       }
 
       if (mounted) {

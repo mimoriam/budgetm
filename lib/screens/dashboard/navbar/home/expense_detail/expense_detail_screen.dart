@@ -7,12 +7,12 @@ import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:currency_picker/currency_picker.dart';
 
 class ExpenseDetailScreen extends StatefulWidget {
   final Transaction transaction;
@@ -111,8 +111,18 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       setState(() {
         _isDeleting = true;
       });
+      
+      // Check if this transaction is linked to a goal before deletion
+      final firestoreTxn = await _firestoreService.getTransactionById(widget.transaction.id);
+      final bool isGoalTransaction = firestoreTxn?.goalId != null && firestoreTxn!.goalId!.isNotEmpty;
+      
       // Delete the transaction from Firestore
       await _firestoreService.deleteTransaction(widget.transaction.id);
+      
+      // Notify GoalsProvider if this was a goal transaction
+      if (isGoalTransaction) {
+        Provider.of<GoalsProvider>(context, listen: false).notifyGoalTransactionDeleted();
+      }
     } catch (e) {
       print('Error deleting transaction: $e');
       rethrow;

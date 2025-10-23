@@ -13,7 +13,6 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/add_budget_screen.dart';
 import 'dart:ui';
-import 'package:currency_picker/currency_picker.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -270,9 +269,9 @@ class _BudgetScreenState extends State<BudgetScreen>
         onNext = provider.goToNextMonth;
         onQuickJump = () => _showPrettyCalendarPicker(context, provider);
         break;
-      case BudgetType.yearly:
-        onPrevious = provider.goToPreviousYear;
-        onNext = provider.goToNextYear;
+      case BudgetType.daily:
+        onPrevious = provider.goToPreviousDay;
+        onNext = provider.goToNextDay;
         onQuickJump = () => _showPrettyCalendarPicker(context, provider);
         break;
     }
@@ -319,6 +318,14 @@ class _BudgetScreenState extends State<BudgetScreen>
                         children: [
                           _buildTypeChip(
                             context,
+                            'Daily',
+                            BudgetType.daily,
+                            provider.selectedBudgetType == BudgetType.daily,
+                            () => provider.changeBudgetType(BudgetType.daily),
+                          ),
+                          const SizedBox(width: 12),
+                          _buildTypeChip(
+                            context,
                             'Weekly',
                             BudgetType.weekly,
                             provider.selectedBudgetType == BudgetType.weekly,
@@ -331,14 +338,6 @@ class _BudgetScreenState extends State<BudgetScreen>
                             BudgetType.monthly,
                             provider.selectedBudgetType == BudgetType.monthly,
                             () => provider.changeBudgetType(BudgetType.monthly),
-                          ),
-                          const SizedBox(width: 12),
-                          _buildTypeChip(
-                            context,
-                            'Yearly',
-                            BudgetType.yearly,
-                            provider.selectedBudgetType == BudgetType.yearly,
-                            () => provider.changeBudgetType(BudgetType.yearly),
                           ),
                         ],
                       );
@@ -408,15 +407,14 @@ class _BudgetScreenState extends State<BudgetScreen>
       case BudgetType.monthly:
         initialDate = provider.selectedMonth;
         break;
-      case BudgetType.yearly:
-        initialDate = provider.selectedYear;
+      case BudgetType.daily:
+        initialDate = provider.selectedDay;
         break;
     }
 
     // Local, mutable state for the bottom sheet
     DateTime tempSelected = initialDate;
     DateTime focusedDay = initialDate;
-    final bool useYearPicker = provider.selectedBudgetType == BudgetType.yearly;
 
     CalendarFormat calendarFormat =
         provider.selectedBudgetType == BudgetType.weekly
@@ -453,26 +451,8 @@ class _BudgetScreenState extends State<BudgetScreen>
               builder: (ctx, setState) {
                 Widget calendarWidget;
 
-                if (useYearPicker) {
-                  // Year view (TableCalendar does not provide a year format)
-                  calendarWidget = SizedBox(
-                    height: 280,
-                    child: YearPicker(
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2100),
-                      initialDate: tempSelected,
-                      selectedDate: tempSelected,
-                      onChanged: (DateTime date) {
-                        setState(() {
-                          // Clamp to first day of selected year for provider usage
-                          tempSelected = DateTime(date.year, 1, 1);
-                        });
-                      },
-                    ),
-                  );
-                } else {
-                  // Weekly/Monthly with TableCalendar
-                  calendarWidget = TableCalendar(
+                // Weekly/Monthly/Daily with TableCalendar
+                calendarWidget = TableCalendar(
                     firstDay: DateTime(2020, 1, 1),
                     lastDay: DateTime(2100, 12, 31),
                     focusedDay: focusedDay,
@@ -545,7 +525,6 @@ class _BudgetScreenState extends State<BudgetScreen>
                       });
                     },
                   );
-                }
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -568,7 +547,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                             ? 'Select Week'
                             : provider.selectedBudgetType == BudgetType.monthly
                             ? 'Select Date'
-                            : 'Select Year',
+                            : 'Select Day',
                         style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryTextColorLight,
@@ -1416,9 +1395,9 @@ class _BudgetScreenState extends State<BudgetScreen>
         tagText = 'Monthly';
         tagColor = Colors.green;
         break;
-      case BudgetType.yearly:
-        tagText = 'Yearly';
-        tagColor = Colors.purple;
+      case BudgetType.daily:
+        tagText = 'Daily';
+        tagColor = Colors.orange;
         break;
     }
     

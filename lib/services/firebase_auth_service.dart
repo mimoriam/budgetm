@@ -8,12 +8,13 @@ class FirebaseAuthService {
   final FirestoreService _firestoreService = FirestoreService.instance;
 
   /// Registers a new user with email and password
-  Future<User?> signUpWithEmailAndPassword(String email, String password) async {
+  Future<User?> signUpWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
       return userCredential.user;
     } on FirebaseAuthException catch (e) {
       // Handle specific FirebaseAuthException errors
@@ -35,7 +36,10 @@ class FirebaseAuthService {
   }
 
   /// Signs in an existing user with email and password
-  Future<User?> signInWithEmailAndPassword(String email, String password) async {
+  Future<User?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -85,21 +89,22 @@ class FirebaseAuthService {
     try {
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       // If the user cancels the sign-in, googleUser will be null
       if (googleUser == null) {
         throw Exception('Google Sign-In was canceled by the user.');
       }
-      
+
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      
+
       // Sign in to Firebase with the Google credential
       final userCredential = await _auth.signInWithCredential(credential);
       return userCredential.user;
@@ -126,7 +131,7 @@ class FirebaseAuthService {
   Stream<User?> userChanges() {
     return _auth.userChanges();
   }
-  
+
   /// Checks if the user is logging in for the first time
   /// Returns true if the user document doesn't exist in Firestore, false otherwise
   Future<bool> isFirstTimeUser(String uid) async {

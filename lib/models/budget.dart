@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum BudgetType { weekly, monthly, yearly }
+enum BudgetType { weekly, monthly, daily }
 
 class Budget {
   final String
@@ -93,8 +93,8 @@ class Budget {
         return BudgetType.weekly;
       case 'monthly':
         return BudgetType.monthly;
-      case 'yearly':
-        return BudgetType.yearly;
+      case 'daily':
+        return BudgetType.daily;
       default:
         return BudgetType.monthly;
     }
@@ -283,9 +283,9 @@ class Budget {
         final endDate = DateTime(year, period + 1, 0, 23, 59, 59);
         return {'startDate': startDate, 'endDate': endDate};
 
-      case BudgetType.yearly:
-        final startDate = DateTime(year, 1, 1);
-        final endDate = DateTime(year, 12, 31, 23, 59, 59);
+      case BudgetType.daily:
+        final startDate = DateTime(year, period ~/ 100, period % 100);
+        final endDate = DateTime(year, period ~/ 100, period % 100, 23, 59, 59);
         return {'startDate': startDate, 'endDate': endDate};
     }
   }

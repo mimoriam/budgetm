@@ -22,7 +22,8 @@ class BudgetProvider with ChangeNotifier {
   int _selectedWeek = 1; // Week 1-5 of selected weekly month
   DateTime _selectedWeeklyMonth = DateTime.now(); // Track which month for weekly view
   DateTime _selectedMonth = DateTime.now();
-  DateTime _selectedYear = DateTime.now();
+  DateTime _selectedDay = DateTime.now(); // Track selected day for daily view
+  DateTime _selectedDailyWeek = DateTime.now(); // Track which week to show days for
   
   // Data
   List<Budget> _budgets = [];
@@ -57,7 +58,8 @@ class BudgetProvider with ChangeNotifier {
   int get selectedWeek => _selectedWeek;
   DateTime get selectedWeeklyMonth => _selectedWeeklyMonth;
   DateTime get selectedMonth => _selectedMonth;
-  DateTime get selectedYear => _selectedYear;
+  DateTime get selectedDay => _selectedDay;
+  DateTime get selectedDailyWeek => _selectedDailyWeek;
   List<Budget> get budgets => _budgets;
   List<Category> get allCategories => _allCategories;
   List<Category> get expenseCategories => _expenseCategories;
@@ -267,23 +269,24 @@ class BudgetProvider with ChangeNotifier {
           }
         }
         break;
-      case BudgetType.yearly:
-        // First try to find a non-recurring budget for the selected year
+      case BudgetType.daily:
+        // First try to find a non-recurring budget for the selected day
         matchingBudget = _budgets.firstWhere(
           (b) => b.categoryId == category.id &&
                  b.type == _selectedBudgetType &&
                  b.currency == currency &&
                  b.isVacation == true &&
-                 b.year == _selectedYear.year,
+                 b.year == _selectedDay.year &&
+                 b.period == (_selectedDay.month * 100 + _selectedDay.day),
           orElse: () => Budget(
             id: '',
             categoryId: category.id,
             limit: 0.0,
             type: _selectedBudgetType,
-            year: _selectedYear.year,
-            period: _selectedYear.year,
-            startDate: DateTime(_selectedYear.year, 1, 1),
-            endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
+            year: _selectedDay.year,
+            period: _selectedDay.month * 100 + _selectedDay.day,
+            startDate: DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day),
+            endDate: DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day, 23, 59, 59),
             userId: '',
             currency: currency,
             spentAmount: 0.0,
@@ -305,10 +308,10 @@ class BudgetProvider with ChangeNotifier {
               categoryId: category.id,
               limit: 0.0,
               type: _selectedBudgetType,
-              year: _selectedYear.year,
-              period: _selectedYear.year,
-              startDate: DateTime(_selectedYear.year, 1, 1),
-              endDate: DateTime(_selectedYear.year, 12, 31, 23, 59, 59),
+              year: _selectedDay.year,
+              period: _selectedDay.month * 100 + _selectedDay.day,
+              startDate: DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day),
+              endDate: DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day, 23, 59, 59),
               userId: '',
               currency: currency,
               spentAmount: 0.0,
@@ -360,9 +363,11 @@ class BudgetProvider with ChangeNotifier {
     // Get categories and currencies that have real budgets (not placeholder budgets)
     final categoryCurrencyMap = <String, Set<String>>{};
     
-    // Collect all category IDs and their currencies that have real budgets
+    // Collect category IDs and currencies that have real budgets of the selected type
     for (final budget in _budgets) {
-      if (budget.id.isNotEmpty && budget.isVacation == false) { // Only real budgets in normal mode
+      if (budget.id.isNotEmpty && 
+          budget.isVacation == false && 
+          budget.type == _selectedBudgetType) { // STRICT TYPE ISOLATION: only collect budgets of selected type
         if (!categoryCurrencyMap.containsKey(budget.categoryId)) {
           categoryCurrencyMap[budget.categoryId] = <String>{};
         }
@@ -406,12 +411,13 @@ class BudgetProvider with ChangeNotifier {
     // Priority: Exact match > Recurring match > Placeholder
     Budget? matchingBudget;
     
-    // Get all budgets for this category and currency
+    // Get budgets for this category and currency that match the selected budget type
     final relevantBudgets = _budgets.where((b) => 
       b.categoryId == category.id &&
       b.currency == currency &&
       b.isVacation == false &&
-      b.id.isNotEmpty
+      b.id.isNotEmpty &&
+      b.type == _selectedBudgetType  // STRICT TYPE ISOLATION: only show budgets of the selected type
     ).toList();
     
     // Find the best matching budget based on selected period
@@ -422,8 +428,8 @@ class BudgetProvider with ChangeNotifier {
       case BudgetType.monthly:
         matchingBudget = _findBestMonthlyBudget(relevantBudgets);
         break;
-      case BudgetType.yearly:
-        matchingBudget = _findBestYearlyBudget(relevantBudgets);
+      case BudgetType.daily:
+        matchingBudget = _findBestDailyBudget(relevantBudgets);
         break;
     }
     
@@ -477,26 +483,6 @@ class BudgetProvider with ChangeNotifier {
       }
     }
     
-    // Priority 3: Monthly budget that covers this week
-    for (final budget in budgets) {
-      if (budget.type == BudgetType.monthly && _isWeekInMonthlyPeriod(budget)) {
-        return budget.copyWith(
-          id: budget.id, // Keep original ID for deletion
-          type: BudgetType.weekly, // Mark as weekly for display
-        );
-      }
-    }
-    
-    // Priority 4: Yearly budget that covers this week
-    for (final budget in budgets) {
-      if (budget.type == BudgetType.yearly && _isWeekInYearlyPeriod(budget)) {
-        return budget.copyWith(
-          id: budget.id, // Keep original ID for deletion
-          type: BudgetType.weekly, // Mark as weekly for display
-        );
-      }
-    }
-    
     return null;
   }
   
@@ -523,45 +509,23 @@ class BudgetProvider with ChangeNotifier {
       }
     }
     
-    // Priority 3: Weekly budgets that fall within this month
-    final weeklyBudgets = budgets.where((b) => 
-      b.type == BudgetType.weekly && _isWeekInMonthlyPeriod(b)
-    ).toList();
-    
-    if (weeklyBudgets.isNotEmpty) {
-      // Combine weekly budgets or return the first one
-      final firstWeekly = weeklyBudgets.first;
-      return firstWeekly.copyWith(
-        id: firstWeekly.id, // Keep original ID for deletion
-        type: BudgetType.monthly, // Mark as monthly for display
-      );
-    }
-    
-    // Priority 4: Yearly budget that covers this month
-    for (final budget in budgets) {
-      if (budget.type == BudgetType.yearly && _isMonthInYearlyPeriod(budget)) {
-        return budget.copyWith(
-          id: budget.id, // Keep original ID for deletion
-          type: BudgetType.monthly, // Mark as monthly for display
-        );
-      }
-    }
-    
     return null;
   }
   
-  // Find the best yearly budget for the selected year
-  Budget? _findBestYearlyBudget(List<Budget> budgets) {
-    // Priority 1: Exact yearly budget for the selected year
+  // Find the best daily budget for the selected day
+  Budget? _findBestDailyBudget(List<Budget> budgets) {
+    // Priority 1: Exact daily budget for the selected day
     for (final budget in budgets) {
-      if (budget.type == BudgetType.yearly && budget.year == _selectedYear.year) {
+      if (budget.type == BudgetType.daily && 
+          budget.year == _selectedDay.year && 
+          budget.period == (_selectedDay.month * 100 + _selectedDay.day)) {
         return budget;
       }
     }
     
-    // Priority 2: Recurring yearly budget
+    // Priority 2: Recurring daily budget
     for (final budget in budgets) {
-      if (budget.type == BudgetType.yearly && budget.isRecurring) {
+      if (budget.type == BudgetType.daily && budget.isRecurring) {
         final periodRange = _getSelectedPeriodRange();
         return budget.copyWith(
           id: budget.id, // Keep original ID for deletion
@@ -571,53 +535,9 @@ class BudgetProvider with ChangeNotifier {
       }
     }
     
-    // Priority 3: Monthly budgets that fall within this year
-    final monthlyBudgets = budgets.where((b) => 
-      b.type == BudgetType.monthly && _isMonthInYearlyPeriod(b)
-    ).toList();
-    
-    if (monthlyBudgets.isNotEmpty) {
-      // Combine monthly budgets or return the first one
-      final firstMonthly = monthlyBudgets.first;
-      return firstMonthly.copyWith(
-        id: firstMonthly.id, // Keep original ID for deletion
-        type: BudgetType.yearly, // Mark as yearly for display
-      );
-    }
-    
-    // Priority 4: Weekly budgets that fall within this year
-    final weeklyBudgets = budgets.where((b) => 
-      b.type == BudgetType.weekly && _isWeekInYearlyPeriod(b)
-    ).toList();
-    
-    if (weeklyBudgets.isNotEmpty) {
-      // Combine weekly budgets or return the first one
-      final firstWeekly = weeklyBudgets.first;
-      return firstWeekly.copyWith(
-        id: firstWeekly.id, // Keep original ID for deletion
-        type: BudgetType.yearly, // Mark as yearly for display
-      );
-    }
-    
     return null;
   }
   
-  // Helper methods for period checking
-  bool _isWeekInMonthlyPeriod(Budget budget) {
-    if (budget.type != BudgetType.weekly) return false;
-    return budget.startDate.year == _selectedMonth.year && 
-           budget.startDate.month == _selectedMonth.month;
-  }
-  
-  bool _isWeekInYearlyPeriod(Budget budget) {
-    if (budget.type != BudgetType.weekly) return false;
-    return budget.startDate.year == _selectedYear.year;
-  }
-  
-  bool _isMonthInYearlyPeriod(Budget budget) {
-    if (budget.type != BudgetType.monthly) return false;
-    return budget.year == _selectedYear.year;
-  }
   
   int _getCurrentYear() {
     switch (_selectedBudgetType) {
@@ -625,8 +545,8 @@ class BudgetProvider with ChangeNotifier {
         return _selectedWeeklyMonth.year;
       case BudgetType.monthly:
         return _selectedMonth.year;
-      case BudgetType.yearly:
-        return _selectedYear.year;
+      case BudgetType.daily:
+        return _selectedDay.year;
     }
   }
   
@@ -636,8 +556,8 @@ class BudgetProvider with ChangeNotifier {
         return _selectedWeek;
       case BudgetType.monthly:
         return _selectedMonth.month;
-      case BudgetType.yearly:
-        return _selectedYear.year;
+      case BudgetType.daily:
+        return _selectedDay.month * 100 + _selectedDay.day;
     }
   }
   
@@ -667,24 +587,6 @@ class BudgetProvider with ChangeNotifier {
     return overlaps;
   }
   
-  // Calculate spent amount for a budget
-  double _calculateSpentAmount(Budget budget) {
-  // Use the budget's own startDate and endDate. For recurring budgets,
-  // this will be the correct date range from the temporary budget object.
-  final start = budget.startDate;
-  final end = budget.endDate;
-
-  return _allTransactions
-    .where((t) =>
-      t.type == 'expense' &&
-      t.categoryId == budget.categoryId &&
-      // Include transactions on the boundary
-      t.date.isAfter(start.subtract(const Duration(seconds: 1))) &&
-      t.date.isBefore(end.add(const Duration(seconds: 1))) &&
-      t.isVacation == budget.isVacation && // Match vacation status
-      t.currency == budget.currency) // Match currency
-    .fold(0.0, (sum, t) => sum + t.amount);
-  }
   
   // Get transaction count for a specific budget
   int getTransactionCountForBudget(Budget budget) {
@@ -731,8 +633,8 @@ class BudgetProvider with ChangeNotifier {
         return display;
       case BudgetType.monthly:
         return _formatMonth(_selectedMonth);
-      case BudgetType.yearly:
-        return '${_selectedYear.year}';
+      case BudgetType.daily:
+        return _formatDay(_selectedDay);
     }
   }
   
@@ -742,6 +644,18 @@ class BudgetProvider with ChangeNotifier {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return '${months[date.month - 1]} ${date.year}';
+  }
+  
+  String _formatDay(DateTime date) {
+    const weekdays = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+    ];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final weekday = weekdays[date.weekday - 1];
+    return '$weekday, ${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
   // Compute the currently selected period's start and end DateTime based on
@@ -763,9 +677,9 @@ class BudgetProvider with ChangeNotifier {
           final start = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
           final end = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
           return {'start': start, 'end': end};
-        case BudgetType.yearly:
-          final start = DateTime(_selectedYear.year, 1, 1);
-          final end = DateTime(_selectedYear.year, 12, 31, 23, 59, 59);
+        case BudgetType.daily:
+          final start = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+          final end = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day, 23, 59, 59);
           return {'start': start, 'end': end};
       }
     } catch (e) {
@@ -930,8 +844,8 @@ class BudgetProvider with ChangeNotifier {
       _selectedWeek = (weeksDiff + 1).clamp(1, 5);
     } else if (type == BudgetType.monthly) {
       _selectedMonth = DateTime.now();
-    } else if (type == BudgetType.yearly) {
-      _selectedYear = DateTime.now();
+    } else if (type == BudgetType.daily) {
+      _selectedDay = DateTime.now();
     }
     
     notifyListeners();
@@ -952,9 +866,9 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
   }
   
-  // Change selected year
-  void changeSelectedYear(DateTime year) {
-    _selectedYear = year;
+  // Change selected day
+  void changeSelectedDay(DateTime day) {
+    _selectedDay = day;
     _selectedCategoryId = null;
     notifyListeners();
   }
@@ -1008,15 +922,27 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
   }
   
-  // Navigation methods for yearly budget
-  void goToNextYear() {
-    _selectedYear = DateTime(_selectedYear.year + 1);
+  // Navigation methods for daily budget
+  void goToNextDay() {
+    _selectedDay = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day + 1);
     _selectedCategoryId = null;
     notifyListeners();
   }
   
-  void goToPreviousYear() {
-    _selectedYear = DateTime(_selectedYear.year - 1);
+  void goToPreviousDay() {
+    _selectedDay = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day - 1);
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  void goToNextDailyWeek() {
+    _selectedDailyWeek = DateTime(_selectedDailyWeek.year, _selectedDailyWeek.month, _selectedDailyWeek.day + 7);
+    _selectedCategoryId = null;
+    notifyListeners();
+  }
+  
+  void goToPreviousDailyWeek() {
+    _selectedDailyWeek = DateTime(_selectedDailyWeek.year, _selectedDailyWeek.month, _selectedDailyWeek.day - 7);
     _selectedCategoryId = null;
     notifyListeners();
   }
@@ -1033,8 +959,8 @@ class BudgetProvider with ChangeNotifier {
       case BudgetType.monthly:
         _selectedMonth = date;
         break;
-      case BudgetType.yearly:
-        _selectedYear = date;
+      case BudgetType.daily:
+        _selectedDay = date;
         break;
     }
     _selectedCategoryId = null;
@@ -1091,9 +1017,9 @@ class BudgetProvider with ChangeNotifier {
           period = now.month;
           dateRange = Budget.getDateRange(type, year, period);
           break;
-        case BudgetType.yearly:
-          year = now.year;
-          period = year;
+        case BudgetType.daily:
+          year = _selectedDay.year;
+          period = _selectedDay.month * 100 + _selectedDay.day; // Encode month and day
           dateRange = Budget.getDateRange(type, year, period);
           break;
       }

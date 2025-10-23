@@ -60,6 +60,18 @@ class GoalsProvider extends ChangeNotifier {
     // Notify listeners so any UI dependent on goals can refresh
     notifyListeners();
   }
+
+  // Notify listeners when a goal transaction is added
+  void notifyGoalTransactionAdded() {
+    print('GoalsProvider: Goal transaction added, notifying listeners');
+    notifyListeners();
+  }
+
+  // Notify listeners when a goal transaction is deleted
+  void notifyGoalTransactionDeleted() {
+    print('GoalsProvider: Goal transaction deleted, notifying listeners');
+    notifyListeners();
+  }
   
   Future<void> deleteGoal(String goalId, {bool cascadeDelete = false}) async {
     await FirestoreService.instance.deleteGoal(goalId, cascadeDelete: cascadeDelete);

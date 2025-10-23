@@ -230,6 +230,18 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       children: [
         _buildFormSection(
           context,
+          'Notes',
+          FormBuilderTextField(
+            name: 'description',
+            style: const TextStyle(fontSize: 13),
+            // initialValue: "Hi there, I'm designing this app.....",
+            decoration: _inputDecoration(hintText: 'Description'),
+            maxLines: 2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
           'Date',
           FormBuilderDateTimePicker(
             name: 'targetDate',
@@ -280,18 +292,6 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 );
               },
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
-          'Notes',
-          FormBuilderTextField(
-            name: 'description',
-            style: const TextStyle(fontSize: 13),
-            // initialValue: "Hi there, I'm designing this app.....",
-            decoration: _inputDecoration(hintText: 'Description'),
-            maxLines: 2,
           ),
         ),
       ],

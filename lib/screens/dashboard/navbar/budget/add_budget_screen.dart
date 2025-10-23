@@ -29,7 +29,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   bool _isLoading = false;
   bool _isRecurring = false;
   String _selectedCurrencyCode = 'USD';
-  String _selectedCurrencySymbol = '\$';
 
   @override
   void initState() {
@@ -44,7 +43,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
       // Initialize currency from CurrencyProvider
       setState(() {
         _selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
-        _selectedCurrencySymbol = currencyProvider.selectedCurrencySymbol;
       });
       
       if (provider.expenseCategories.isNotEmpty && _selectedCategoryId == null) {
@@ -318,9 +316,9 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                               GestureDetector(
                                 onTap: () async {
                                   final budgetTypes = [
+                                    BudgetType.daily,
                                     BudgetType.weekly,
                                     BudgetType.monthly,
-                                    BudgetType.yearly,
                                   ];
                                   
                                   final selected = await _openBottomSheet<BudgetType>(
@@ -329,12 +327,12 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                     selectedItem: _selectedType,
                                     getDisplayName: (type) {
                                       switch (type) {
+                                        case BudgetType.daily:
+                                          return 'Daily';
                                         case BudgetType.weekly:
                                           return 'Weekly';
                                         case BudgetType.monthly:
                                           return 'Monthly';
-                                        case BudgetType.yearly:
-                                          return 'Yearly';
                                       }
                                     },
                                   );
@@ -362,11 +360,11 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          _selectedType == BudgetType.weekly
-                                              ? 'Weekly'
-                                              : _selectedType == BudgetType.monthly
-                                                  ? 'Monthly'
-                                                  : 'Yearly',
+                                          _selectedType == BudgetType.daily
+                                              ? 'Daily'
+                                              : _selectedType == BudgetType.weekly
+                                                  ? 'Weekly'
+                                                  : 'Monthly',
                                           style: const TextStyle(
                                             fontSize: 13,
                                             color: AppColors.primaryTextColorLight,
@@ -401,7 +399,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                 onSelect: (Currency currency) {
                                   setState(() {
                                     _selectedCurrencyCode = currency.code;
-                                    _selectedCurrencySymbol = currency.symbol;
                                   });
                                 },
                               );
@@ -468,7 +465,9 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                             ),
                           ),
                           subtitle: Text(
-                            'Automatically renew this budget for each period',
+                            _selectedType == BudgetType.daily
+                                ? 'Applies to every day'
+                                : 'Automatically renew this budget for each period',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.secondaryTextColorLight,

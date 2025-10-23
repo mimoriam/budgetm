@@ -220,9 +220,9 @@ class FirestoreService {
           year = transactionDate.year;
           period = transactionDate.month;
           break;
-        case BudgetType.yearly:
+        case BudgetType.daily:
           year = transactionDate.year;
-          period = 1; // For yearly, period is always 1
+          period = transactionDate.month * 100 + transactionDate.day; // Encode month and day
           break;
       }
       
@@ -309,8 +309,8 @@ class FirestoreService {
         case BudgetType.monthly:
           period = now.month;
           break;
-        case BudgetType.yearly:
-          period = 1; // For yearly, period is always 1
+        case BudgetType.daily:
+          period = now.month * 100 + now.day; // Encode month and day
           break;
       }
       print('createVacationBudgetsForAllExpenseCategories: type=$type year=$year period=$period currency=$currency');
@@ -517,6 +517,19 @@ class FirestoreService {
     } catch (e) {
       print('Error streaming goals: $e');
       return Stream.empty();
+    }
+  }
+
+  // Get all goals (one-time fetch)
+  Future<List<FirestoreGoal>> getAllGoals() async {
+    try {
+      final snapshot = await _goalsCollection
+          .orderBy('creationDate', descending: false)
+          .get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('Error getting all goals: $e');
+      return [];
     }
   }
 
@@ -1182,6 +1195,27 @@ class FirestoreService {
       }
     } catch (e) {
       print('Error getting transactions amount for account: $e');
+    }
+    return totalAmount;
+  }
+
+  // Calculate current amount for a goal based on linked transactions
+  Future<double> calculateGoalCurrentAmount(String goalId) async {
+    double totalAmount = 0.0;
+    try {
+      final querySnapshot = await _transactionsCollection
+          .where('goalId', isEqualTo: goalId)
+          .get();
+
+      for (final doc in querySnapshot.docs) {
+        final transaction = doc.data();
+        // Only count income transactions for goal progress
+        if (transaction.type == 'income') {
+          totalAmount += transaction.amount;
+        }
+      }
+    } catch (e) {
+      print('Error calculating goal current amount: $e');
     }
     return totalAmount;
   }

@@ -27,44 +27,10 @@ class GoalDetailScreen extends StatefulWidget {
 }
 
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
-
-  // Helper function to get currency symbol for a currency code
-  String _getCurrencySymbol(String currencyCode) {
-    // Simple mapping for common currencies - can be expanded
-    final currencySymbols = {
-      'USD': '\$',
-      'EUR': '€',
-      'GBP': '£',
-      'JPY': '¥',
-      'CAD': 'C\$',
-      'AUD': 'A\$',
-      'CHF': 'CHF',
-      'CNY': '¥',
-      'INR': '₹',
-      'BRL': 'R\$',
-      'MXN': '\$',
-      'KRW': '₩',
-      'SGD': 'S\$',
-      'HKD': 'HK\$',
-      'NZD': 'NZ\$',
-      'SEK': 'kr',
-      'NOK': 'kr',
-      'DKK': 'kr',
-      'PLN': 'zł',
-      'CZK': 'Kč',
-      'HUF': 'Ft',
-      'RUB': '₽',
-      'TRY': '₺',
-      'ZAR': 'R',
-      'THB': '฿',
-      'MYR': 'RM',
-      'PHP': '₱',
-      'IDR': 'Rp',
-      'VND': '₫',
-    };
-    
-    return currencySymbols[currencyCode] ?? currencyCode;
-  }
+  final FirestoreService _firestoreService = FirestoreService.instance;
+  List<_TransactionWithCategory> _detailedTransactions = [];
+  bool _isLoading = true;
+  double _calculatedCurrentAmount = 0.0;
 
   // Helper function to convert Firestore transaction to UI transaction
   model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context, [Category? category]) {
@@ -88,6 +54,61 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTransactions();
+    });
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print('GoalDetail: Loading transactions for goal=${widget.goal.id}');
+      
+      final allTransactions = await _firestoreService.getTransactionsForGoal(widget.goal.id).first;
+      print('GoalDetail: Total transactions found: ${allTransactions.length}');
+
+      // Calculate current amount from transactions
+      _calculatedCurrentAmount = await _firestoreService.calculateGoalCurrentAmount(widget.goal.id);
+      print('GoalDetail: Calculated current amount: $_calculatedCurrentAmount');
+
+      // Create a list of futures to fetch category information for each transaction
+      final detailedTransactionsFutures = allTransactions.map((t) async {
+        Category? category;
+        if (t.categoryId != null && t.categoryId!.isNotEmpty) {
+          category = await _firestoreService.getCategoryById(t.categoryId!);
+        }
+        return _TransactionWithCategory(
+          transaction: t,
+          category: category,
+        );
+      }).toList();
+
+      // Wait for all futures to complete
+      _detailedTransactions = await Future.wait(detailedTransactionsFutures);
+
+      // Sort by date descending
+      _detailedTransactions.sort(
+        (a, b) => b.transaction.date.compareTo(a.transaction.date),
+      );
+      
+      print('GoalDetail: Loaded ${_detailedTransactions.length} transactions with categories');
+    } catch (e) {
+      print('Error loading transactions: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -95,183 +116,192 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         children: [
           _buildCustomAppBar(context),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 12.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Column(
-                      children: [
-                        Text(
-                          widget.goal.name,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.displayLarge?.copyWith(fontSize: 28),
-                        ),
-                        if (widget.goal.description != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.goal.description!,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: AppColors.secondaryTextColorLight,
-                                ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildInfoCard(
-                        context,
-                        'Accumulated Amount',
-                        '${_getCurrencySymbol(widget.goal.currency)}${NumberFormat('#,##0').format(widget.goal.currentAmount)}',
-                      ),
-                      const SizedBox(width: 12),
-                      _buildInfoCard(
-                        context,
-                        'Total',
-                        '${_getCurrencySymbol(widget.goal.currency)}${NumberFormat('#,##0').format(widget.goal.targetAmount)}',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'DATE',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        DateFormat(
-                          'MMMM d, yyyy',
-                        ).format(widget.goal.targetDate).toUpperCase(),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(color: Colors.grey.shade300),
-                  const SizedBox(height: 12),
-                  Text(
-                    'TRANSACTIONS',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.secondaryTextColorLight,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  // const SizedBox(height: 8),
-                  Expanded(
-                    child: StreamBuilder<List<FirestoreTransaction>>(
-                      stream: FirestoreService.instance.getTransactionsForGoal(widget.goal.id),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        final transactions = snapshot.data ?? const <FirestoreTransaction>[];
-                        if (transactions.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'No transactions yet',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.secondaryTextColorLight,
-                              ),
-                            ),
-                          );
-                        }
-                        return ListView.builder(
-                          itemCount: transactions.length,
-                          // separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200),
-                          itemBuilder: (context, index) => _buildTransactionItem(context, transactions[index]),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                           final result = await showDialog<Map<String, bool>>(
-                             context: context,
-                             barrierDismissible: false,
-                             builder: (ctx) {
-                               return AlertDialog(
-                                 title: const Text('Delete Goal'),
-                                 content: Text('Are you sure you want to delete "${widget.goal.name}"? This action cannot be undone.'),
-                                 actions: [
-                                   TextButton(
-                                     onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
-                                     child: const Text('Cancel'),
-                                   ),
-                                   TextButton(
-                                     onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
-                                     style: TextButton.styleFrom(
-                                       foregroundColor: Colors.red,
-                                     ),
-                                     child: const Text('Delete'),
-                                   ),
-                                 ],
-                               );
-                             },
-                           );
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _detailedTransactions.isEmpty
+                    ? _buildEmptyState()
+                    : _buildTransactionsList(),
+          ),
+        ],
+      ),
+    );
+  }
 
-                            if (result != null && result['confirmed'] == true) {
-                              final cascadeDelete = result['cascadeDelete'] == true;
-                              try {
-                                await context.read<GoalsProvider>().deleteGoal(widget.goal.id, cascadeDelete: cascadeDelete);
-                                
-                                // Trigger a refresh of transactions if cascade delete was performed
-                                if (cascadeDelete) {
-                                  Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
-                                }
-                                
-                                if (mounted) {
-                                  Navigator.of(context).pop();
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Failed to delete goal')),
-                                  );
-                                }
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                          ),
-                          child: Text(
-                            'Delete',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.white, fontSize: 14),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.savings, size: 80, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'No transactions yet',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'No transactions found for this goal',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionsList() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16.0,
+        vertical: 12.0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  widget.goal.name,
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 28),
+                ),
+                if (widget.goal.description != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.goal.description!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.secondaryTextColorLight,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildInfoCard(
+                context,
+                'Accumulated Amount',
+                '${widget.goal.currency} ${NumberFormat('#,##0').format(_calculatedCurrentAmount)}',
+              ),
+              const SizedBox(width: 12),
+              _buildInfoCard(
+                context,
+                'Total',
+                '${widget.goal.currency} ${NumberFormat('#,##0').format(widget.goal.targetAmount)}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'DATE',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.secondaryTextColorLight,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                DateFormat('MMMM d, yyyy').format(widget.goal.targetDate).toUpperCase(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text(
+            'TRANSACTIONS',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.secondaryTextColorLight,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _detailedTransactions.length,
+              itemBuilder: (context, index) => _buildTransactionItem(context, _detailedTransactions[index]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final result = await showDialog<Map<String, bool>>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) {
+                        return AlertDialog(
+                          title: const Text('Delete Goal'),
+                          content: Text('Are you sure you want to delete "${widget.goal.name}"? This action cannot be undone.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.red,
+                              ),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (result != null && result['confirmed'] == true) {
+                      final cascadeDelete = result['cascadeDelete'] == true;
+                      try {
+                        await context.read<GoalsProvider>().deleteGoal(widget.goal.id, cascadeDelete: cascadeDelete);
+                        
+                        // Trigger a refresh of transactions if cascade delete was performed
+                        if (cascadeDelete) {
+                          Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
+                        }
+                        
+                        if (mounted) {
+                          Navigator.of(context).pop(true);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to delete goal')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+                  child: Text(
+                    'Delete',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white, fontSize: 14),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -319,22 +349,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     );
   }
 
-  Widget _buildTransactionItem(BuildContext context, FirestoreTransaction txn) {
-    final bool isIncome = txn.type == 'income';
+  Widget _buildTransactionItem(BuildContext context, _TransactionWithCategory detailedTransaction) {
+    final transaction = detailedTransaction.transaction;
+    final category = detailedTransaction.category;
+    final bool isIncome = transaction.type == 'income';
     
     // Get the icon color from the transaction, fallback to default if null
-    final Color iconBackgroundColor = hexToColor(txn.icon_color);
+    final Color iconBackgroundColor = hexToColor(transaction.icon_color);
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     return InkWell(
       onTap: () async {
-        // Get the category for the conversion
-        final category = txn.categoryId != null
-            ? await FirestoreService.instance.getCategoryById(txn.categoryId!)
-            : null;
-        
         // Convert FirestoreTransaction to Transaction
-        final uiTransaction = _convertToUiTransaction(txn, context, category);
+        final uiTransaction = _convertToUiTransaction(transaction, context, category);
         
         // Navigate to ExpenseDetailScreen
         final result = await PersistentNavBarNavigator.pushNewScreen(
@@ -345,73 +372,66 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         );
         
         // Refresh data if needed when returning from the detail screen
-        if (result == true) {
-          // You might want to refresh the data here if needed
+        if (result == true && mounted) {
+          _loadTransactions();
         }
       },
       child: Container(
-        // margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.grey.shade200, width: 1),
         ),
-        child: FutureBuilder<Category?>(
-          future: txn.categoryId != null
-              ? FirestoreService.instance.getCategoryById(txn.categoryId!)
-              : Future.value(null),
-          builder: (context, categorySnapshot) {
-            String categoryName = 'Uncategorized';
-            String iconId = isIncome ? 'icon_default_income' : 'icon_default_expense';
-
-            if (categorySnapshot.connectionState == ConnectionState.waiting) {
-              categoryName = '...';
-            } else if (categorySnapshot.hasData && categorySnapshot.data != null) {
-              categoryName = categorySnapshot.data!.name ?? 'Uncategorized';
-              if (categorySnapshot.data!.icon != null) {
-                iconId = categorySnapshot.data!.icon!;
-              }
-            }
-
-            return Row(
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBackgroundColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: HugeIcon(
+                icon: getIcon(category?.icon ?? (isIncome ? 'icon_default_income' : 'icon_default_expense')),
+                color: iconForegroundColor,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    category?.name ?? 'Uncategorized',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    DateFormat('MMM d, yyyy').format(transaction.date),
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconBackgroundColor,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: HugeIcon(
-                    icon: getIcon(iconId),
-                    color: iconForegroundColor,
-                    size: 18,
-                  ),
+                // Add paid/unpaid status icon
+                Icon(
+                  transaction.paid == true ? Icons.check_circle : Icons.circle_outlined,
+                  color: transaction.paid == true ? Colors.green : Colors.grey,
+                  size: 16,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        categoryName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        DateFormat('MMM d, yyyy').format(txn.date),
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(width: 4),
                 Text(
-                  '${isIncome ? '+' : '-'} ${_getCurrencySymbol(widget.goal.currency)}${txn.amount.toStringAsFixed(2)}',
+                  '${isIncome ? '+' : '-'} ${widget.goal.currency} ${transaction.amount.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: isIncome ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
@@ -419,8 +439,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   ),
                 ),
               ],
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
@@ -485,4 +505,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       ),
     );
   }
+}
+
+// Helper class to hold transaction and its category information
+class _TransactionWithCategory {
+  final FirestoreTransaction transaction;
+  final Category? category;
+
+  _TransactionWithCategory({
+    required this.transaction,
+    required this.category,
+  });
 }

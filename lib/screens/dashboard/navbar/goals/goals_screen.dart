@@ -1,10 +1,13 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/models/goal.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -22,10 +25,116 @@ class GoalsScreen extends StatefulWidget {
 
 class _GoalsScreenState extends State<GoalsScreen> {
   bool _isPendingSelected = true;
+  late ScrollController _scrollController;
+  List<FirestoreGoal> _cachedGoals = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(() {
+      if (!_scrollController.hasClients) return;
+      final provider = Provider.of<NavbarVisibilityProvider>(
+        context,
+        listen: false,
+      );
+      final direction = _scrollController.position.userScrollDirection;
+
+      if (direction == ScrollDirection.reverse) {
+        provider.setNavBarVisibility(false);
+      } else if (direction == ScrollDirection.forward) {
+        provider.setNavBarVisibility(true);
+      }
+    });
+    
+    // Load goals once and cache them
+    _loadGoals();
+    
+    // Listen to GoalsProvider for changes (e.g., when transactions are added)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final goalsProvider = Provider.of<GoalsProvider>(context, listen: false);
+      goalsProvider.addListener(_onGoalsProviderChanged);
+    });
+  }
+
+  Future<void> _loadGoals() async {
+    print('GoalsScreen: Starting to load goals');
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Get goals from FirestoreService directly instead of using stream
+      final goals = await FirestoreService.instance.getAllGoals();
+      print('GoalsScreen: Loaded ${goals.length} goals');
+      
+      // Calculate current amounts for each goal based on transactions
+      final updatedGoals = <FirestoreGoal>[];
+      for (final goal in goals) {
+        final calculatedAmount = await FirestoreService.instance.calculateGoalCurrentAmount(goal.id);
+        print('GoalsScreen: Goal ${goal.name} - stored: ${goal.currentAmount}, calculated: $calculatedAmount');
+        
+        // Create a new goal with calculated current amount
+        final updatedGoal = FirestoreGoal(
+          id: goal.id,
+          name: goal.name,
+          description: goal.description,
+          targetAmount: goal.targetAmount,
+          currentAmount: calculatedAmount, // Use calculated amount
+          creationDate: goal.creationDate,
+          targetDate: goal.targetDate,
+          isCompleted: calculatedAmount >= goal.targetAmount, // Update completion status
+          userId: goal.userId,
+          icon: goal.icon,
+          color: goal.color,
+          currency: goal.currency,
+        );
+        updatedGoals.add(updatedGoal);
+      }
+      
+      if (mounted) {
+        setState(() {
+          _cachedGoals = updatedGoals;
+          _isLoading = false;
+        });
+        print('GoalsScreen: Goals loaded successfully with calculated amounts, UI updated');
+      }
+    } catch (e) {
+      print('GoalsScreen: Error loading goals: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Method to refresh goals (can be called when returning from detail screen)
+  Future<void> refreshGoals() async {
+    print('GoalsScreen: Refreshing goals');
+    await _loadGoals();
+  }
+
+  // Callback for GoalsProvider changes
+  void _onGoalsProviderChanged() {
+    print('GoalsScreen: GoalsProvider changed, refreshing goals');
+    if (mounted) {
+      refreshGoals();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Remove listener before disposing
+    try {
+      final goalsProvider = Provider.of<GoalsProvider>(context, listen: false);
+      goalsProvider.removeListener(_onGoalsProviderChanged);
+    } catch (e) {
+      // Provider might not be available during disposal
+    }
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -37,44 +146,36 @@ class _GoalsScreenState extends State<GoalsScreen> {
           _buildCustomAppBar(context),
           _buildToggleChips(),
           Expanded(
-            child: StreamBuilder<List<FirestoreGoal>>(
-              stream: context.read<GoalsProvider>().getGoals(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final allGoals = snapshot.data ?? <FirestoreGoal>[];
-                
-                // Show empty state if no goals exist
-                if (allGoals.isEmpty) {
-                  return SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: _buildEmptyState(),
-                    ),
-                  );
-                }
-                
-                // No currency filtering - show all goals
-                final pendingGoals =
-                    allGoals.where((g) => g.isCompleted == false).toList();
-                final fulfilledGoals =
-                    allGoals.where((g) => g.isCompleted == true).toList();
-
-                return SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 20),
-                      _buildInfoCards(pendingGoals, fulfilledGoals, allGoals),
-                      _isPendingSelected
-                          ? _buildPendingGoalsList(pendingGoals)
-                          : _buildFulfilledGoalsList(fulfilledGoals),
-                    ],
-                  ),
-                );
-              },
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _cachedGoals.isEmpty
+                    ? SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: _buildEmptyState(),
+                        ),
+                      )
+                    : _buildGoalsContent(),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalsContent() {
+    // No currency filtering - show all goals
+    final pendingGoals = _cachedGoals.where((g) => g.isCompleted == false).toList();
+    final fulfilledGoals = _cachedGoals.where((g) => g.isCompleted == true).toList();
+
+    return SingleChildScrollView(
+      controller: _scrollController,
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          _buildInfoCards(pendingGoals, fulfilledGoals, _cachedGoals),
+          _isPendingSelected
+              ? _buildPendingGoalsList(pendingGoals)
+              : _buildFulfilledGoalsList(fulfilledGoals),
         ],
       ),
     );
@@ -297,7 +398,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     children: [
                       ...totalsByCurrency.entries.map((entry) => _buildCurrencyTotal(
                         entry.key,
-                        '${_getCurrencySymbol(entry.key)}${NumberFormat('#,##0.00').format(entry.value)}',
+                        '${entry.key} ${NumberFormat('#,##0.00').format(entry.value)}',
                         _isPendingSelected ? Colors.orange : Colors.green,
                       )),
                     ],
@@ -305,15 +406,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ],
               ),
             ),
-          // Fulfilled ratio card in row format
-          Row(
-            children: [
-              _buildInfoCard(
+          // Fulfilled ratio card centered
+          Center(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.6,
+              child: _buildInfoCard(
                 context,
                 'Fulfilled Goals',
                 fulfilledRatio,
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -354,41 +456,39 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Widget _buildInfoCard(BuildContext context, String title, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 2,
-              blurRadius: 10,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.secondaryTextColorLight,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.secondaryTextColorLight,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: AppColors.primaryTextColorLight,
             ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: AppColors.primaryTextColorLight,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -440,14 +540,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Widget _buildGoalItem(FirestoreGoal goal) {
+    // Calculate progress using the goal's current amount (which is now calculated from transactions)
     final double progress =
         goal.targetAmount > 0 ? goal.currentAmount / goal.targetAmount : 0;
-    final currencySymbol = _getCurrencySymbol(goal.currency);
-    final currencyFormat = NumberFormat.currency(
-      symbol: currencySymbol,
-      decimalDigits: 2,
-    );
-    final totalFormat = NumberFormat.compactCurrency(symbol: currencySymbol);
     
     // Use goal's custom color if available, otherwise fallback to default behavior
     final Color iconBackgroundColor = goal.color != null 
@@ -456,13 +551,21 @@ class _GoalsScreenState extends State<GoalsScreen> {
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
 
     return GestureDetector(
-      onTap: () {
-        PersistentNavBarNavigator.pushNewScreen(
+      onTap: () async {
+        print('GoalsScreen: Navigating to goal detail for goal: ${goal.name}');
+        final result = await PersistentNavBarNavigator.pushNewScreen(
           context,
           screen: GoalDetailScreen(goal: goal),
           withNavBar: false,
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );
+        
+        print('GoalsScreen: Returned from goal detail, result: $result');
+        // Refresh goals when returning from detail screen if needed
+        if (result == true && mounted) {
+          print('GoalsScreen: Goal was modified, refreshing goals');
+          await refreshGoals();
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8),
@@ -524,7 +627,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   const Icon(Icons.check_circle, color: Colors.green, size: 28)
                 else
                   Text(
-                    currencyFormat.format(goal.currentAmount),
+                    '${goal.currency} ${NumberFormat('#,##0.00').format(goal.currentAmount)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -548,7 +651,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      totalFormat.format(goal.targetAmount),
+                      '${goal.currency} ${NumberFormat('#,##0.00').format(goal.targetAmount)}',
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     Text(
@@ -556,7 +659,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: iconBackgroundColor,
+                        color: Colors.grey,
                       ),
                     ),
                   ],
@@ -607,43 +710,5 @@ class _GoalsScreenState extends State<GoalsScreen> {
         ],
       ),
     );
-  }
-
-  // Helper method to get currency symbol for a currency code
-  String _getCurrencySymbol(String currencyCode) {
-    // Simple mapping for common currencies - can be expanded
-    final currencySymbols = {
-      'USD': '\$',
-      'EUR': '€',
-      'GBP': '£',
-      'JPY': '¥',
-      'CAD': 'C\$',
-      'AUD': 'A\$',
-      'CHF': 'CHF',
-      'CNY': '¥',
-      'INR': '₹',
-      'BRL': 'R\$',
-      'MXN': '\$',
-      'KRW': '₩',
-      'SGD': 'S\$',
-      'HKD': 'HK\$',
-      'NZD': 'NZ\$',
-      'SEK': 'kr',
-      'NOK': 'kr',
-      'DKK': 'kr',
-      'PLN': 'zł',
-      'CZK': 'Kč',
-      'HUF': 'Ft',
-      'RUB': '₽',
-      'TRY': '₺',
-      'ZAR': 'R',
-      'THB': '฿',
-      'MYR': 'RM',
-      'PHP': '₱',
-      'IDR': 'Rp',
-      'VND': '₫',
-    };
-    
-    return currencySymbols[currencyCode] ?? currencyCode;
   }
 }
