@@ -1057,8 +1057,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     if (account.isVacationAccount == true) {
       return '';
     }
-    final currency = CurrencyService().findByCode(account.currency);
-    return currency?.symbol ?? '\$';
+    // Return currency code instead of symbol
+    return account.currency;
   }
 
 
@@ -1328,7 +1328,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 CurrencyService().findByCode(currency)?.symbol ?? currency;
             return DropdownMenuItem<String>(
               value: currency,
-              child: Text('$currencySymbol $currency'),
+              child: Text(currency),
             );
           }).toList(),
           onChanged: (String? newValue) {

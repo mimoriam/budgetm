@@ -892,15 +892,16 @@ class _BudgetScreenState extends State<BudgetScreen>
   }
 
   String _formatAmountForCard(double amount, {String? currencyCode}) {
-    String currencySymbol;
+    String currencyDisplay;
     if (currencyCode != null) {
-      final currency = CurrencyService().findByCode(currencyCode);
-      currencySymbol = currency?.symbol ?? '\$';
+      // Use currency code instead of symbol
+      currencyDisplay = currencyCode;
     } else {
-      currencySymbol = Provider.of<CurrencyProvider>(
+      // Fallback to selected currency code
+      currencyDisplay = Provider.of<CurrencyProvider>(
         context,
         listen: false,
-      ).currencySymbol;
+      ).selectedCurrencyCode;
     }
     
     if (amount.abs() >= 1000) {
@@ -908,13 +909,13 @@ class _BudgetScreenState extends State<BudgetScreen>
       final thousands = amount / 1000;
       if (thousands == thousands.floor()) {
         // If it's a whole number of thousands, show without decimal
-        return '$currencySymbol${thousands.floor()}k';
+        return '$currencyDisplay ${thousands.floor()}k';
       } else {
         // Show one decimal place for partial thousands
-        return '$currencySymbol${thousands.toStringAsFixed(1)}k';
+        return '$currencyDisplay ${thousands.toStringAsFixed(1)}k';
       }
     }
-    return '$currencySymbol${amount.toStringAsFixed(2)}';
+    return '$currencyDisplay ${amount.toStringAsFixed(2)}';
   }
 
   Widget _buildCategoryCard(
@@ -1466,10 +1467,9 @@ class _BudgetScreenState extends State<BudgetScreen>
             color: Colors.black,
           ),
           items: availableCurrencies.map((String currency) {
-            final currencySymbol = CurrencyService().findByCode(currency)?.symbol ?? currency;
             return DropdownMenuItem<String>(
               value: currency,
-              child: Text('$currencySymbol $currency'),
+              child: Text(currency),
             );
           }).toList(),
           onChanged: (String? newValue) {

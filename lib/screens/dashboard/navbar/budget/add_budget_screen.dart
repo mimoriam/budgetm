@@ -437,14 +437,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        _selectedCurrencySymbol,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.secondaryTextColorLight,
-                                        ),
-                                      ),
                                     ],
                                   ),
                                   Icon(

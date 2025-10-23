@@ -328,13 +328,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             _buildInfoCard(
                               context,
                               'Accumulated Amount',
-                              '${_getCurrencySymbol(widget.transaction.currency)}${widget.transaction.amount.toStringAsFixed(2)}',
+                              '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                             const SizedBox(width: 16),
                             _buildInfoCard(
                               context,
                               'Total',
-                              '${_getCurrencySymbol(widget.transaction.currency)}${widget.transaction.amount.toStringAsFixed(2)}',
+                              '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                           ],
                         ),
@@ -691,10 +691,9 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
     );
   }
 
-  // Helper method to get currency symbol from currency code
-  String _getCurrencySymbol(String currencyCode) {
-    final currency = CurrencyService().findByCode(currencyCode);
-    return currency?.symbol ?? '\$';
+  // Helper method to get currency code (return as-is)
+  String _getCurrencyCode(String currencyCode) {
+    return currencyCode;
   }
 
   Widget _buildCustomAppBar(BuildContext context) {

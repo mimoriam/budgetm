@@ -171,12 +171,11 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   }
 
   Widget _buildBody() {
-    // Determine the correct currency symbol for the account being viewed
+    // Determine the correct currency code for the account being viewed
     final accountCurrencyCode = widget.account.currency;
-    final currency = CurrencyService().findByCode(accountCurrencyCode);
-    // For vacation accounts, don't show currency symbol as they are multi-currency
-    final currencySymbol = widget.account.isVacationAccount == true ? '' : (currency?.symbol ?? '\$');
-    final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
+    // For vacation accounts, don't show currency code as they are multi-currency
+    final currencyCode = widget.account.isVacationAccount == true ? '' : accountCurrencyCode;
+    final currencyFormat = NumberFormat.currency(symbol: currencyCode);
 
     // Calculate current balance (only from paid transactions)
     double currentBalance = widget.account.initialBalance;
@@ -493,11 +492,9 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     final isIncome = transaction.type == 'income';
     final isVacationTransaction = transaction.isVacation == true;
     
-    // Determine the correct currency symbol for the transaction
+    // Determine the correct currency code for the transaction
     // For vacation transactions, use the transaction's currency, otherwise use account's currency
     final currencyCode = isVacationTransaction ? transaction.currency : widget.account.currency;
-    final currency = CurrencyService().findByCode(currencyCode);
-    final currencySymbol = currency?.symbol ?? '\$';
     
     // Get the icon color from the transaction, fallback to default if null
     final Color iconBackgroundColor = hexToColor(transaction.icon_color);
@@ -608,7 +605,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                 ],
                 const SizedBox(width: 4),
                 Text(
-                  '${isIncome ? '+' : '-'} $currencySymbol${transaction.amount.toStringAsFixed(2)}',
+                  '${isIncome ? '+' : '-'} $currencyCode ${transaction.amount.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: isIncome ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
@@ -890,12 +887,11 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                   return sortedEntries.map((entry) {
                     final currency = entry.key;
                     final amount = entry.value;
-                    final currencySymbol = _getCurrencySymbol(currency);
                     
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Text(
-                        '- $currencySymbol${amount.toStringAsFixed(2)}',
+                        '- $currency ${amount.toStringAsFixed(2)}',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Colors.red[600],
                           fontSize: 16,

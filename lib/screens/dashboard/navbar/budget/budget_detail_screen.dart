@@ -162,10 +162,9 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine the correct currency symbol for the budget being viewed
+    // Determine the correct currency code for the budget being viewed
     _budgetCurrencyCode = widget.budget.currency;
-    final currency = CurrencyService().findByCode(_budgetCurrencyCode);
-    _currencySymbol = currency?.symbol ?? '\$';
+    _currencySymbol = _budgetCurrencyCode; // Use currency code instead of symbol
     
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
@@ -548,7 +547,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                 ],
                 Text(
                   // Match home.dart amount formatting and style (sign + space + currency)
-                  '${transaction.type == 'income' ? '+' : '-'} $_currencySymbol${transaction.amount.toStringAsFixed(2)}',
+                  '${transaction.type == 'income' ? '+' : '-'} $_currencySymbol ${transaction.amount.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: transaction.type == 'income' ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,

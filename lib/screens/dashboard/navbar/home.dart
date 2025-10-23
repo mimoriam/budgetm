@@ -1671,7 +1671,7 @@ Widget _buildCurrencyBreakdownContent(
                 Icon(Icons.account_balance_wallet, color: Colors.blue.shade600, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Total Budget: ${currencyProvider.currencySymbol}${totalBudget.toStringAsFixed(2)}',
+                  'Total Budget: ${currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade700,
@@ -1687,9 +1687,6 @@ Widget _buildCurrencyBreakdownContent(
           final expenses = expensesByCurrency[currency] ?? 0.0;
           final balance = income - expenses;
           final isSelectedCurrency = currency == currencyProvider.selectedCurrencyCode;
-          
-          // Get currency symbol
-          final currencySymbol = _getCurrencySymbol(currency);
           
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -1737,21 +1734,24 @@ Widget _buildCurrencyBreakdownContent(
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildCurrencyRow(
-                        'Income',
-                        income,
-                        currencySymbol,
-                        Colors.green,
-                        Icons.trending_up,
+                    // Only show income row if not in vacation mode
+                    if (!isVacationMode) ...[
+                      Expanded(
+                        child: _buildCurrencyRow(
+                          'Income',
+                          income,
+                          currency,
+                          Colors.green,
+                          Icons.trending_up,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
+                      const SizedBox(width: 12),
+                    ],
                     Expanded(
                       child: _buildCurrencyRow(
                         'Expense',
                         expenses,
-                        currencySymbol,
+                        currency,
                         Colors.red,
                         Icons.trending_down,
                       ),
@@ -1779,7 +1779,7 @@ Widget _buildCurrencyBreakdownContent(
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Balance: $currencySymbol${balance.toStringAsFixed(2)}',
+                        'Balance: $currency ${balance.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: balance >= 0 ? Colors.green.shade700 : Colors.red.shade700,
@@ -1801,7 +1801,7 @@ Widget _buildCurrencyBreakdownContent(
 Widget _buildCurrencyRow(
   String label,
   double amount,
-  String currencySymbol,
+  String currencyCode,
   Color color,
   IconData icon,
 ) {
@@ -1821,7 +1821,7 @@ Widget _buildCurrencyRow(
               ),
             ),
             Text(
-              '$currencySymbol${amount.toStringAsFixed(2)}',
+              '$currencyCode ${amount.toStringAsFixed(2)}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: color,
@@ -1833,16 +1833,6 @@ Widget _buildCurrencyRow(
       ),
     ],
   );
-}
-
-// Helper function to get currency symbol
-String _getCurrencySymbol(String currencyCode) {
-  try {
-    final currency = CurrencyService().findByCode(currencyCode);
-    return currency?.symbol ?? currencyCode;
-  } catch (e) {
-    return currencyCode;
-  }
 }
 
 // Helper function to show vacation mode currency change dialog
@@ -1870,22 +1860,18 @@ Future<void> _showVacationCurrencyDialog(
       // Non-fatal: use default currency
     }
 
-    // Get currency symbol for display
-    final currency = CurrencyService().findByCode(previousCurrency);
-    final currencySymbol = currency?.symbol ?? '\$';
-
     await showDialog<void>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
           title: const Text('Vacation Mode'),
           content: Text(
-            'You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was $currencySymbol $previousCurrency.',
+            'You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was $previousCurrency.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('Keep Current ($currencySymbol $previousCurrency)'),
+              child: Text('Keep Current ($previousCurrency)'),
             ),
             TextButton(
               onPressed: () async {
@@ -2472,7 +2458,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${currencyProvider.currencySymbol} ${topBalance.toStringAsFixed(2)}',
+                                  '${currencyProvider.selectedCurrencyCode} ${topBalance.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -2781,7 +2767,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           Expanded(
                             child: _buildInfoCard(
                               'Total Budget',
-                              '${currencyProvider.currencySymbol}${totalBudget.toStringAsFixed(2)}',
+                              '${currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
                               Colors.blue,
                               HugeIcons.strokeRoundedWallet01,
                               Colors.blue.shade50,
