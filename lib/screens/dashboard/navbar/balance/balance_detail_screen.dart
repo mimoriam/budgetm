@@ -277,7 +277,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
           ),
           child: Column(
             children: [
-              // Row for Initial Balance and Current Balance
+              // Row for Initial Balance and Current Balance/Expenses
               Row(
                 children: [
                   Expanded(
@@ -312,37 +312,36 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                     color: Colors.black.withOpacity(0.2),
                   ),
                   Expanded(
-                    child: Semantics(
-                      label: 'Current Balance',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Current Balance',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500,
+                    child: widget.account.isVacationAccount == true
+                        ? _buildVacationExpensesSummary()
+                        : Semantics(
+                            label: 'Current Balance',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Current Balance',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  currencyFormat.format(currentBalance),
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    color: currentBalance >= 0 ? Colors.black : Colors.red[300],
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            currencyFormat.format(currentBalance),
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: currentBalance >= 0 ? Colors.black : Colors.red[300],
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              // Show multi-currency expense breakdown for vacation accounts
-              if (widget.account.isVacationAccount == true)
-                _buildVacationExpenseBreakdown(),
               // Display filtered subtotal if a date range is selected
               if (_selectedDateRange != null)
                 Semantics(
@@ -826,74 +825,6 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     }
   }
 
-  // Helper function to build vacation expense breakdown (similar to home.dart expense card)
-  Widget _buildVacationExpenseBreakdown() {
-    // Calculate expenses by currency
-    final Map<String, double> expensesByCurrency = {};
-    
-    for (final detailedTransaction in _detailedTransactions) {
-      final transaction = detailedTransaction.transaction;
-      final currency = transaction.currency;
-      
-      if (currency.isEmpty) continue;
-      
-      if (transaction.type == 'expense') {
-        expensesByCurrency[currency] = (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
-      }
-    }
-
-    if (expensesByCurrency.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    // Sort currencies alphabetically
-    final sortedCurrencies = expensesByCurrency.keys.toList()..sort();
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_down, color: Colors.red.shade600, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Expenses by Currency',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red.shade700,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...sortedCurrencies.map((currency) {
-            final amount = expensesByCurrency[currency] ?? 0.0;
-            final currencySymbol = _getCurrencySymbol(currency);
-            
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '- $currencySymbol${amount.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: Colors.red.shade700,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
 
 
   // Helper function to get currency symbol
@@ -904,6 +835,81 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     } catch (e) {
       return currencyCode;
     }
+  }
+
+  // Build vacation expenses summary for the balance card
+  Widget _buildVacationExpensesSummary() {
+    // Calculate expenses by currency (only paid expenses)
+    final Map<String, double> expensesByCurrency = {};
+    
+    for (final detailedTransaction in _detailedTransactions) {
+      final transaction = detailedTransaction.transaction;
+      final currency = transaction.currency;
+      
+      if (currency.isEmpty) continue;
+      
+      if (transaction.type == 'expense' && transaction.paid == true) {
+        expensesByCurrency[currency] = (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
+      }
+    }
+
+    return Semantics(
+      label: 'Total Expenses',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Total Expenses',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Display currency breakdown similar to home.dart
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (expensesByCurrency.isEmpty)
+                Text(
+                  '- 0.00',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.red[600],
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              else
+                ...() {
+                  // Sort currencies alphabetically
+                  final sortedEntries = expensesByCurrency.entries.toList()
+                    ..sort((a, b) => a.key.compareTo(b.key));
+                  
+                  return sortedEntries.map((entry) {
+                    final currency = entry.key;
+                    final amount = entry.value;
+                    final currencySymbol = _getCurrencySymbol(currency);
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        '- $currencySymbol${amount.toStringAsFixed(2)}',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.red[600],
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  }).toList();
+                }(),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
