@@ -383,15 +383,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   vacationAccounts =
                       data['vacation_accounts'] as List<Map<String, dynamic>>;
 
-                  // Show empty state if both lists are empty
+                  // Show new empty state structure if both lists are empty
                   if (normalAccounts.isEmpty && vacationAccounts.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: _buildEmptyState(),
-                      ),
-                    );
+                    return _buildNewEmptyState();
                   }
                 }
               } else {
@@ -403,15 +397,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   vacationAccounts =
                       data['vacation_accounts'] as List<Map<String, dynamic>>;
 
-                  // Show empty state if both lists are empty
+                  // Show new empty state structure if both lists are empty
                   if (normalAccounts.isEmpty && vacationAccounts.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: _buildEmptyState(),
-                      ),
-                    );
+                    return _buildNewEmptyState();
                   }
                 }
               }
@@ -471,17 +459,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           ),
                           const SizedBox(height: 6),
                           if (normalAccounts.isEmpty)
-                            Center(
-                              child: Text(
-                                'No normal accounts',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: AppColors.secondaryTextColorLight,
-                                    ),
-                              ),
-                            )
+                            _buildMyAccountsEmptyCard()
                           else
                             ...normalAccounts.asMap().entries.map(
                                   (entry) => Column(
@@ -550,17 +528,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           ),
                           const SizedBox(height: 12),
                           if (vacationAccounts.isEmpty)
-                            Center(
-                              child: Text(
-                                'No vacation accounts',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: AppColors.secondaryTextColorLight,
-                                    ),
-                              ),
-                            )
+                            _buildVacationEmptyCard()
                           else
                             ...vacationAccounts.map(
                               (accountData) => Column(
@@ -831,7 +799,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final isTouched = i == touchedIndex;
       final radius = isTouched ? 120.0 : 100.0;
       final accountData = accountsWithData[i];
-      final value = accountData['finalBalance'] as double;
+      final account = accountData['account'] as FirestoreAccount;
+      final value = account.isVacationAccount == true 
+        ? account.initialBalance 
+        : accountData['finalBalance'] as double;
 
       return PieChartSectionData(
         color: colors[i % colors.length],
@@ -883,7 +854,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               _buildLegendItem(
                 colors[index % colors.length],
                 account.name,
-                finalBalance,
+                account.isVacationAccount == true ? account.initialBalance : finalBalance,
                 _getAccountCurrencySymbol(account),
               ),
               if (index < filteredData.length - 1)
@@ -1068,7 +1039,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               ),
             ),
             Text(
-              '${_getAccountCurrencySymbol(account)}${amount.toStringAsFixed(2)}',
+              isVacationAccount 
+                ? '${account.initialBalance.toStringAsFixed(2)}'
+                : '${_getAccountCurrencySymbol(account)}${amount.toStringAsFixed(2)}',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -1088,9 +1061,79 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     return currency?.symbol ?? '\$';
   }
 
-  Widget _buildEmptyState() {
+
+  Widget _buildNewEmptyState() {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20.0,
+        vertical: 16.0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Account Balance card with currency selector
+          _buildEmptyAccountBalanceCard(),
+          const SizedBox(height: 24),
+          
+          // MY ACCOUNTS section
+          _buildSectionHeaderWithButton(
+            'MY ACCOUNTS',
+            () async {
+              final vacationProvider =
+                  Provider.of<VacationProvider>(
+                context,
+                listen: false,
+              );
+              final isVacationMode =
+                  vacationProvider.isVacationMode;
+              final result =
+                  await PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: AddAccountScreen(
+                    isCreatingVacationAccount:
+                        isVacationMode),
+                withNavBar: false,
+                pageTransitionAnimation:
+                    PageTransitionAnimation.cupertino,
+              );
+              if (result == true) {
+                if (mounted) setState(() {});
+              }
+            },
+          ),
+          const SizedBox(height: 6),
+          _buildMyAccountsEmptyCard(),
+          
+          // VACATION section
+          const SizedBox(height: 24),
+          _buildSectionHeaderWithButton(
+            'VACATION',
+            () async {
+              final result =
+                  await PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: const AddAccountScreen(
+                    isCreatingVacationAccount: true),
+                withNavBar: false,
+                pageTransitionAnimation:
+                    PageTransitionAnimation.cupertino,
+              );
+              if (result == true) {
+                if (mounted) setState(() {});
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildVacationEmptyCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyAccountBalanceCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1103,26 +1146,144 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Make column take minimum space
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Account Balance',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              // Currency dropdown placeholder - could be enhanced later
+              // Container(
+              //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              //   decoration: BoxDecoration(
+              //     color: Colors.grey.shade100,
+              //     borderRadius: BorderRadius.circular(8),
+              //     border: Border.all(color: Colors.grey.shade300),
+              //   ),
+              //   child: Text(
+              //     'USD',
+              //     style: const TextStyle(
+              //       fontSize: 11,
+              //       fontWeight: FontWeight.w600,
+              //       color: Colors.black,
+              //     ),
+              //   ),
+              // ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Show app logo
           Image.asset(
             'images/launcher/logo.png',
-            width: 80,
-            height: 80,
-            color: Colors.grey.shade300,
+            width: 120,
+            height: 120,
+            color: Colors.grey.shade400,
           ),
           const SizedBox(height: 16),
           Text(
-            'No accounts',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+            'No accounts created',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Start by creating an account to track your balances here.',
+            'Create your first account to start tracking balances',
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyAccountsEmptyCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 48,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No accounts created',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your first account to start tracking your finances',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVacationEmptyCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.flight_takeoff_outlined,
+            size: 48,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No vacations yet',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your first vacation account to start planning your trips',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 14,
+            ),
           ),
         ],
       ),

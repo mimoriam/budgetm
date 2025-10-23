@@ -494,9 +494,10 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     final isIncome = transaction.type == 'income';
     final isVacationTransaction = transaction.isVacation == true;
     
-    // Determine the correct currency symbol for the account being viewed
-    final accountCurrencyCode = widget.account.currency;
-    final currency = CurrencyService().findByCode(accountCurrencyCode);
+    // Determine the correct currency symbol for the transaction
+    // For vacation transactions, use the transaction's currency, otherwise use account's currency
+    final currencyCode = isVacationTransaction ? transaction.currency : widget.account.currency;
+    final currency = CurrencyService().findByCode(currencyCode);
     final currencySymbol = currency?.symbol ?? '\$';
     
     // Get the icon color from the transaction, fallback to default if null
@@ -515,7 +516,9 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     return GestureDetector(
       onTap: () async {
         // Convert FirestoreTransaction to Transaction for ExpenseDetailScreen
-        final uiTransaction = await _convertToUiTransaction(transaction, accountCurrencyCode);
+        // For vacation transactions, use the transaction's currency, otherwise use account's currency
+        final transactionCurrencyCode = isVacationTransaction ? transaction.currency : widget.account.currency;
+        final uiTransaction = await _convertToUiTransaction(transaction, transactionCurrencyCode);
         if (mounted) {
           final result = await Navigator.push(
             context,
