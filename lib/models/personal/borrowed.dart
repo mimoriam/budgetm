@@ -9,6 +9,8 @@ class Borrowed with DueDateContract {
   final DateTime dueDate; // when due/expected return
   final bool returned;
   final String currency; // New field for currency
+  final String? transactionId; // ID of the initial income transaction
+  final String? returnTransactionId; // ID of the return expense transaction
 
   Borrowed({
     required this.id,
