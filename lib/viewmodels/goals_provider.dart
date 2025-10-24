@@ -97,7 +97,7 @@ class GoalsProvider extends ChangeNotifier {
         .get();
 
     for (final doc in querySnapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
       final existingName = (data['name'] as String? ?? '').trim().toLowerCase();
       if (existingName == lowerName) {
         return true;

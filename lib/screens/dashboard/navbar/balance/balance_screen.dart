@@ -15,7 +15,6 @@ import 'package:provider/provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'dart:async';
 import 'dart:math';
-import 'package:currency_picker/currency_picker.dart';
 
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
@@ -1324,8 +1323,6 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             color: Colors.black,
           ),
           items: availableCurrencies.map((String currency) {
-            final currencySymbol =
-                CurrencyService().findByCode(currency)?.symbol ?? currency;
             return DropdownMenuItem<String>(
               value: currency,
               child: Text(currency),

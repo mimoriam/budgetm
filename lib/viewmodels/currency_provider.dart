@@ -84,7 +84,7 @@ class CurrencyProvider extends ChangeNotifier {
             final currency = CurrencyService().findByCode(currencyCode);
             if (currency != null) {
               _selectedCurrencyCode = currency.code;
-              _selectedCurrencySymbol = currency.symbol ?? '\$';
+              _selectedCurrencySymbol = currency.symbol;
               // For now, we'll assume a conversion rate of 1.0
               // In a real app, you might want to fetch this from an API
               _conversionRate = 1.0;
@@ -131,7 +131,7 @@ class CurrencyProvider extends ChangeNotifier {
 
     final oldCode = _selectedCurrencyCode;
     _selectedCurrencyCode = currency.code;
-    _selectedCurrencySymbol = currency.symbol ?? _selectedCurrencySymbol;
+    _selectedCurrencySymbol = currency.symbol;
     _conversionRate = rate;
 
     // Update other currencies list

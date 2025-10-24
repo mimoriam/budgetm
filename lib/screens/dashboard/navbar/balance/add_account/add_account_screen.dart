@@ -2,7 +2,6 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
-import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/widgets/pretty_bottom_sheet.dart';

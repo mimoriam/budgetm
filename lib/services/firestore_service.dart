@@ -6,6 +6,8 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_task.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/goal.dart';
+import 'package:budgetm/models/personal/borrowed.dart';
+import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/data/local/category_initializer.dart';
 
 class FirestoreService {
@@ -636,6 +638,30 @@ class FirestoreService {
         );
   }
 
+  CollectionReference<Borrowed> get _borrowedCollection {
+    if (_userId == null) throw Exception('User not authenticated');
+    return _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('borrowed')
+        .withConverter<Borrowed>(
+          fromFirestore: (snapshot, _) => Borrowed.fromJson(snapshot.data()!),
+          toFirestore: (borrowed, _) => borrowed.toJson(),
+        );
+  }
+
+  CollectionReference<Lent> get _lentCollection {
+    if (_userId == null) throw Exception('User not authenticated');
+    return _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('lent')
+        .withConverter<Lent>(
+          fromFirestore: (snapshot, _) => Lent.fromJson(snapshot.data()!),
+          toFirestore: (lent, _) => lent.toJson(),
+        );
+  }
+
   // ================ TRANSACTION OPERATIONS ================
 
   // Create a new transaction (accepts optional vacation flag)
@@ -1057,38 +1083,6 @@ class FirestoreService {
       print('Error deleting transaction: $e');
       rethrow;
     }
-  }
-
-  // Helper method to process account balance reversal for a transaction
-  Future<void> _processAccountBalanceReversal(
-    Transaction transaction,
-    FirestoreTransaction transactionData,
-    String? accountId,
-  ) async {
-    if (accountId == null || accountId.isEmpty) {
-      return;
-    }
-
-    final accountDocRef = _accountsCollection.doc(accountId);
-    final accountSnapshot = await transaction.get(accountDocRef);
-
-    if (!accountSnapshot.exists) {
-      return;
-    }
-
-    // Update account balance (reverse the original transaction)
-    final currentBalance = accountSnapshot.data()!.balance;
-    final transactionAmount = transactionData.amount;
-    final transactionType = transactionData.type;
-
-    // For deletion, we reverse the original balance change
-    // Income: subtract the amount (since original added it)
-    // Expense: add the amount (since original subtracted it)
-    final newBalance = (transactionType == 'income')
-        ? currentBalance - transactionAmount
-        : currentBalance + transactionAmount;
-
-    transaction.update(accountDocRef, {'balance': newBalance});
   }
 
   // Stream transactions (real-time updates)
@@ -2161,6 +2155,160 @@ class FirestoreService {
     }
   }
 
+  // ================ BORROWED OPERATIONS ================
+
+  // Create a new borrowed item
+  Future<String> createBorrowed(Borrowed borrowed) async {
+    try {
+      // Save borrowed item directly without creating a transaction
+      await _borrowedCollection.doc(borrowed.id).set(borrowed);
+      return borrowed.id;
+    } catch (e) {
+      print('Error creating borrowed item: $e');
+      rethrow;
+    }
+  }
+
+  // Create a new lent item
+  Future<String> createLent(Lent lent) async {
+    try {
+      // Save lent item directly without creating a transaction
+      await _lentCollection.doc(lent.id).set(lent);
+      return lent.id;
+    } catch (e) {
+      print('Error creating lent item: $e');
+      rethrow;
+    }
+  }
+
+  // Stream all borrowed items
+  Stream<List<Borrowed>> streamBorrowed() {
+    try {
+      return _borrowedCollection
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming borrowed items: $e');
+      return Stream.empty();
+    }
+  }
+
+  // Stream all lent items
+  Stream<List<Lent>> streamLent() {
+    try {
+      return _lentCollection
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming lent items: $e');
+      return Stream.empty();
+    }
+  }
+
+  // Get borrowed item by ID
+  Future<Borrowed?> getBorrowedById(String id) async {
+    try {
+      final doc = await _borrowedCollection.doc(id).get();
+      return doc.data();
+    } catch (e) {
+      print('Error getting borrowed item: $e');
+      return null;
+    }
+  }
+
+  // Get lent item by ID
+  Future<Lent?> getLentById(String id) async {
+    try {
+      final doc = await _lentCollection.doc(id).get();
+      return doc.data();
+    } catch (e) {
+      print('Error getting lent item: $e');
+      return null;
+    }
+  }
+
+  // Update borrowed item
+  Future<void> updateBorrowed(String id, Borrowed borrowed) async {
+    try {
+      await _borrowedCollection.doc(id).set(borrowed);
+    } catch (e) {
+      print('Error updating borrowed item: $e');
+      rethrow;
+    }
+  }
+
+  // Update lent item
+  Future<void> updateLent(String id, Lent lent) async {
+    try {
+      await _lentCollection.doc(id).set(lent);
+    } catch (e) {
+      print('Error updating lent item: $e');
+      rethrow;
+    }
+  }
+
+  // Mark borrowed item as returned
+  Future<void> markBorrowedAsReturned(String id) async {
+    try {
+      final borrowed = await getBorrowedById(id);
+      if (borrowed == null) throw Exception('Borrowed item not found');
+      if (borrowed.returned) throw Exception('Item already returned');
+
+      // Update borrowed item to mark as returned
+      final updatedBorrowed = borrowed.copyWith(returned: true);
+      await updateBorrowed(id, updatedBorrowed);
+    } catch (e) {
+      print('Error marking borrowed as returned: $e');
+      rethrow;
+    }
+  }
+
+  // Mark lent item as returned
+  Future<void> markLentAsReturned(String id) async {
+    try {
+      final lent = await getLentById(id);
+      if (lent == null) throw Exception('Lent item not found');
+      if (lent.returned) throw Exception('Item already returned');
+
+      // Update lent item to mark as returned
+      final updatedLent = lent.copyWith(returned: true);
+      await updateLent(id, updatedLent);
+    } catch (e) {
+      print('Error marking lent as returned: $e');
+      rethrow;
+    }
+  }
+
+  // Delete borrowed item
+  Future<void> deleteBorrowed(String id) async {
+    try {
+      final borrowed = await getBorrowedById(id);
+      if (borrowed == null) throw Exception('Borrowed item not found');
+
+      // Delete borrowed item
+      await _borrowedCollection.doc(id).delete();
+    } catch (e) {
+      print('Error deleting borrowed item: $e');
+      rethrow;
+    }
+  }
+
+  // Delete lent item
+  Future<void> deleteLent(String id) async {
+    try {
+      final lent = await getLentById(id);
+      if (lent == null) throw Exception('Lent item not found');
+
+      // Delete lent item
+      await _lentCollection.doc(id).delete();
+    } catch (e) {
+      print('Error deleting lent item: $e');
+      rethrow;
+    }
+  }
+
   // Begin first-time initialization: default categories upsert + account profile update + default shadow account
   Future<void> beginInitialization(String uid, String currency, String themeMode) async {
     try {
@@ -2219,7 +2367,7 @@ class FirestoreService {
 
       bool initialized = false;
       if (profileSnap.exists) {
-        final data = profileSnap.data() as Map<String, dynamic>? ?? {};
+        final data = profileSnap.data() ?? {};
         initialized = (data['isInitialized'] as bool?) ?? false;
         if (initialized) {
           return true;

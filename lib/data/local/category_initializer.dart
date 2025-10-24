@@ -28,6 +28,7 @@ class CategoryInitializer {
       'Restaurant',
       'Health',
       'Communications',
+      'Lent',
       'Others',
     ];
 
@@ -38,6 +39,7 @@ class CategoryInitializer {
       'Rewards',
       'Gifts',
       'Business',
+      'Borrowed',
       'Others',
     ];
 
@@ -58,6 +60,7 @@ class CategoryInitializer {
       'Restaurant': 'icon_restaurant',
       'Health': 'icon_health',
       'Communications': 'icon_communications',
+      'Lent': 'icon_lent',
       'Others': 'icon_others_expense',
     };
 
@@ -67,6 +70,7 @@ class CategoryInitializer {
       'Rewards': 'icon_rewards',
       'Gifts': 'icon_gifts_income',
       'Business': 'icon_business',
+      'Borrowed': 'icon_borrowed',
       'Others': 'icon_others_income',
     };
 

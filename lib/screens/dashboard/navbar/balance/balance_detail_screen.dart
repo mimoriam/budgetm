@@ -14,7 +14,6 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sticky_headers/sticky_headers.dart';
-import 'package:currency_picker/currency_picker.dart';
 
 class BalanceDetailScreen extends StatefulWidget {
   final FirestoreAccount account;
@@ -570,7 +569,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    category?.name ?? 'Uncategorized',
+                    _getTransactionDisplayName(transaction, category),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -589,6 +588,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Show paid/unpaid icon for all transactions
                 Icon(
                   transaction.paid == true ? Icons.check_circle : Icons.circle_outlined,
                   color: transaction.paid == true ? Colors.green : Colors.grey,
@@ -688,6 +688,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     
     // Get category name for title
     String title = 'Uncategorized';
+    
     if (firestoreTransaction.categoryId != null) {
       final category = await _firestoreService.getCategoryById(firestoreTransaction.categoryId!);
       if (category != null && category.name != null) {
@@ -824,14 +825,11 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
 
 
 
-  // Helper function to get currency symbol
-  String _getCurrencySymbol(String currencyCode) {
-    try {
-      final currency = CurrencyService().findByCode(currencyCode);
-      return currency?.symbol ?? currencyCode;
-    } catch (e) {
-      return currencyCode;
-    }
+
+  // Helper method to get the appropriate display name for transactions
+  String _getTransactionDisplayName(FirestoreTransaction transaction, Category? category) {
+    // For regular transactions, use category name or fallback to 'Uncategorized'
+    return category?.name ?? 'Uncategorized';
   }
 
   // Build vacation expenses summary for the balance card

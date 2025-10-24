@@ -4,6 +4,8 @@ import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/transaction.dart';
+import 'package:budgetm/models/personal/borrowed.dart';
+import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -87,12 +89,18 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
         }
       }
       
+      // Borrowed/lent items are now independent - no need to fetch them here
+      Borrowed? borrowedItem;
+      Lent? lentItem;
+      
       return {
         'firestoreTransaction': firestoreTxn,
         'category': results[1] as Category?,
         'account': results[2] as FirestoreAccount?,
         'goalName': results[3] as String?,
         'vacationAccount': vacationAccount,
+        'borrowedItem': borrowedItem,
+        'lentItem': lentItem,
       };
     } catch (e) {
       print('Error fetching data: $e');
@@ -102,6 +110,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
         'account': null,
         'goalName': null,
         'vacationAccount': null,
+        'borrowedItem': null,
+        'lentItem': null,
       };
     }
   }
@@ -134,6 +144,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   }
 
   Future<void> _togglePaidStatus() async {
+    
     if (_isUpdating) return;
 
     final bool wasPaid = _isPaid; // Store the original state for potential rollback
@@ -242,6 +253,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   final goalName = snapshot.data?['goalName'] as String?;
                   final firestoreTransaction = snapshot.data?['firestoreTransaction'] as FirestoreTransaction?;
                   final vacationAccount = snapshot.data?['vacationAccount'] as FirestoreAccount?;
+                  final borrowedItem = snapshot.data?['borrowedItem'] as Borrowed?;
+                  final lentItem = snapshot.data?['lentItem'] as Lent?;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -349,31 +362,82 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 24),
-                        Column(
-                          children: [
-                            
-                            Center(
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12.0),
-                                  color: _isPaid ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
-                                ),
-                                child: Text(
-                                  _isPaid ? 'PAID' : 'UNPAID',
-                                  key: const Key('expense-status-chip'),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
+                        // Show borrowed/lent-specific status or paid/unpaid status for regular transactions
+                        if (borrowedItem != null)
+                          Column(
+                            children: [
+                              Center(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    color: borrowedItem.returned ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+                                  ),
+                                  child: Text(
+                                    borrowedItem.returned ? 'RETURNED' : 'BORROWED',
+                                    key: const Key('borrowed-status-chip'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Divider(color: Colors.grey.shade300),
-                          ],
-                        ),
+                              const SizedBox(height: 16),
+                              Divider(color: Colors.grey.shade300),
+                            ],
+                          )
+                        else if (lentItem != null)
+                          Column(
+                            children: [
+                              Center(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    color: lentItem.returned ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+                                  ),
+                                  child: Text(
+                                    lentItem.returned ? 'RETURNED' : 'LENT',
+                                    key: const Key('lent-status-chip'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(color: Colors.grey.shade300),
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              Center(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    color: _isPaid ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+                                  ),
+                                  child: Text(
+                                    _isPaid ? 'PAID' : 'UNPAID',
+                                    key: const Key('expense-status-chip'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(color: Colors.grey.shade300),
+                            ],
+                          ),
                         const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -398,6 +462,141 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                         const SizedBox(height: 16),
                         Divider(color: Colors.grey.shade300),
                         const SizedBox(height: 16),
+                        
+                        // Borrowed/Lent-specific information
+                        if (borrowedItem != null) ...[
+                          // Due Date
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'DUE DATE',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.secondaryTextColorLight,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              Text(
+                                DateFormat('MMMM d, yyyy').format(borrowedItem.dueDate).toUpperCase(),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Divider(color: Colors.grey.shade300),
+                          const SizedBox(height: 16),
+                          
+                          // Borrowed Notes (if available from borrowed item or transaction)
+                          if ((borrowedItem.description != null && borrowedItem.description!.isNotEmpty) ||
+                              (firestoreTransaction?.notes != null && firestoreTransaction!.notes!.isNotEmpty))
+                            Column(
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'NOTES',
+                                      style: Theme.of(context).textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.secondaryTextColorLight,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Text(
+                                          // Show borrowed item description first, then transaction notes if available
+                                          (borrowedItem.description != null && borrowedItem.description!.isNotEmpty)
+                                              ? borrowedItem.description!
+                                              : firestoreTransaction?.notes ?? '',
+                                          style: Theme.of(context).textTheme.bodyMedium
+                                              ?.copyWith(color: Colors.black87),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Divider(color: Colors.grey.shade300),
+                              ],
+                            ),
+                        ]
+                        else if (lentItem != null) ...[
+                          // Due Date
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'DUE DATE',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.secondaryTextColorLight,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              Text(
+                                DateFormat('MMMM d, yyyy').format(lentItem.dueDate).toUpperCase(),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Divider(color: Colors.grey.shade300),
+                          const SizedBox(height: 16),
+                          
+                          // Lent Notes (if available from lent item or transaction)
+                          if ((lentItem.description != null && lentItem.description!.isNotEmpty) ||
+                              (firestoreTransaction?.notes != null && firestoreTransaction!.notes!.isNotEmpty))
+                            Column(
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'NOTES',
+                                      style: Theme.of(context).textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.secondaryTextColorLight,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Text(
+                                          // Show lent item description first, then transaction notes if available
+                                          (lentItem.description != null && lentItem.description!.isNotEmpty)
+                                              ? lentItem.description!
+                                              : firestoreTransaction?.notes ?? '',
+                                          style: Theme.of(context).textTheme.bodyMedium
+                                              ?.copyWith(color: Colors.black87),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Divider(color: Colors.grey.shade300),
+                              ],
+                            ),
+                        ],
+                        
                         if (goalName != null && goalName.isNotEmpty)
                           Column(
                             children: [
@@ -491,8 +690,10 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             ],
                           ),
                         
-                        // Transaction Notes
-                        if (firestoreTransaction?.notes != null && firestoreTransaction!.notes!.isNotEmpty)
+                        // Transaction Notes (only for non-borrowed/lent transactions)
+                        if (borrowedItem == null && lentItem == null &&
+                            firestoreTransaction?.notes != null && 
+                            firestoreTransaction!.notes!.isNotEmpty)
                           Column(
                             children: [
                               const SizedBox(height: 16),
@@ -533,50 +734,51 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                         const SizedBox(height: 40),
                         Row(
                           children: [
+                            // Show paid/unpaid toggle for all transactions
                             Expanded(
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                child: OutlinedButton(
-                                  onPressed: _isUpdating ? null : _togglePaidStatus,
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30.0),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: OutlinedButton(
+                                    onPressed: _isUpdating ? null : _togglePaidStatus,
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30.0),
+                                      ),
+                                      side: BorderSide(
+                                        color: _isPaid ? Colors.red : Colors.green,
+                                        width: 1.5,
+                                      ),
                                     ),
-                                    side: BorderSide(
-                                      color: _isPaid ? Colors.red : Colors.green,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    child: _isUpdating
-                                        ? const SizedBox(
-                                            key: ValueKey('loading'),
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(
-                                                Colors.grey,
-                                              ),
-                                            ),
-                                          )
-                                        : Text(
-                                            key: ValueKey(_isPaid ? 'paid' : 'unpaid'),
-                                            _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelLarge
-                                                ?.copyWith(
-                                                  color: _isPaid ? Colors.red : Colors.green,
-                                                  fontSize: 14,
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: _isUpdating
+                                          ? const SizedBox(
+                                              key: ValueKey('loading'),
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  Colors.grey,
                                                 ),
-                                          ),
+                                              ),
+                                            )
+                                          : Text(
+                                              key: ValueKey(_isPaid ? 'paid' : 'unpaid'),
+                                              _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelLarge
+                                                  ?.copyWith(
+                                                    color: _isPaid ? Colors.red : Colors.green,
+                                                    fontSize: 14,
+                                                  ),
+                                            ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton(

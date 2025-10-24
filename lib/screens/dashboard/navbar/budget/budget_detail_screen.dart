@@ -16,7 +16,6 @@ import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:intl/intl.dart';
-import 'package:currency_picker/currency_picker.dart';
 
 // Helper function to convert Firestore transaction to UI transaction
 model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context, String currencyCode) {
@@ -562,74 +561,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
     );
   }
 
-  Color _getCategoryColor() {
-    if (widget.category.color == null) return Colors.grey;
 
-    switch (widget.category.color!.toLowerCase()) {
-      case 'red':
-        return Colors.red;
-      case 'orange':
-        return Colors.orange;
-      case 'yellow':
-        return Colors.yellow.shade700;
-      case 'green':
-        return Colors.green;
-      case 'blue':
-        return Colors.blue;
-      case 'purple':
-        return Colors.purple;
-      case 'pink':
-        return Colors.pink;
-      case 'teal':
-        return Colors.teal;
-      case 'brown':
-        return Colors.brown;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getCategoryIcon() {
-    if (widget.category.icon == null) return Icons.category;
-
-    switch (widget.category.icon!.toLowerCase()) {
-      case 'restaurant':
-      case 'food':
-        return Icons.restaurant;
-      case 'directions_car':
-      case 'car':
-      case 'transport':
-        return Icons.directions_car;
-      case 'shopping_cart':
-      case 'shopping':
-        return Icons.shopping_cart;
-      case 'movie':
-      case 'entertainment':
-        return Icons.movie;
-      case 'receipt':
-      case 'bills':
-        return Icons.receipt;
-      case 'work':
-      case 'salary':
-        return Icons.work;
-      case 'business':
-      case 'freelance':
-        return Icons.business;
-      case 'trending_up':
-      case 'investment':
-        return Icons.trending_up;
-      case 'home':
-        return Icons.home;
-      case 'health':
-      case 'medical':
-        return Icons.local_hospital;
-      case 'education':
-      case 'school':
-        return Icons.school;
-      default:
-        return Icons.category;
-    }
-  }
 }
 
  // Helper class to hold transaction and its account name and type

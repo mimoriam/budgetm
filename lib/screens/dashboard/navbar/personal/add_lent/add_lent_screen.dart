@@ -1,9 +1,8 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +15,32 @@ class AddLentScreen extends StatefulWidget {
 }
 
 class _AddLentScreenState extends State<AddLentScreen> {
-  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _priceController = TextEditingController();
+  DateTime? _date;
+  DateTime? _dueDate;
+  bool _returned = false;
+  bool _isSaving = false;
+
+  bool _isMoreOptionsVisible = false;
+  final FirestoreService _firestoreService = FirestoreService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _date = DateTime.now();
+    _dueDate = DateTime.now().add(const Duration(days: 7));
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +61,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
                     horizontal: 18.0,
                     vertical: 16.0,
                   ),
-                  child: FormBuilder(
+                  child: Form(
                     key: _formKey,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
@@ -45,89 +69,43 @@ class _AddLentScreenState extends State<AddLentScreen> {
                       children: [
                         _buildAmountField(currencyProvider),
                         const SizedBox(height: 10),
-                        _buildFormSection(
-                          context,
-                          'Name',
-                          FormBuilderTextField(
-                            name: 'name',
-                            style: const TextStyle(fontSize: 13),
-                            decoration: _inputDecoration(
-                              hintText: 'Name',
-                            ),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(
-                                errorText: 'Name is required',
-                              ),
-                            ]),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _buildFormSection(
                                 context,
-                                'Date',
-                                FormBuilderDateTimePicker(
-                                  name: 'date',
-                                  inputType: InputType.date,
-                                  format: DateFormat('dd/MM/yyyy'),
-                                  initialValue: DateTime.now(),
+                                'Name',
+                                TextFormField(
+                                  controller: _nameController,
                                   style: const TextStyle(fontSize: 13),
                                   decoration: _inputDecoration(
-                                    hintText: 'Select Date',
-                                    suffixIcon: HugeIcons.strokeRoundedCalendar01,
+                                    hintText: 'Name',
                                   ),
-                                  firstDate: DateTime(2000),
-                                  lastDate: DateTime(2101),
-                                  validator: FormBuilderValidators.compose([
-                                    FormBuilderValidators.required(
-                                      errorText: 'Date is required',
-                                    ),
-                                  ]),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildFormSection(
-                                context,
-                                'Due Date',
-                                FormBuilderDateTimePicker(
-                                  name: 'dueDate',
-                                  inputType: InputType.date,
-                                  format: DateFormat('dd/MM/yyyy'),
-                                  style: const TextStyle(fontSize: 13),
-                                  decoration: _inputDecoration(
-                                    hintText: 'Select Due Date',
-                                    suffixIcon: HugeIcons.strokeRoundedCalendar01,
-                                  ),
-                                  firstDate: DateTime(2000),
-                                  lastDate: DateTime(2101),
-                                  validator: FormBuilderValidators.compose([
-                                    FormBuilderValidators.required(
-                                      errorText: 'Due date is required',
-                                    ),
-                                  ]),
+                                  textInputAction: TextInputAction.next,
+                                  validator: (value) {
+                                    final v = value?.trim() ?? '';
+                                    if (v.isEmpty) {
+                                      return 'Please enter a name';
+                                    }
+                                    return null;
+                                  },
                                 ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        _buildFormSection(
-                          context,
-                          'Notes',
-                          FormBuilderTextField(
-                            name: 'description',
-                            style: const TextStyle(fontSize: 13),
-                            decoration: _inputDecoration(hintText: 'Description'),
-                            maxLines: 2,
+                        _buildMoreOptionsToggle(),
+                        const SizedBox(height: 10),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: Visibility(
+                            visible: _isMoreOptionsVisible,
+                            child: _buildMoreOptions(context),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        _buildReturnedToggle(),
                       ],
                     ),
                   ),
@@ -154,8 +132,8 @@ class _AddLentScreenState extends State<AddLentScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        FormBuilderTextField(
-          name: 'price',
+        TextFormField(
+          controller: _priceController,
           style: const TextStyle(
             color: AppColors.primaryTextColorLight,
             fontSize: 26,
@@ -168,61 +146,204 @@ class _AddLentScreenState extends State<AddLentScreen> {
               color: AppColors.lightGreyBackground,
             ),
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            prefixText: currencyProvider.currencySymbol,
           ),
-          validator: FormBuilderValidators.compose([
-            FormBuilderValidators.required(errorText: 'Amount is required'),
-            FormBuilderValidators.numeric(
-              errorText: 'Please enter a valid number',
-            ),
-            (val) {
-              final parsed = (val is num)
-                  ? (val as num).toDouble()
-                  : double.tryParse((val ?? '').toString().replaceAll(',', '').trim());
+          validator: (value) {
+            final v = value?.trim() ?? '';
+            if (v.isEmpty) {
+              return 'Please enter a price';
+            }
+            final parsed = double.tryParse(v.replaceAll(',', ''));
               if (parsed == null) {
                 return 'Please enter a valid number';
               }
               if (parsed <= 0) {
-                return 'Amount must be greater than zero';
-              }
-              return null;
+              return 'Price must be greater than zero';
             }
-          ]),
-          keyboardType: TextInputType.number,
+            return null;
+          },
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
         ),
       ],
     );
   }
 
-  Widget _buildReturnedToggle() {
+  Widget _buildMoreOptions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Returned',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.secondaryTextColorLight,
-                fontSize: 11,
-              ),
+        _buildFormSection(
+          context,
+          'Notes',
+          TextFormField(
+            controller: _descriptionController,
+            style: const TextStyle(fontSize: 13),
+            decoration: _inputDecoration(hintText: 'Description'),
+            maxLines: 2,
+          ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Date',
+          GestureDetector(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _date ?? DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+              );
+              if (picked != null) {
+                setState(() {
+                  _date = picked;
+                  if (_dueDate != null && _dueDate!.isBefore(picked)) {
+                    _dueDate = null;
+                  }
+                });
+              }
+            },
+            child: InputDecorator(
+              decoration: _inputDecoration(
+                hintText: 'Select Date',
+                suffixIcon: HugeIcons.strokeRoundedCalendar01,
+              ),
+              child: SizedBox(
+                height: 20,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _date == null ? 'Select Date' : _formatDate(_date!),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _date == null
+                            ? AppColors.lightGreyBackground
+                            : AppColors.primaryTextColorLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Due Date',
+          GestureDetector(
+            onTap: () async {
+              final initial = _dueDate ?? _date ?? DateTime.now();
+              final first = _date ?? DateTime(2000);
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: initial,
+                firstDate: first,
+                lastDate: DateTime(2101),
+              );
+              if (picked != null) {
+                setState(() {
+                  _dueDate = picked;
+                });
+              }
+            },
+            child: InputDecorator(
+              decoration: _inputDecoration(
+                hintText: 'Select Due Date',
+                suffixIcon: HugeIcons.strokeRoundedCalendar01,
+              ),
+              child: SizedBox(
+                height: 20,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+                      _dueDate == null ? 'Select Due Date' : _formatDate(_dueDate!),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _dueDate == null
+                            ? AppColors.lightGreyBackground
+                            : AppColors.primaryTextColorLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Returned',
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(30.0),
             border: Border.all(color: Colors.grey.shade300),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: FormBuilderSwitch(
-            name: 'returned',
-            title: const Text(
+            padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
+            child: Row(
+              children: [
+                const Text(
               'Mark as returned',
-              style: TextStyle(fontSize: 13, color: AppColors.primaryTextColorLight),
+                  style: TextStyle(fontSize: 13),
+                ),
+                const Spacer(),
+                Switch(
+                  value: _returned,
+                  activeColor: Theme.of(context).primaryColor,
+                  onChanged: (value) {
+                    setState(() {
+                      _returned = value;
+                    });
+                  },
+                ),
+              ],
             ),
-            initialValue: false,
-            decoration: const InputDecoration.collapsed(hintText: ''),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildMoreOptionsToggle() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Expanded(child: Divider(color: Colors.grey)),
+        TextButton(
+          onPressed: () {
+            setState(() {
+              _isMoreOptionsVisible = !_isMoreOptionsVisible;
+            });
+          },
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'More',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                _isMoreOptionsVisible
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
+                color: Theme.of(context).primaryColor,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+        const Expanded(child: Divider(color: Colors.grey)),
       ],
     );
   }
@@ -379,7 +500,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _saveLentItem,
+              onPressed: _isSaving ? null : _saveLentItem,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -387,7 +508,16 @@ class _AddLentScreenState extends State<AddLentScreen> {
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
                 'Add',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: Colors.white,
@@ -401,71 +531,66 @@ class _AddLentScreenState extends State<AddLentScreen> {
     );
   }
 
+  String _formatDate(DateTime dt) {
+    return DateFormat('dd/MM/yyyy').format(dt);
+  }
+
   Future<void> _saveLentItem() async {
-    final isValid = _formKey.currentState?.saveAndValidate() ?? false;
-    if (!isValid) return;
-
-    final values = _formKey.currentState!.value;
-
-    final String name = (values['name'] as String? ?? '').trim();
-
-    // Parse amount robustly (num or String)
-    final dynamic amountRaw = values['price'];
-    double price;
-    if (amountRaw is num) {
-      price = amountRaw.toDouble();
-    } else if (amountRaw is String) {
-      price = double.tryParse(amountRaw.replaceAll(',', '').trim()) ?? 0.0;
-    } else {
-      price = 0.0;
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
-
-    final DateTime? date = values['date'] as DateTime?;
-    final DateTime? dueDate = values['dueDate'] as DateTime?;
-    final String? descriptionRaw = values['description'] as String?;
-    final String? description =
-        (descriptionRaw == null || descriptionRaw.trim().isEmpty)
-            ? null
-            : descriptionRaw.trim();
-    final bool returned = (values['returned'] as bool?) ?? false;
-
-    if (date == null || dueDate == null) {
+    if (_date == null || _dueDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select both date and due date')),
       );
       return;
     }
-    if (dueDate.isBefore(date)) {
+    if (_dueDate!.isBefore(_date!)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Due date cannot be before loan date')),
+        const SnackBar(content: Text('Due date cannot be before the lent date')),
       );
       return;
     }
-    if (price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Amount must be greater than zero')),
-      );
-      return;
-    }
+
+    setState(() {
+      _isSaving = true;
+    });
 
     try {
       final lent = Lent(
         id: 'lent_${DateTime.now().microsecondsSinceEpoch}',
-        name: name,
-        description: description,
-        price: price,
-        date: date,
-        dueDate: dueDate,
-        returned: returned,
-        currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        price: double.parse(_priceController.text.trim().replaceAll(',', '')),
+        date: _date!,
+        dueDate: _dueDate!,
+        returned: _returned,
+        currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
       );
 
-      // TODO: Persist the lent item using a provider/service
-      Navigator.of(context).pop(lent);
+      // Save to Firestore without creating a transaction
+      await _firestoreService.createLent(lent);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lent item added successfully')),
+        );
+        Navigator.of(context).pop(lent);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 }

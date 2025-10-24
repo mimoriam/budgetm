@@ -4,17 +4,14 @@ import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/currency/currency_rates.dart';
-import 'package:budgetm/screens/dashboard/profile/export_data/export_data_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
-import 'package:budgetm/screens/dashboard/navbar/home/vacation_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
-import 'package:hugeicons/hugeicons.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

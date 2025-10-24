@@ -4,6 +4,7 @@ import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -26,10 +27,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   bool _isLentSelected = false;
 
   final List<Subscription> _subscriptions = [];
-
-  final List<Borrowed> _borrowedItems = [];
-
-  final List<Lent> _lentItems = [];
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -274,26 +272,112 @@ class _PersonalScreenState extends State<PersonalScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Row(
         children: [
-          _buildInfoCard(
-            context,
-            'Total',
-            _isSubscriptionsSelected
-                ? '${Provider.of<CurrencyProvider>(context).currencySymbol}${_subscriptions.fold(0.0, (sum, item) => sum + item.price).toStringAsFixed(2)}'
-                : _isBorrowedSelected
-                    ? '${_borrowedItems.length} Item(s)'
-                    : '${_lentItems.length} Item(s)',
-          ),
+          _isSubscriptionsSelected
+              ? _buildSubscriptionInfoCard()
+              : _isBorrowedSelected
+                  ? _buildBorrowedInfoCard()
+                  : _buildLentInfoCard(),
           const SizedBox(width: 16),
-          _buildInfoCard(
-            context,
-            'Active',
-            _isSubscriptionsSelected
-                ? '${_subscriptions.where((s) => s.isActive).length}/${_subscriptions.length}'
-                : _isBorrowedSelected
-                    ? '${_borrowedItems.where((b) => !b.returned).length}/${_borrowedItems.length}'
-                    : '${_lentItems.where((l) => !l.returned).length}/${_lentItems.length}',
-          ),
+          _isSubscriptionsSelected
+              ? _buildSubscriptionActiveCard()
+              : _isBorrowedSelected
+                  ? _buildBorrowedActiveCard()
+                  : _buildLentActiveCard(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionInfoCard() {
+    return Expanded(
+      child: _buildInfoCard(
+        context,
+        'Total',
+        '${Provider.of<CurrencyProvider>(context).currencySymbol}${_subscriptions.fold(0.0, (sum, item) => sum + item.price).toStringAsFixed(2)}',
+      ),
+    );
+  }
+
+  Widget _buildBorrowedInfoCard() {
+    return Expanded(
+      child: StreamBuilder<List<Borrowed>>(
+        stream: _firestoreService.streamBorrowed(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return _buildInfoCard(
+              context,
+              'Total',
+              '${snapshot.data!.length} Item(s)',
+            );
+          }
+          return _buildInfoCard(context, 'Total', '0 Item(s)');
+        },
+      ),
+    );
+  }
+
+  Widget _buildLentInfoCard() {
+    return Expanded(
+      child: StreamBuilder<List<Lent>>(
+        stream: _firestoreService.streamLent(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return _buildInfoCard(
+              context,
+              'Total',
+              '${snapshot.data!.length} Item(s)',
+            );
+          }
+          return _buildInfoCard(context, 'Total', '0 Item(s)');
+        },
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionActiveCard() {
+    return Expanded(
+      child: _buildInfoCard(
+        context,
+        'Active',
+        '${_subscriptions.where((s) => s.isActive).length}/${_subscriptions.length}',
+      ),
+    );
+  }
+
+  Widget _buildBorrowedActiveCard() {
+    return Expanded(
+      child: StreamBuilder<List<Borrowed>>(
+        stream: _firestoreService.streamBorrowed(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            final activeCount = snapshot.data!.where((b) => !b.returned).length;
+            return _buildInfoCard(
+              context,
+              'Active',
+              '$activeCount/${snapshot.data!.length}',
+            );
+          }
+          return _buildInfoCard(context, 'Active', '0/0');
+        },
+      ),
+    );
+  }
+
+  Widget _buildLentActiveCard() {
+    return Expanded(
+      child: StreamBuilder<List<Lent>>(
+        stream: _firestoreService.streamLent(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            final activeCount = snapshot.data!.where((l) => !l.returned).length;
+            return _buildInfoCard(
+              context,
+              'Active',
+              '$activeCount/${snapshot.data!.length}',
+            );
+          }
+          return _buildInfoCard(context, 'Active', '0/0');
+        },
       ),
     );
   }
@@ -378,7 +462,28 @@ class _PersonalScreenState extends State<PersonalScreen> {
               ),
             ),
           ),
-          ..._borrowedItems.map((item) => _buildBorrowedItem(item)),
+          StreamBuilder<List<Borrowed>>(
+            stream: _firestoreService.streamBorrowed(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No borrowed items yet',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                );
+              }
+              return Column(
+                children: snapshot.data!.map((item) => _buildBorrowedItem(item)).toList(),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -401,7 +506,28 @@ class _PersonalScreenState extends State<PersonalScreen> {
               ),
             ),
           ),
-          ..._lentItems.map((item) => _buildLentItem(item)),
+          StreamBuilder<List<Lent>>(
+            stream: _firestoreService.streamLent(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No lent items yet',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                );
+              }
+              return Column(
+                children: snapshot.data!.map((item) => _buildLentItem(item)).toList(),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -525,7 +651,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildBorrowedItem(Borrowed item) {
-    final currencyFormat = NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol, decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: item.currency, decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 
@@ -581,16 +707,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
                           fontSize: 16,
                         ),
                       ),
-                      if (item.description != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          item.description!,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -652,7 +768,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildLentItem(Lent item) {
-    final currencyFormat = NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol, decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: item.currency, decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 
@@ -708,16 +824,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
                           fontSize: 16,
                         ),
                       ),
-                      if (item.description != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          item.description!,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -777,4 +883,5 @@ class _PersonalScreenState extends State<PersonalScreen> {
       ),
     );
   }
+
 }

@@ -1,17 +1,11 @@
 import 'package:budgetm/constants/appColors.dart';
-import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
-import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
-import 'package:budgetm/screens/dashboard/navbar/goals/create_goal/create_goal_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
-import 'package:budgetm/screens/dashboard/navbar/personal/add_borrowed/add_borrowed.dart';
-import 'package:budgetm/screens/dashboard/navbar/personal/add_lent/add_lent.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
-import 'package:budgetm/screens/dashboard/navbar/personal/add_subscription/add_subscription_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';

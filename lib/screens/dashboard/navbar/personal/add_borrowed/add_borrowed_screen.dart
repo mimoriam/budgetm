@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -21,8 +22,17 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
   DateTime? _date;
   DateTime? _dueDate;
   bool _returned = false;
+  bool _isSaving = false;
 
   bool _isMoreOptionsVisible = false;
+  final FirestoreService _firestoreService = FirestoreService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _date = DateTime.now();
+    _dueDate = DateTime.now().add(const Duration(days: 7));
+  }
 
   @override
   void dispose() {
@@ -78,9 +88,6 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                                     if (v.isEmpty) {
                                       return 'Please enter a name';
                                     }
-                                    if (v.length < 2) {
-                                      return 'Name must be at least 2 characters';
-                                    }
                                     return null;
                                   },
                                 ),
@@ -117,7 +124,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       children: [
         Center(
           child: Text(
-            'Amount (${currencyProvider.currencySymbol})',
+            'Amount',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.secondaryTextColorLight,
               fontSize: 12,
@@ -164,6 +171,17 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildFormSection(
+          context,
+          'Notes',
+          TextFormField(
+            controller: _descriptionController,
+            style: const TextStyle(fontSize: 13),
+            decoration: _inputDecoration(hintText: 'Description'),
+            maxLines: 2,
+          ),
+        ),
+        const SizedBox(height: 8),
         _buildFormSection(
           context,
           'Date',
@@ -252,17 +270,6 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                 ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
-          'Notes',
-          TextFormField(
-            controller: _descriptionController,
-            style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(hintText: 'Description'),
-            maxLines: 2,
           ),
         ),
         const SizedBox(height: 8),
@@ -493,7 +500,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _saveBorrowedItem,
+              onPressed: _isSaving ? null : _saveBorrowedItem,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -501,13 +508,22 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
-                'Add',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Add',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -519,7 +535,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
     return DateFormat('dd/MM/yyyy').format(dt);
   }
 
-  void _saveBorrowedItem() {
+  Future<void> _saveBorrowedItem() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -536,6 +552,10 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       return;
     }
 
+    setState(() {
+      _isSaving = true;
+    });
+
     try {
       final borrowed = Borrowed(
         id: 'borrowed_${DateTime.now().microsecondsSinceEpoch}',
@@ -547,15 +567,30 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         date: _date!,
         dueDate: _dueDate!,
         returned: _returned,
-        currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode, // New required field
+        currency: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
       );
 
-      // TODO: Persist the borrowed item using a provider/service
-      Navigator.of(context).pop(borrowed);
+      // Save to Firestore without creating a transaction
+      await _firestoreService.createBorrowed(borrowed);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Borrowed item added successfully')),
+        );
+        Navigator.of(context).pop(borrowed);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 }

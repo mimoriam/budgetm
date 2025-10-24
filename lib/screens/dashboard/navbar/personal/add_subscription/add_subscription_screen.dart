@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
-import 'package:budgetm/viewmodels/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -32,7 +31,6 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final currencyProvider = Provider.of<CurrencyProvider>(context);
 
     return GestureDetector(

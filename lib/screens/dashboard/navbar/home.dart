@@ -148,6 +148,8 @@ class MonthPageProvider extends ChangeNotifier {
   String _lastDataHash = ''; // Track the last data hash to detect changes
   bool _isInitialized =
       false; // Track if provider has been initialized at least once
+  final Set<String> _locallyUpdatingTransactions = {}; // Track which transactions are being updated locally
+  DateTime? _lastInitializeTime; // Track when initialize was last called
 
   // Getters
   List<TransactionWithAccount> get allTransactions => _allTransactions;
@@ -185,7 +187,18 @@ class MonthPageProvider extends ChangeNotifier {
     }
 
     // Always reset state if this is the first initialization or if data has changed
-    if (!_isInitialized || currentDataHash != _lastDataHash) {
+    // But don't reset if any transactions are being locally updated
+    final now = DateTime.now();
+    final timeSinceLastInitialize = _lastInitializeTime != null 
+        ? now.difference(_lastInitializeTime!).inMilliseconds 
+        : 1000; // Default to 1000ms if never initialized
+    
+    // Check if any transactions in the incoming data are being locally updated
+    final hasLocallyUpdatingTransactions = data.transactionsWithAccounts
+        .any((tx) => _locallyUpdatingTransactions.contains(tx.transaction.id));
+    
+    if (!_isInitialized || (currentDataHash != _lastDataHash && !hasLocallyUpdatingTransactions)) {
+      print('DEBUG: MonthPageProvider.initialize - RESETTING STATE: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}, hasLocallyUpdatingTransactions=$hasLocallyUpdatingTransactions, locallyUpdatingIds=${_locallyUpdatingTransactions.toList()}, timeSinceLastInit=${timeSinceLastInitialize}ms');
       _allTransactions = data.transactionsWithAccounts;
       _paginatedTransactions = [];
       _currentPage = 0;
@@ -193,9 +206,12 @@ class MonthPageProvider extends ChangeNotifier {
       _error = '';
       _lastDataHash = currentDataHash;
       _isInitialized = true;
+      _lastInitializeTime = now;
 
       // Load first page
       fetchNextPage();
+    } else {
+      print('DEBUG: MonthPageProvider.initialize - SKIPPING RESET: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}, hasLocallyUpdatingTransactions=$hasLocallyUpdatingTransactions, locallyUpdatingIds=${_locallyUpdatingTransactions.toList()}, timeSinceLastInit=${timeSinceLastInitialize}ms');
     }
   }
 
@@ -263,11 +279,15 @@ class MonthPageProvider extends ChangeNotifier {
     _hasReachedEnd = false;
     _lastDataHash = ''; // Reset the data hash when resetting
     _isInitialized = false; // Reset initialization state
+    _locallyUpdatingTransactions.clear(); // Clear locally updating transactions
     notifyListeners();
   }
 
   // Toggle paid status for a transaction locally
   void togglePaidStatus(String transactionId) {
+    // Add transaction to locally updating set
+    _locallyUpdatingTransactions.add(transactionId);
+    
     // Find and update in _allTransactions
     final allIndex = _allTransactions.indexWhere(
       (tx) => tx.transaction.id == transactionId,
@@ -301,6 +321,12 @@ class MonthPageProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+    
+    // Remove transaction from locally updating set after delay to prevent stream overrides
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      _locallyUpdatingTransactions.remove(transactionId);
+      print('DEBUG: togglePaidStatus - removed transaction $transactionId from locally updating set. Remaining: ${_locallyUpdatingTransactions.toList()}');
+    });
   }
 }
 
@@ -319,6 +345,8 @@ class MonthPageDataManager {
   final Map<String, Stream<MonthPageData>> _pageStreamCache = {};
   // Cache for currency-only vacation streams
   final Map<String, Stream<MonthPageData>> _vacationCurrencyStreamCache = {};
+  // Stream version counter to force stream recreation
+  int _streamVersion = 0;
 
   MonthPageDataManager(this._vacationProvider) {
     // Initialize the shared streams immediately.
@@ -339,9 +367,9 @@ class MonthPageDataManager {
     final activeVacationAccountId =
         isVacation ? _vacationProvider.activeVacationAccountId : null;
 
-    // Create a composite key that includes monthIndex, isVacation status, and accountId
+    // Create a composite key that includes monthIndex, isVacation status, accountId, and version
     final cacheKey =
-        '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}';
+        '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}-v$_streamVersion';
 
     print(
         'DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId');
@@ -612,45 +640,21 @@ class MonthPageDataManager {
     print(
         'DEBUG: Active vacation accountId=${_vacationProvider.activeVacationAccountId}');
 
-    // Build the prefix to match keys to remove
-    final String prefix =
-        isVacation == null ? '$monthIndex-' : '$monthIndex-${isVacation}-';
+    // Increment stream version to force recreation of all streams
+    _streamVersion++;
+    print('DEBUG: Stream version incremented to $_streamVersion');
 
-    // Collect keys to remove based on the computed prefix
-    final keysToRemove = <String>[];
-    _pageStreamCache.forEach((key, value) {
-      if (key.startsWith(prefix)) {
-        keysToRemove.add(key);
-      }
-    });
-    print(
-        'DEBUG: invalidateMonth -> removing keys by prefix "$prefix": $keysToRemove');
-    for (final key in keysToRemove) {
-      _pageStreamCache.remove(key);
-    }
-
-    // Optional: also invalidate the other mode to handle linked transactions crossing modes
-    if (isVacation != null) {
-      final otherPrefix = '$monthIndex-${!isVacation}-';
-      final otherKeysToRemove = <String>[];
-      _pageStreamCache.forEach((key, value) {
-        if (key.startsWith(otherPrefix)) {
-          otherKeysToRemove.add(key);
-        }
-      });
-      print(
-          'DEBUG: invalidateMonth -> also removing other mode keys by prefix "$otherPrefix": $otherKeysToRemove');
-      for (final key in otherKeysToRemove) {
-        _pageStreamCache.remove(key);
-      }
-    }
+    // Clear all cached streams to force recreation
+    _pageStreamCache.clear();
+    _vacationCurrencyStreamCache.clear();
 
     print(
-        'DEBUG: Cache invalidation complete. Remaining cache keys: ${_pageStreamCache.keys.toList()}');
+        'DEBUG: Cache invalidation complete. All streams cleared, version=$_streamVersion');
   }
 
   // Method to clear the cache if a full refresh is needed (e.g., on user logout/login).
   void clearCache() {
+    _streamVersion++;
     _pageStreamCache.clear();
     _vacationCurrencyStreamCache.clear();
   }
@@ -1294,13 +1298,14 @@ class _MonthPageViewState extends State<MonthPageView> {
     // DEBUG: Log each transaction item render (may be verbose)
     try {
       print(
-          'DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}');
+          'DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}, paid=${transaction.paid}');
     } catch (e) {
       print('DEBUG: BuildTransactionItem - logging error: $e');
     }
 
     return InkWell(
       onTap: () async {
+        // Navigate to detail screen for all transactions
         final result = await PersistentNavBarNavigator.pushNewScreen(
           context,
           screen: ExpenseDetailScreen(transaction: uiTransaction),
@@ -1356,13 +1361,19 @@ class _MonthPageViewState extends State<MonthPageView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    transactionWithAccount.category?.name ??
-                        transaction.description,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          transactionWithAccount.category?.name ??
+                              transaction.description,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   if (account != null && (account.isDefault != true))
@@ -1378,6 +1389,7 @@ class _MonthPageViewState extends State<MonthPageView> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Show paid/unpaid icon for all transactions
                 Icon(
                   transaction.paid == true
                       ? Icons.check_circle

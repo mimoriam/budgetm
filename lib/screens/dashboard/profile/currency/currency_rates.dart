@@ -166,58 +166,6 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
     );
   }
 
-  List<Widget> _buildOtherCurrencies(CurrencyProvider currencyProvider) {
-    List<Widget> widgets = [];
-
-    for (int i = 0; i < currencyProvider.otherCurrencies.length; i++) {
-      final currencyCode = currencyProvider.otherCurrencies[i];
-      final flag = _getCurrencyFlag(currencyCode);
-      final name = _getCurrencyName(currencyCode);
-
-      widgets.add(
-        _buildCurrencyCard(
-          context,
-          flag,
-          name,
-          currencyCode,
-          value:
-              '${currencyProvider.currencySymbol}10.00', // This should be replaced with actual conversion logic
-        ),
-      );
-
-      // Add spacing between currency cards except for the last one
-      if (i < currencyProvider.otherCurrencies.length - 1) {
-        widgets.add(const SizedBox(height: 12));
-      }
-    }
-
-    // If there are no other currencies, show a message
-    if (currencyProvider.otherCurrencies.isEmpty) {
-      widgets.add(
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.08),
-                spreadRadius: 1,
-                blurRadius: 10,
-              ),
-            ],
-          ),
-          child: const Text(
-            'No other currencies added yet',
-            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-          ),
-        ),
-      );
-    }
-
-    return widgets;
-  }
 
   Widget _buildCurrencyCard(
     BuildContext context,
@@ -227,7 +175,6 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
     String? value,
     bool isMain = false,
   }) {
-    final currencyProvider = Provider.of<CurrencyProvider>(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
@@ -307,67 +254,6 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
     );
   }
 
-  void _showEditRateDialog(BuildContext context, String currencyCode) {
-    final currencyProvider = Provider.of<CurrencyProvider>(
-      context,
-      listen: false,
-    );
-    final controller = TextEditingController(
-      text: currencyProvider.conversionRate.toString(),
-    );
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Conversion Rate'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('1 $currencyCode = ? (multiplier applied to amounts)'),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(hintText: 'e.g. 1.0'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('CANCEL'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final input = controller.text.trim();
-                final parsed = double.tryParse(input);
-                if (parsed == null || parsed <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter a valid rate greater than 0'),
-                    ),
-                  );
-                  return;
-                }
-                final currency = CurrencyService().findByCode(currencyCode);
-                if (currency != null) {
-                  await currencyProvider.setCurrency(currency, parsed);
-                }
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('SAVE'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   String _getCurrencyFlag(String currencyCode) {
     try {
