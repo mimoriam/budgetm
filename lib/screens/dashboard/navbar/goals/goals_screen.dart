@@ -338,21 +338,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Widget _buildInfoCards(List<FirestoreGoal> pendingGoals, List<FirestoreGoal> fulfilledGoals, List<FirestoreGoal> allGoals) {
-    // Calculate totals by currency for current tab
-    final Map<String, double> totalsByCurrency = {};
-    
-    if (_isPendingSelected) {
-      // Show pending totals by currency
-      for (final goal in pendingGoals) {
-        totalsByCurrency[goal.currency] = (totalsByCurrency[goal.currency] ?? 0) + goal.currentAmount;
-      }
-    } else {
-      // Show fulfilled totals by currency
-      for (final goal in fulfilledGoals) {
-        totalsByCurrency[goal.currency] = (totalsByCurrency[goal.currency] ?? 0) + goal.currentAmount;
-      }
-    }
-    
     // Count fulfilled/unfulfilled goals across ALL currencies
     final int fulfilledCount = fulfilledGoals.length;
     final int totalCount = allGoals.length;
@@ -362,50 +347,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         children: [
-          // Currency totals row for current tab
-          if (totalsByCurrency.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _isPendingSelected ? 'PENDING TOTALS BY CURRENCY' : 'FULFILLED TOTALS BY CURRENCY',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.secondaryTextColorLight,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    children: [
-                      ...totalsByCurrency.entries.map((entry) => _buildCurrencyTotal(
-                        entry.key,
-                        '${entry.key} ${NumberFormat('#,##0.00').format(entry.value)}',
-                        _isPendingSelected ? Colors.orange : Colors.green,
-                      )),
-                    ],
-                  ),
-                ],
-              ),
-            ),
           // Fulfilled ratio card centered
           Center(
             child: SizedBox(
@@ -422,38 +363,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  Widget _buildCurrencyTotal(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildInfoCard(BuildContext context, String title, String value) {
     return Container(

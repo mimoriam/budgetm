@@ -1405,14 +1405,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          // const SizedBox(height: 20),
           // Show app logo
-          Image.asset(
-            'images/launcher/logo.png',
-            width: 120,
-            height: 120,
-            color: Colors.grey.shade400,
-          ),
+          // Image.asset(
+          //   'images/launcher/logo.png',
+          //   width: 120,
+          //   height: 120,
+          //   color: Colors.grey.shade400,
+          // ),
           const SizedBox(height: 16),
           Text(
             'Single Account View',

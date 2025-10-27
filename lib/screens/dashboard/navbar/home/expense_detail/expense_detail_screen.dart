@@ -46,52 +46,63 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   Future<Map<String, dynamic>> _fetchAllData() async {
     try {
       final futures = <Future>[];
-      
+
       // Fetch the full FirestoreTransaction to get vacation mode and notes
-      final firestoreTxnFuture = _firestoreService.getTransactionById(widget.transaction.id);
+      final firestoreTxnFuture = _firestoreService.getTransactionById(
+        widget.transaction.id,
+      );
       futures.add(firestoreTxnFuture);
-      
+
       // Fetch category data
       final categoryFuture = widget.transaction.categoryId != null
           ? _firestoreService.getCategoryById(widget.transaction.categoryId!)
           : Future.value(null);
       futures.add(categoryFuture);
-      
+
       // Fetch account data
       final accountFuture = widget.transaction.accountId != null
           ? _firestoreService.getAccountById(widget.transaction.accountId!)
           : Future.value(null);
       futures.add(accountFuture);
-      
+
       // Fetch goal data only for income transactions
       final goalFuture = widget.transaction.type == TransactionType.income
           ? _fetchLinkedGoalName()
           : Future.value(null);
       futures.add(goalFuture);
-      
+
       final results = await Future.wait(futures);
-      
+
       final firestoreTxn = results[0] as FirestoreTransaction?;
-      
+
       // Fetch vacation account for vacation transactions
       FirestoreAccount? vacationAccount;
       if (firestoreTxn != null && firestoreTxn.isVacation) {
         // For vacation transactions, get the vacation account directly
         if (firestoreTxn.linkedVacationAccountId != null) {
-          vacationAccount = await _firestoreService.getAccountById(firestoreTxn.linkedVacationAccountId!);
+          vacationAccount = await _firestoreService.getAccountById(
+            firestoreTxn.linkedVacationAccountId!,
+          );
         }
-      } else if (firestoreTxn != null && !firestoreTxn.isVacation && firestoreTxn.linkedTransactionId != null) {
+      } else if (firestoreTxn != null &&
+          !firestoreTxn.isVacation &&
+          firestoreTxn.linkedTransactionId != null) {
         // For normal transactions linked to vacation, fetch the vacation transaction to get the vacation account
-        final vacationTxn = await _firestoreService.getTransactionById(firestoreTxn.linkedTransactionId!);
-        if (vacationTxn != null && vacationTxn.linkedVacationAccountId != null) {
-          vacationAccount = await _firestoreService.getAccountById(vacationTxn.linkedVacationAccountId!);
+        final vacationTxn = await _firestoreService.getTransactionById(
+          firestoreTxn.linkedTransactionId!,
+        );
+        if (vacationTxn != null &&
+            vacationTxn.linkedVacationAccountId != null) {
+          vacationAccount = await _firestoreService.getAccountById(
+            vacationTxn.linkedVacationAccountId!,
+          );
         }
       }
-      
+
       // Borrowed/lent items are now independent - no need to fetch them here
       Borrowed? borrowedItem;
       Lent? lentItem;
-      
+
       return {
         'firestoreTransaction': firestoreTxn,
         'category': results[1] as Category?,
@@ -120,17 +131,23 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       setState(() {
         _isDeleting = true;
       });
-      
+
       // Check if this transaction is linked to a goal before deletion
-      final firestoreTxn = await _firestoreService.getTransactionById(widget.transaction.id);
-      final bool isGoalTransaction = firestoreTxn?.goalId != null && firestoreTxn!.goalId!.isNotEmpty;
-      
+      final firestoreTxn = await _firestoreService.getTransactionById(
+        widget.transaction.id,
+      );
+      final bool isGoalTransaction =
+          firestoreTxn?.goalId != null && firestoreTxn!.goalId!.isNotEmpty;
+
       // Delete the transaction from Firestore
       await _firestoreService.deleteTransaction(widget.transaction.id);
-      
+
       // Notify GoalsProvider if this was a goal transaction
       if (isGoalTransaction) {
-        Provider.of<GoalsProvider>(context, listen: false).notifyGoalTransactionDeleted();
+        Provider.of<GoalsProvider>(
+          context,
+          listen: false,
+        ).notifyGoalTransactionDeleted();
       }
     } catch (e) {
       print('Error deleting transaction: $e');
@@ -143,11 +160,11 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
   }
 
   Future<void> _togglePaidStatus() async {
-    
     if (_isUpdating) return;
 
-    final bool wasPaid = _isPaid; // Store the original state for potential rollback
-    
+    final bool wasPaid =
+        _isPaid; // Store the original state for potential rollback
+
     setState(() {
       _isUpdating = true;
     });
@@ -168,18 +185,18 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       });
     } catch (e) {
       print('Error toggling paid status: $e');
-      
+
       // Restore the original state in case of error
       if (wasPaid != _isPaid) {
         setState(() {
           _isPaid = wasPaid;
         });
       }
-      
+
       setState(() {
         _isUpdating = false;
       });
-      
+
       // Show error message to user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -232,9 +249,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                 future: _dataFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return const Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
                     return Center(
                       child: Text('Error loading data: ${snapshot.error}'),
@@ -242,11 +257,16 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                   }
 
                   final category = snapshot.data?['category'] as Category?;
-                  final account = snapshot.data?['account'] as FirestoreAccount?;
+                  final account =
+                      snapshot.data?['account'] as FirestoreAccount?;
                   final goalName = snapshot.data?['goalName'] as String?;
-                  final firestoreTransaction = snapshot.data?['firestoreTransaction'] as FirestoreTransaction?;
-                  final vacationAccount = snapshot.data?['vacationAccount'] as FirestoreAccount?;
-                  final borrowedItem = snapshot.data?['borrowedItem'] as Borrowed?;
+                  final firestoreTransaction =
+                      snapshot.data?['firestoreTransaction']
+                          as FirestoreTransaction?;
+                  final vacationAccount =
+                      snapshot.data?['vacationAccount'] as FirestoreAccount?;
+                  final borrowedItem =
+                      snapshot.data?['borrowedItem'] as Borrowed?;
                   final lentItem = snapshot.data?['lentItem'] as Lent?;
 
                   return Padding(
@@ -262,9 +282,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             children: [
                               Text(
                                 category?.name ?? widget.transaction.title,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displayLarge
+                                style: Theme.of(context).textTheme.displayLarge
                                     ?.copyWith(fontSize: 32),
                               ),
                               const SizedBox(height: 8),
@@ -272,30 +290,40 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Consumer<VacationProvider>(
                                 builder: (context, vacationProvider, child) {
                                   // For vacation transactions, show normal account if available
-                                  if (firestoreTransaction?.isVacation == true) {
-                                    if (account != null && !(account.isDefault ?? false)) {
+                                  if (firestoreTransaction?.isVacation ==
+                                      true) {
+                                    if (account != null &&
+                                        !(account.isDefault ?? false)) {
                                       // Show normal account for vacation transactions with icon
                                       return Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.all(6),
                                             decoration: BoxDecoration(
                                               color: Colors.grey.shade100,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: HugeIcon(
-                                              icon: getAccountIcon(account.accountType)[0][0],
+                                              icon: getAccountIcon(
+                                                account.accountType,
+                                              )[0][0],
                                               size: 16,
-                                              color: AppColors.primaryTextColorLight,
+                                              color: AppColors
+                                                  .primaryTextColorLight,
                                             ),
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
                                             "${account.name} - ${account.accountType}",
-                                            style: Theme.of(context).textTheme.bodyMedium
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
                                                 ?.copyWith(
-                                                  color: AppColors.secondaryTextColorLight,
+                                                  color: AppColors
+                                                      .secondaryTextColorLight,
                                                 ),
                                           ),
                                         ],
@@ -304,28 +332,38 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     // If no normal account, show nothing at top (vacation account will be shown below)
                                   }
                                   // For normal transactions, show normal account (but hide default cash account)
-                                  else if (account != null && !(account.isDefault ?? false)) {
+                                  else if (account != null &&
+                                      !(account.isDefault ?? false)) {
                                     return Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.all(6),
                                           decoration: BoxDecoration(
                                             color: Colors.grey.shade100,
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           child: HugeIcon(
-                                            icon: getAccountIcon(account.accountType)[0][0],
+                                            icon: getAccountIcon(
+                                              account.accountType,
+                                            )[0][0],
                                             size: 16,
-                                            color: AppColors.primaryTextColorLight,
+                                            color:
+                                                AppColors.primaryTextColorLight,
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
                                           "${account.name} - ${account.accountType}",
-                                          style: Theme.of(context).textTheme.bodyMedium
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
                                               ?.copyWith(
-                                                color: AppColors.secondaryTextColorLight,
+                                                color: AppColors
+                                                    .secondaryTextColorLight,
                                               ),
                                         ),
                                       ],
@@ -343,14 +381,16 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           children: [
                             _buildInfoCard(
                               context,
-                              'Accumulated Amount',
+                              'Total',
                               '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                             const SizedBox(width: 16),
                             _buildInfoCard(
                               context,
-                              'Total',
-                              '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
+                              'Accumulated Amount',
+                              !_isPaid
+                                  ? '${_getCurrencyCode(widget.transaction.currency)} 0.00'
+                                  : '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                           ],
                         ),
@@ -362,13 +402,20 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Center(
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 12,
+                                  ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12.0),
-                                    color: borrowedItem.returned ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+                                    color: borrowedItem.returned
+                                        ? const Color(0xFF2ECC71)
+                                        : const Color(0xFFE74C3C),
                                   ),
                                   child: Text(
-                                    borrowedItem.returned ? 'RETURNED' : 'BORROWED',
+                                    borrowedItem.returned
+                                        ? 'RETURNED'
+                                        : 'BORROWED',
                                     key: const Key('borrowed-status-chip'),
                                     style: const TextStyle(
                                       color: Colors.white,
@@ -387,10 +434,15 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Center(
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 12,
+                                  ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12.0),
-                                    color: lentItem.returned ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+                                    color: lentItem.returned
+                                        ? const Color(0xFF2ECC71)
+                                        : const Color(0xFFE74C3C),
                                   ),
                                   child: Text(
                                     lentItem.returned ? 'RETURNED' : 'LENT',
@@ -412,10 +464,15 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Center(
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 12,
+                                  ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12.0),
-                                    color: _isPaid ? const Color(0xFF2ECC71) : const Color(0xFFE74C3C),
+                                    color: _isPaid
+                                        ? const Color(0xFF2ECC71)
+                                        : const Color(0xFFE74C3C),
                                   ),
                                   child: Text(
                                     _isPaid ? 'PAID' : 'UNPAID',
@@ -455,7 +512,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                         const SizedBox(height: 16),
                         Divider(color: Colors.grey.shade300),
                         const SizedBox(height: 16),
-                        
+
                         // Borrowed/Lent-specific information
                         if (borrowedItem != null) ...[
                           // Due Date
@@ -471,7 +528,9 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     ),
                               ),
                               Text(
-                                DateFormat('MMMM d, yyyy').format(borrowedItem.dueDate).toUpperCase(),
+                                DateFormat(
+                                  'MMMM d, yyyy',
+                                ).format(borrowedItem.dueDate).toUpperCase(),
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -480,10 +539,12 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           const SizedBox(height: 16),
                           Divider(color: Colors.grey.shade300),
                           const SizedBox(height: 16),
-                          
+
                           // Borrowed Notes (if available from borrowed item or transaction)
-                          if ((borrowedItem.description != null && borrowedItem.description!.isNotEmpty) ||
-                              (firestoreTransaction?.notes != null && firestoreTransaction!.notes!.isNotEmpty))
+                          if ((borrowedItem.description != null &&
+                                  borrowedItem.description!.isNotEmpty) ||
+                              (firestoreTransaction?.notes != null &&
+                                  firestoreTransaction!.notes!.isNotEmpty))
                             Column(
                               children: [
                                 Row(
@@ -491,9 +552,12 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                   children: [
                                     Text(
                                       'NOTES',
-                                      style: Theme.of(context).textTheme.bodySmall
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
                                           ?.copyWith(
-                                            color: AppColors.secondaryTextColorLight,
+                                            color: AppColors
+                                                .secondaryTextColorLight,
                                             fontWeight: FontWeight.bold,
                                           ),
                                     ),
@@ -503,15 +567,25 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
                                           color: Colors.grey.shade50,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey.shade200),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.grey.shade200,
+                                          ),
                                         ),
                                         child: Text(
                                           // Show borrowed item description first, then transaction notes if available
-                                          (borrowedItem.description != null && borrowedItem.description!.isNotEmpty)
+                                          (borrowedItem.description != null &&
+                                                  borrowedItem
+                                                      .description!
+                                                      .isNotEmpty)
                                               ? borrowedItem.description!
-                                              : firestoreTransaction?.notes ?? '',
-                                          style: Theme.of(context).textTheme.bodyMedium
+                                              : firestoreTransaction?.notes ??
+                                                    '',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
                                               ?.copyWith(color: Colors.black87),
                                         ),
                                       ),
@@ -522,8 +596,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                 Divider(color: Colors.grey.shade300),
                               ],
                             ),
-                        ]
-                        else if (lentItem != null) ...[
+                        ] else if (lentItem != null) ...[
                           // Due Date
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -537,7 +610,9 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     ),
                               ),
                               Text(
-                                DateFormat('MMMM d, yyyy').format(lentItem.dueDate).toUpperCase(),
+                                DateFormat(
+                                  'MMMM d, yyyy',
+                                ).format(lentItem.dueDate).toUpperCase(),
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -546,10 +621,12 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           const SizedBox(height: 16),
                           Divider(color: Colors.grey.shade300),
                           const SizedBox(height: 16),
-                          
+
                           // Lent Notes (if available from lent item or transaction)
-                          if ((lentItem.description != null && lentItem.description!.isNotEmpty) ||
-                              (firestoreTransaction?.notes != null && firestoreTransaction!.notes!.isNotEmpty))
+                          if ((lentItem.description != null &&
+                                  lentItem.description!.isNotEmpty) ||
+                              (firestoreTransaction?.notes != null &&
+                                  firestoreTransaction!.notes!.isNotEmpty))
                             Column(
                               children: [
                                 Row(
@@ -557,9 +634,12 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                   children: [
                                     Text(
                                       'NOTES',
-                                      style: Theme.of(context).textTheme.bodySmall
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
                                           ?.copyWith(
-                                            color: AppColors.secondaryTextColorLight,
+                                            color: AppColors
+                                                .secondaryTextColorLight,
                                             fontWeight: FontWeight.bold,
                                           ),
                                     ),
@@ -569,15 +649,25 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
                                           color: Colors.grey.shade50,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey.shade200),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.grey.shade200,
+                                          ),
                                         ),
                                         child: Text(
                                           // Show lent item description first, then transaction notes if available
-                                          (lentItem.description != null && lentItem.description!.isNotEmpty)
+                                          (lentItem.description != null &&
+                                                  lentItem
+                                                      .description!
+                                                      .isNotEmpty)
                                               ? lentItem.description!
-                                              : firestoreTransaction?.notes ?? '',
-                                          style: Theme.of(context).textTheme.bodyMedium
+                                              : firestoreTransaction?.notes ??
+                                                    '',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
                                               ?.copyWith(color: Colors.black87),
                                         ),
                                       ),
@@ -589,12 +679,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               ],
                             ),
                         ],
-                        
+
                         if (goalName != null && goalName.isNotEmpty)
                           Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'GOAL',
@@ -607,7 +698,9 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                   ),
                                   Text(
                                     goalName,
-                                    style: Theme.of(context).textTheme.bodyMedium
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
                                         ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -617,23 +710,26 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Divider(color: Colors.grey.shade300),
                             ],
                           ),
-                        
+
                         // Vacation account information for vacation transactions (with or without normal account) or vacation-linked transactions
-                        if (vacationAccount != null && (
-                          firestoreTransaction?.isVacation == true ||
-                          (firestoreTransaction?.isVacation == false && firestoreTransaction?.linkedTransactionId != null)
-                        ))
+                        if (vacationAccount != null &&
+                            (firestoreTransaction?.isVacation == true ||
+                                (firestoreTransaction?.isVacation == false &&
+                                    firestoreTransaction?.linkedTransactionId !=
+                                        null)))
                           Column(
                             children: [
                               const SizedBox(height: 16),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'VACATION',
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
-                                          color: AppColors.secondaryTextColorLight,
+                                          color:
+                                              AppColors.secondaryTextColorLight,
                                           fontWeight: FontWeight.bold,
                                         ),
                                   ),
@@ -645,10 +741,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                           padding: const EdgeInsets.all(6),
                                           decoration: BoxDecoration(
                                             color: Colors.blue.shade50,
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           child: HugeIcon(
-                                            icon: HugeIcons.strokeRoundedAirplaneMode,
+                                            icon: HugeIcons
+                                                .strokeRoundedAirplaneMode,
                                             size: 16,
                                             color: Colors.blue.shade600,
                                           ),
@@ -656,12 +755,18 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                         const SizedBox(width: 8),
                                         Flexible(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
                                             children: [
                                               Text(
                                                 vacationAccount.name,
-                                                style: Theme.of(context).textTheme.bodyMedium
-                                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
                                                 textAlign: TextAlign.right,
                                               ),
                                               // Text(
@@ -682,10 +787,11 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Divider(color: Colors.grey.shade300),
                             ],
                           ),
-                        
+
                         // Transaction Notes (only for non-borrowed/lent transactions)
-                        if (borrowedItem == null && lentItem == null &&
-                            firestoreTransaction?.notes != null && 
+                        if (borrowedItem == null &&
+                            lentItem == null &&
+                            firestoreTransaction?.notes != null &&
                             firestoreTransaction!.notes!.isNotEmpty)
                           Column(
                             children: [
@@ -697,7 +803,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     'NOTES',
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
-                                          color: AppColors.secondaryTextColorLight,
+                                          color:
+                                              AppColors.secondaryTextColorLight,
                                           fontWeight: FontWeight.bold,
                                         ),
                                   ),
@@ -708,11 +815,15 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                       decoration: BoxDecoration(
                                         color: Colors.grey.shade50,
                                         borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.grey.shade200),
+                                        border: Border.all(
+                                          color: Colors.grey.shade200,
+                                        ),
                                       ),
                                       child: Text(
                                         firestoreTransaction.notes!,
-                                        style: Theme.of(context).textTheme.bodyMedium
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
                                             ?.copyWith(color: Colors.black87),
                                       ),
                                     ),
@@ -723,55 +834,68 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                               Divider(color: Colors.grey.shade300),
                             ],
                           ),
-                        
+
                         const SizedBox(height: 40),
                         Row(
                           children: [
                             // Show paid/unpaid toggle for all transactions
                             Expanded(
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: OutlinedButton(
-                                    onPressed: _isUpdating ? null : _togglePaidStatus,
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30.0),
-                                      ),
-                                      side: BorderSide(
-                                        color: _isPaid ? Colors.red : Colors.green,
-                                        width: 1.5,
-                                      ),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                child: OutlinedButton(
+                                  onPressed: _isUpdating
+                                      ? null
+                                      : _togglePaidStatus,
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
                                     ),
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
-                                      child: _isUpdating
-                                          ? const SizedBox(
-                                              key: ValueKey('loading'),
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(
-                                                  Colors.grey,
-                                                ),
-                                              ),
-                                            )
-                                          : Text(
-                                              key: ValueKey(_isPaid ? 'paid' : 'unpaid'),
-                                              _isPaid ? 'Mark as Unpaid' : 'Mark as Paid',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .labelLarge
-                                                  ?.copyWith(
-                                                    color: _isPaid ? Colors.red : Colors.green,
-                                                    fontSize: 14,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30.0),
+                                    ),
+                                    side: BorderSide(
+                                      color: _isPaid
+                                          ? Colors.red
+                                          : Colors.green,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: _isUpdating
+                                        ? const SizedBox(
+                                            key: ValueKey('loading'),
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.grey,
                                                   ),
                                             ),
-                                    ),
+                                          )
+                                        : Text(
+                                            key: ValueKey(
+                                              _isPaid ? 'paid' : 'unpaid',
+                                            ),
+                                            _isPaid
+                                                ? 'Mark as Unpaid'
+                                                : 'Mark as Paid',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelLarge
+                                                ?.copyWith(
+                                                  color: _isPaid
+                                                      ? Colors.red
+                                                      : Colors.green,
+                                                  fontSize: 14,
+                                                ),
+                                          ),
                                   ),
                                 ),
                               ),
+                            ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton(
@@ -779,21 +903,28 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     ? null
                                     : () async {
                                         // Show confirmation dialog before deleting
-                                        final bool? shouldDelete = await showDialog<bool>(
+                                        final bool?
+                                        shouldDelete = await showDialog<bool>(
                                           context: context,
                                           builder: (BuildContext context) {
                                             return AlertDialog(
-                                              title: const Text('Delete Transaction'),
+                                              title: const Text(
+                                                'Delete Transaction',
+                                              ),
                                               content: const Text(
                                                 'Are you sure you want to delete this transaction? This action cannot be undone.',
                                               ),
                                               actions: [
                                                 TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(false),
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(false),
                                                   child: const Text('Cancel'),
                                                 ),
                                                 TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(true),
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(true),
                                                   style: TextButton.styleFrom(
                                                     foregroundColor: Colors.red,
                                                   ),
@@ -803,7 +934,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                             );
                                           },
                                         );
-                                        
+
                                         // Only proceed with deletion if user confirmed
                                         if (shouldDelete == true) {
                                           await _deleteTransaction();
@@ -815,7 +946,9 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                       },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(30.0),
                                   ),
