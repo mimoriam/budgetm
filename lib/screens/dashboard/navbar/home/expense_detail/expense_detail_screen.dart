@@ -7,7 +7,6 @@ import 'package:budgetm/models/transaction.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
-import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
@@ -161,12 +160,6 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
         widget.transaction.id,
         !_isPaid,
       );
-
-      // Notify the rest of the app that transaction data has changed.
-      if (mounted) {
-        Provider.of<HomeScreenProvider>(context, listen: false)
-            .triggerTransactionsRefresh();
-      }
 
       setState(() {
         _isPaid = !_isPaid;

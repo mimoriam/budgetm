@@ -376,6 +376,9 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
       } else if (widget.itemType.toLowerCase() == 'lent') {
         final lent = widget.item as Lent;
         await _firestoreService.deleteLent(lent.id);
+      } else if (widget.itemType.toLowerCase() == 'subscription') {
+        final subscription = widget.item as Subscription;
+        await _firestoreService.deleteSubscription(subscription.id);
       }
       
       if (mounted) {
@@ -502,23 +505,143 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
 
   Widget _buildSubscriptionHistory(BuildContext context, Subscription sub) {
     final entries = sub.history;
-    if (entries.isEmpty) {
-      return Center(
-        child: Text(
-          'No history yet',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppColors.secondaryTextColorLight,
-          ),
-        ),
-      );
-    }
-    return ListView.builder(
-      itemCount: entries.length,
-      itemBuilder: (context, index) {
-        final entry = entries[index];
-        return _buildHistoryItem(context, entry);
-      },
+    final upcomingDates = _calculateUpcomingBillingDates(sub);
+    
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Past History Section
+          if (entries.isNotEmpty) ...[
+            Text(
+              'PAST HISTORY',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.secondaryTextColorLight,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...entries.map((entry) => _buildHistoryItem(context, entry)),
+            const SizedBox(height: 16),
+          ],
+          
+          // Upcoming Billing Dates Section
+          if (upcomingDates.isNotEmpty) ...[
+            Text(
+              'UPCOMING BILLS',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.secondaryTextColorLight,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...upcomingDates.map((date) => _buildUpcomingBillingItem(context, date, sub)),
+          ],
+          
+          // Empty state
+          if (entries.isEmpty && upcomingDates.isEmpty)
+            Center(
+              child: Text(
+                'No history yet',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.secondaryTextColorLight,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildUpcomingBillingItem(BuildContext context, DateTime date, Subscription sub) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const HugeIcon(
+              icon: HugeIcons.strokeRoundedCalendar01,
+              color: Colors.grey,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Upcoming Charge',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.grey,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  DateFormat('MMM d, yyyy').format(date),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '+ ${sub.currency} ${sub.price.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<DateTime> _calculateUpcomingBillingDates(Subscription sub) {
+    if (!sub.isActive) return [];
+    
+    final List<DateTime> upcomingDates = [];
+    DateTime currentDate = sub.nextBillingDate;
+    final now = DateTime.now();
+    
+    // Calculate next 5 billing dates
+    for (int i = 0; i < 5; i++) {
+      if (currentDate.isAfter(now)) {
+        upcomingDates.add(currentDate);
+      }
+      
+      // Calculate next billing date based on recurrence
+      switch (sub.recurrence) {
+        case Recurrence.weekly:
+          currentDate = currentDate.add(const Duration(days: 7));
+          break;
+        case Recurrence.monthly:
+          currentDate = DateTime(currentDate.year, currentDate.month + 1, currentDate.day);
+          break;
+        case Recurrence.quarterly:
+          currentDate = DateTime(currentDate.year, currentDate.month + 3, currentDate.day);
+          break;
+        case Recurrence.yearly:
+          currentDate = DateTime(currentDate.year + 1, currentDate.month, currentDate.day);
+          break;
+      }
+    }
+    
+    return upcomingDates;
   }
 
   Widget _buildHistoryItem(BuildContext context, TransactionHistoryEntry entry) {
@@ -641,6 +764,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
   }
 
   String _getCurrency(Object item) {
+    if (item is Subscription) return item.currency;
     if (item is Borrowed) return item.currency;
     if (item is Lent) return item.currency;
     return 'USD';

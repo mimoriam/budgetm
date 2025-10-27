@@ -8,6 +8,7 @@ import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
+import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/data/local/category_initializer.dart';
 
 class FirestoreService {
@@ -659,6 +660,18 @@ class FirestoreService {
         .withConverter<Lent>(
           fromFirestore: (snapshot, _) => Lent.fromJson(snapshot.data()!),
           toFirestore: (lent, _) => lent.toJson(),
+        );
+  }
+
+  CollectionReference<Subscription> get _subscriptionsCollection {
+    if (_userId == null) throw Exception('User not authenticated');
+    return _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('subscriptions')
+        .withConverter<Subscription>(
+          fromFirestore: (snapshot, _) => Subscription.fromJson(snapshot.data()!),
+          toFirestore: (subscription, _) => subscription.toJson(),
         );
   }
 
@@ -2305,6 +2318,83 @@ class FirestoreService {
       await _lentCollection.doc(id).delete();
     } catch (e) {
       print('Error deleting lent item: $e');
+      rethrow;
+    }
+  }
+
+  // ================ SUBSCRIPTION OPERATIONS ================
+
+  // Create a new subscription
+  Future<String> createSubscription(Subscription subscription) async {
+    try {
+      // Save subscription directly to Firestore
+      await _subscriptionsCollection.doc(subscription.id).set(subscription);
+      return subscription.id;
+    } catch (e) {
+      print('Error creating subscription: $e');
+      rethrow;
+    }
+  }
+
+  // Stream all subscriptions
+  Stream<List<Subscription>> streamSubscriptions() {
+    try {
+      return _subscriptionsCollection
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming subscriptions: $e');
+      return Stream.empty();
+    }
+  }
+
+  // Get subscription by ID
+  Future<Subscription?> getSubscriptionById(String id) async {
+    try {
+      final doc = await _subscriptionsCollection.doc(id).get();
+      return doc.data();
+    } catch (e) {
+      print('Error getting subscription: $e');
+      return null;
+    }
+  }
+
+  // Update subscription
+  Future<void> updateSubscription(String id, Subscription subscription) async {
+    try {
+      await _subscriptionsCollection.doc(id).set(subscription);
+    } catch (e) {
+      print('Error updating subscription: $e');
+      rethrow;
+    }
+  }
+
+  // Toggle subscription active status
+  Future<void> toggleSubscriptionActive(String id) async {
+    try {
+      final subscription = await getSubscriptionById(id);
+      if (subscription == null) throw Exception('Subscription not found');
+
+      // Update subscription to toggle active status
+      final updatedSubscription = subscription.copyWith(isActive: !subscription.isActive);
+      await updateSubscription(id, updatedSubscription);
+    } catch (e) {
+      print('Error toggling subscription active status: $e');
+      rethrow;
+    }
+  }
+
+  // Delete subscription
+  Future<void> deleteSubscription(String id) async {
+    try {
+      final subscription = await getSubscriptionById(id);
+      if (subscription == null) throw Exception('Subscription not found');
+
+      // Delete subscription
+      await _subscriptionsCollection.doc(id).delete();
+    } catch (e) {
+      print('Error deleting subscription: $e');
       rethrow;
     }
   }

@@ -40,6 +40,7 @@ class Subscription with DueDateContract {
   final DateTime dueDate;      // mirrors nextBillingDate to satisfy cross-model constraints
   final DateTime nextBillingDate;
   final Recurrence recurrence;
+  final String currency;       // currency code (e.g., 'USD', 'EUR')
   final List<TransactionHistoryEntry> history; // for detail view
 
   Subscription({
@@ -50,6 +51,7 @@ class Subscription with DueDateContract {
     required DateTime startDate,
     required this.nextBillingDate,
     required this.recurrence,
+    required this.currency,
     List<TransactionHistoryEntry>? history,
   })  : date = startDate,
         dueDate = nextBillingDate,
@@ -68,6 +70,7 @@ class Subscription with DueDateContract {
     DateTime? startDate,
     DateTime? nextBillingDate,
     Recurrence? recurrence,
+    String? currency,
     List<TransactionHistoryEntry>? history,
   }) {
     final effectiveStartDate = startDate ?? date;
@@ -80,6 +83,7 @@ class Subscription with DueDateContract {
       startDate: effectiveStartDate,
       nextBillingDate: effectiveNextBilling,
       recurrence: recurrence ?? this.recurrence,
+      currency: currency ?? this.currency,
       history: history ?? this.history,
     );
     return updated;
@@ -94,6 +98,7 @@ class Subscription with DueDateContract {
         'dueDate': dueDate.toIso8601String(), // redundant mirror for uniformity
         'nextBillingDate': nextBillingDate.toIso8601String(),
         'recurrence': recurrence.name,
+        'currency': currency,
         'history': history.map((h) => h.toJson()).toList(),
       };
 
@@ -110,6 +115,7 @@ class Subscription with DueDateContract {
       recurrence: Recurrence.values.firstWhere(
         (r) => r.name == json['recurrence'],
       ),
+      currency: json['currency'] as String? ?? 'USD', // Default to USD if not present
       history: ((json['history'] as List?) ?? [])
           .map((e) => TransactionHistoryEntry.fromJson(e))
           .toList(),

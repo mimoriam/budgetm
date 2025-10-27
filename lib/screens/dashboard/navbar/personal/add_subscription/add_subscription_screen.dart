@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/services/firestore_service.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -16,15 +17,27 @@ class AddSubscriptionScreen extends StatefulWidget {
 class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   bool _isActive = true;
   Recurrence _recurrence = Recurrence.monthly;
   DateTime? _startDate;
   DateTime? _nextBillingDate;
+  bool _isLoading = false;
+  bool _isMoreOptionsVisible = false;
+  final FirestoreService _firestoreService = FirestoreService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill start date with current date
+    _startDate = DateTime.now();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     _priceController.dispose();
     super.dispose();
   }
@@ -50,12 +63,17 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                   ),
                   child: Form(
                     key: _formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildPriceField(currencyProvider),
                         const SizedBox(height: 10),
-                        _buildFormSection(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildFormSection(
                           context,
                           'Name',
                           TextFormField(
@@ -66,139 +84,28 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                             ),
                             textInputAction: TextInputAction.next,
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                                    final v = value?.trim() ?? '';
+                                    if (v.isEmpty) {
                                 return 'Please enter a name';
                               }
-                              if (value.trim().length < 2) {
-                                return 'Name must be at least 2 characters';
-                              }
                               return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _buildFormSection(
-                          context,
-                          'Active',
-                          InputDecorator(
-                            decoration: _inputDecoration(),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Active',
-                                  style: TextStyle(fontSize: 13, color: AppColors.primaryTextColorLight),
-                                ),
-                                Switch(
-                                  value: _isActive,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _isActive = value;
-                                    });
                                   },
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildFormSection(
-                          context,
-                          'Recurrence',
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30.0),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                            child: SegmentedButton<Recurrence>(
-                              segments: const [
-                                ButtonSegment(value: Recurrence.weekly, label: Text('Weekly')),
-                                ButtonSegment(value: Recurrence.monthly, label: Text('Monthly')),
-                                ButtonSegment(value: Recurrence.quarterly, label: Text('Quarterly')),
-                                ButtonSegment(value: Recurrence.yearly, label: Text('Yearly')),
-                              ],
-                              selected: {_recurrence},
-                              onSelectionChanged: (newSelection) {
-                                setState(() {
-                                  _recurrence = newSelection.first;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildFormSection(
-                          context,
-                          'Start Date',
-                          GestureDetector(
-                            onTap: _selectStartDate,
-                            child: InputDecorator(
-                              decoration: _inputDecoration(
-                                hintText: 'Select Date',
-                              ).copyWith(
-                                suffixIcon: const Padding(
-                                  padding: EdgeInsets.only(right: 12.0),
-                                  child: HugeIcon(
-                                    icon: HugeIcons.strokeRoundedCalendar01,
-                                    color: Colors.grey,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                              child: SizedBox(
-                                height: 20,
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    _formatDate(_startDate) ?? 'Select Date',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.primaryTextColorLight,
-                                    ),
-                                  ),
-                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildFormSection(
-                          context,
-                          'Next Billing Date',
-                          GestureDetector(
-                            onTap: _selectNextBillingDate,
-                            child: InputDecorator(
-                              decoration: _inputDecoration(
-                                hintText: 'Select Date',
-                              ).copyWith(
-                                suffixIcon: const Padding(
-                                  padding: EdgeInsets.only(right: 12.0),
-                                  child: HugeIcon(
-                                    icon: HugeIcons.strokeRoundedCalendar01,
-                                    color: Colors.grey,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                              child: SizedBox(
-                                height: 20,
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    _formatDate(_nextBillingDate) ?? 'Select Date',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.primaryTextColorLight,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                          ],
                         ),
                         const SizedBox(height: 10),
+                        _buildMoreOptionsToggle(),
+                        const SizedBox(height: 10),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: Visibility(
+                            visible: _isMoreOptionsVisible,
+                            child: _buildMoreOptions(context),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -239,7 +146,6 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
               color: AppColors.lightGreyBackground,
             ),
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            prefixText: currencyProvider.currencySymbol,
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           validator: (value) {
@@ -257,6 +163,210 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
             return null;
           },
         ),
+      ],
+    );
+  }
+
+  Widget _buildMoreOptions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildFormSection(
+          context,
+          'Notes',
+          TextFormField(
+            controller: _descriptionController,
+            style: const TextStyle(fontSize: 13),
+            decoration: _inputDecoration(hintText: 'Description'),
+            maxLines: 2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Active',
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30.0),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
+            child: Row(
+              children: [
+                const Text(
+                  'Mark as active',
+                  style: TextStyle(fontSize: 13),
+                ),
+                const Spacer(),
+                Switch(
+                  value: _isActive,
+                  activeColor: Theme.of(context).primaryColor,
+                  onChanged: (value) {
+                    setState(() {
+                      _isActive = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Recurrence',
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30.0),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: Recurrence.values.map((recurrence) {
+                final isSelected = _recurrence == recurrence;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _recurrence = recurrence;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected 
+                          ? AppColors.gradientEnd 
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected 
+                            ? AppColors.gradientEnd 
+                            : Colors.grey.shade300,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _getRecurrenceLabel(recurrence),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected 
+                            ? Colors.white 
+                            : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Start Date',
+          GestureDetector(
+            onTap: _selectStartDate,
+            child: InputDecorator(
+              decoration: _inputDecoration(
+                hintText: 'Select Date',
+                suffixIcon: HugeIcons.strokeRoundedCalendar01,
+              ),
+              child: SizedBox(
+                height: 20,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _startDate == null ? 'Select Date' : _formatDate(_startDate!)!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _startDate == null
+                            ? AppColors.lightGreyBackground
+                            : AppColors.primaryTextColorLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFormSection(
+          context,
+          'Next Billing Date',
+          GestureDetector(
+            onTap: _selectNextBillingDate,
+            child: InputDecorator(
+              decoration: _inputDecoration(
+                hintText: 'Select Next Billing Date',
+                suffixIcon: HugeIcons.strokeRoundedCalendar01,
+              ),
+              child: SizedBox(
+                height: 20,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _nextBillingDate == null ? 'Select Next Billing Date' : _formatDate(_nextBillingDate!)!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _nextBillingDate == null
+                            ? AppColors.lightGreyBackground
+                            : AppColors.primaryTextColorLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMoreOptionsToggle() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Expanded(child: Divider(color: Colors.grey)),
+        TextButton(
+          onPressed: () {
+            setState(() {
+              _isMoreOptionsVisible = !_isMoreOptionsVisible;
+            });
+          },
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'More',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                _isMoreOptionsVisible
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
+                color: Theme.of(context).primaryColor,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+        const Expanded(child: Divider(color: Colors.grey)),
       ],
     );
   }
@@ -291,6 +401,19 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
       setState(() {
         _nextBillingDate = picked;
       });
+    }
+  }
+
+  String _getRecurrenceLabel(Recurrence recurrence) {
+    switch (recurrence) {
+      case Recurrence.weekly:
+        return 'Weekly';
+      case Recurrence.monthly:
+        return 'Monthly';
+      case Recurrence.yearly:
+        return 'Yearly';
+      case Recurrence.quarterly:
+        return 'Quarterly';
     }
   }
 
@@ -376,6 +499,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
 
   InputDecoration _inputDecoration({
     String? hintText,
+    List<List<dynamic>>? suffixIcon,
   }) {
     return InputDecoration(
       hintText: hintText,
@@ -408,6 +532,16 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
         borderRadius: BorderRadius.circular(30.0),
         borderSide: const BorderSide(color: AppColors.errorColor, width: 1.5),
       ),
+      suffixIcon: suffixIcon != null
+          ? Padding(
+              padding: const EdgeInsets.only(right: 12.0),
+              child: HugeIcon(
+                icon: suffixIcon,
+                size: 18,
+                color: Colors.grey.shade600,
+              ),
+            )
+          : null,
     );
   }
 
@@ -440,7 +574,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _saveSubscription,
+              onPressed: _isLoading ? null : _saveSubscription,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -448,13 +582,22 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
-                'Add',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Add',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -462,7 +605,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
     );
   }
 
-  void _saveSubscription() {
+  Future<void> _saveSubscription() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -479,7 +622,12 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
+      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
       final subscription = Subscription(
         id: 'sub_${DateTime.now().microsecondsSinceEpoch}',
         name: _nameController.text.trim(),
@@ -488,14 +636,29 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
         startDate: _startDate!,
         nextBillingDate: _nextBillingDate!,
         recurrence: _recurrence,
+        currency: currencyProvider.selectedCurrencyCode,
       );
 
-      // TODO: Persist the subscription using a provider/service
-      Navigator.of(context).pop(subscription);
+      await _firestoreService.createSubscription(subscription);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subscription created successfully')),
+        );
+        Navigator.of(context).pop();
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 }

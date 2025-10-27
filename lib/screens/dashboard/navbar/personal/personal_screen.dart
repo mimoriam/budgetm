@@ -3,12 +3,10 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/models/personal/subscription.dart';
-import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
-import 'package:provider/provider.dart';
 import 'detailed_item/detailed_item_screen.dart';
 import 'add_subscription/add_subscription_screen.dart';
 import 'add_borrowed/add_borrowed_screen.dart';
@@ -26,7 +24,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
   bool _isBorrowedSelected = false;
   bool _isLentSelected = false;
 
-  final List<Subscription> _subscriptions = [];
   final FirestoreService _firestoreService = FirestoreService.instance;
 
   @override
@@ -289,12 +286,23 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildSubscriptionInfoCard() {
-    return Expanded(
-      child: _buildInfoCard(
-        context,
-        'Total',
-        '${Provider.of<CurrencyProvider>(context).currencySymbol}${_subscriptions.fold(0.0, (sum, item) => sum + item.price).toStringAsFixed(2)}',
-      ),
+    return StreamBuilder<List<Subscription>>(
+      stream: _firestoreService.streamSubscriptions(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          final total = snapshot.data!.fold(0.0, (sum, item) => sum + item.price);
+          return Expanded(
+            child: _buildInfoCard(
+              context,
+              'Total',
+              '${snapshot.data!.isNotEmpty ? snapshot.data!.first.currency : 'USD'} ${total.toStringAsFixed(2)}',
+            ),
+          );
+        }
+        return Expanded(
+          child: _buildInfoCard(context, 'Total', 'USD 0.00'),
+        );
+      },
     );
   }
 
@@ -335,12 +343,23 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildSubscriptionActiveCard() {
-    return Expanded(
-      child: _buildInfoCard(
-        context,
-        'Active',
-        '${_subscriptions.where((s) => s.isActive).length}/${_subscriptions.length}',
-      ),
+    return StreamBuilder<List<Subscription>>(
+      stream: _firestoreService.streamSubscriptions(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          final activeCount = snapshot.data!.where((s) => s.isActive).length;
+          return Expanded(
+            child: _buildInfoCard(
+              context,
+              'Active',
+              '$activeCount/${snapshot.data!.length}',
+            ),
+          );
+        }
+        return Expanded(
+          child: _buildInfoCard(context, 'Active', '0/0'),
+        );
+      },
     );
   }
 
@@ -383,41 +402,39 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildInfoCard(BuildContext context, String title, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 2,
-              blurRadius: 10,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.secondaryTextColorLight,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: AppColors.primaryTextColorLight,
-                  ),
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.secondaryTextColorLight,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: AppColors.primaryTextColorLight,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -439,7 +456,29 @@ class _PersonalScreenState extends State<PersonalScreen> {
               ),
             ),
           ),
-          ..._subscriptions.map((subscription) => _buildSubscriptionItem(subscription)),
+          StreamBuilder<List<Subscription>>(
+            stream: _firestoreService.streamSubscriptions(),
+            builder: (context, snapshot) {
+              // Only show loading if we have no data at all
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No subscriptions yet',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                );
+              }
+              return Column(
+                children: snapshot.data!.map((subscription) => _buildSubscriptionItem(subscription)).toList(),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -465,7 +504,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
           StreamBuilder<List<Borrowed>>(
             stream: _firestoreService.streamBorrowed(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              // Only show loading if we have no data at all
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
@@ -509,7 +549,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
           StreamBuilder<List<Lent>>(
             stream: _firestoreService.streamLent(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              // Only show loading if we have no data at all
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
@@ -534,7 +575,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildSubscriptionItem(Subscription subscription) {
-    final currencyFormat = NumberFormat.currency(symbol: Provider.of<CurrencyProvider>(context, listen: false).currencySymbol, decimalDigits: 2);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = subscription.isActive ? AppColors.gradientEnd : Colors.grey;
 
@@ -594,7 +634,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   ),
                 ),
                 Text(
-                  currencyFormat.format(subscription.price),
+                  '${subscription.currency} ${subscription.price.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

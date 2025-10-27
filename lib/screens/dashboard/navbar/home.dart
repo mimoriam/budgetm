@@ -148,8 +148,6 @@ class MonthPageProvider extends ChangeNotifier {
   String _lastDataHash = ''; // Track the last data hash to detect changes
   bool _isInitialized =
       false; // Track if provider has been initialized at least once
-  final Set<String> _locallyUpdatingTransactions = {}; // Track which transactions are being updated locally
-  DateTime? _lastInitializeTime; // Track when initialize was last called
 
   // Getters
   List<TransactionWithAccount> get allTransactions => _allTransactions;
@@ -187,18 +185,8 @@ class MonthPageProvider extends ChangeNotifier {
     }
 
     // Always reset state if this is the first initialization or if data has changed
-    // But don't reset if any transactions are being locally updated
-    final now = DateTime.now();
-    final timeSinceLastInitialize = _lastInitializeTime != null 
-        ? now.difference(_lastInitializeTime!).inMilliseconds 
-        : 1000; // Default to 1000ms if never initialized
-    
-    // Check if any transactions in the incoming data are being locally updated
-    final hasLocallyUpdatingTransactions = data.transactionsWithAccounts
-        .any((tx) => _locallyUpdatingTransactions.contains(tx.transaction.id));
-    
-    if (!_isInitialized || (currentDataHash != _lastDataHash && !hasLocallyUpdatingTransactions)) {
-      print('DEBUG: MonthPageProvider.initialize - RESETTING STATE: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}, hasLocallyUpdatingTransactions=$hasLocallyUpdatingTransactions, locallyUpdatingIds=${_locallyUpdatingTransactions.toList()}, timeSinceLastInit=${timeSinceLastInitialize}ms');
+    if (!_isInitialized || currentDataHash != _lastDataHash) {
+      print('DEBUG: MonthPageProvider.initialize - RESETTING STATE: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}');
       _allTransactions = data.transactionsWithAccounts;
       _paginatedTransactions = [];
       _currentPage = 0;
@@ -206,18 +194,19 @@ class MonthPageProvider extends ChangeNotifier {
       _error = '';
       _lastDataHash = currentDataHash;
       _isInitialized = true;
-      _lastInitializeTime = now;
 
-      // Load first page
-      fetchNextPage();
+      // Load first page only if we have transactions
+      if (_allTransactions.isNotEmpty) {
+        fetchNextPage();
+      }
     } else {
-      print('DEBUG: MonthPageProvider.initialize - SKIPPING RESET: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}, hasLocallyUpdatingTransactions=$hasLocallyUpdatingTransactions, locallyUpdatingIds=${_locallyUpdatingTransactions.toList()}, timeSinceLastInit=${timeSinceLastInitialize}ms');
+      print('DEBUG: MonthPageProvider.initialize - SKIPPING RESET: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}');
     }
   }
 
   // Fetch next page of transactions
   Future<void> fetchNextPage() async {
-    if (_isLoading || _hasReachedEnd) return;
+    if (_isLoading || _hasReachedEnd || _allTransactions.isEmpty) return;
 
     _isLoading = true;
     _error = '';
@@ -279,55 +268,10 @@ class MonthPageProvider extends ChangeNotifier {
     _hasReachedEnd = false;
     _lastDataHash = ''; // Reset the data hash when resetting
     _isInitialized = false; // Reset initialization state
-    _locallyUpdatingTransactions.clear(); // Clear locally updating transactions
+    print('DEBUG: MonthPageProvider.reset() - Provider state completely reset');
     notifyListeners();
   }
 
-  // Toggle paid status for a transaction locally
-  void togglePaidStatus(String transactionId) {
-    // Add transaction to locally updating set
-    _locallyUpdatingTransactions.add(transactionId);
-    
-    // Find and update in _allTransactions
-    final allIndex = _allTransactions.indexWhere(
-      (tx) => tx.transaction.id == transactionId,
-    );
-    if (allIndex != -1) {
-      final oldTx = _allTransactions[allIndex];
-      final updatedTransaction = oldTx.transaction.copyWith(
-        paid: !(oldTx.transaction.paid ?? false),
-      );
-      _allTransactions[allIndex] = TransactionWithAccount(
-        transaction: updatedTransaction,
-        account: oldTx.account,
-        category: oldTx.category,
-      );
-    }
-
-    // Find and update in _paginatedTransactions
-    final paginatedIndex = _paginatedTransactions.indexWhere(
-      (tx) => tx.transaction.id == transactionId,
-    );
-    if (paginatedIndex != -1) {
-      final oldTx = _paginatedTransactions[paginatedIndex];
-      final updatedTransaction = oldTx.transaction.copyWith(
-        paid: !(oldTx.transaction.paid ?? false),
-      );
-      _paginatedTransactions[paginatedIndex] = TransactionWithAccount(
-        transaction: updatedTransaction,
-        account: oldTx.account,
-        category: oldTx.category,
-      );
-    }
-
-    notifyListeners();
-    
-    // Remove transaction from locally updating set after delay to prevent stream overrides
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      _locallyUpdatingTransactions.remove(transactionId);
-      print('DEBUG: togglePaidStatus - removed transaction $transactionId from locally updating set. Remaining: ${_locallyUpdatingTransactions.toList()}');
-    });
-  }
 }
 
 // Data manager for handling and caching month-specific data streams.
@@ -1314,16 +1258,9 @@ class _MonthPageViewState extends State<MonthPageView> {
         );
 
         if (result == true) {
-          // Use local state update instead of full data refresh
-          _provider.togglePaidStatus(uiTransaction.id);
-          
-          // For vacation mode transactions, also trigger a full refresh to ensure
-          // all screens update properly since vacation transactions affect multiple accounts
-          final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
-          if (vacationProvider.isVacationMode) {
-            final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
-            homeScreenProvider.requestRefreshForBothModes();
-          }
+          // Trigger a refresh to get the updated transaction data from Firestore
+          final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+          homeScreenProvider.triggerTransactionsRefresh();
         }
       },
       child: Container(
