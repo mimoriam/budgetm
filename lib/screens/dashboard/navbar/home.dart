@@ -6,7 +6,6 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/transaction.dart' as model;
 import 'package:budgetm/constants/transaction_type_enum.dart';
-import 'package:budgetm/screens/dashboard/navbar/feedback_modal.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/analytics/analytics_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
@@ -204,6 +203,55 @@ class MonthPageProvider extends ChangeNotifier {
     }
   }
 
+  // Force re-initialization (used when filter changes)
+  void forceReinitialize(MonthPageData data) {
+    print('DEBUG: MonthPageProvider.forceReinitialize - forcing complete reset');
+    _allTransactions = data.transactionsWithAccounts;
+    _paginatedTransactions = [];
+    _currentPage = 0;
+    _hasReachedEnd = false;
+    _error = '';
+    _lastDataHash = data.transactionsWithAccounts
+        .map((tx) => '${tx.transaction.id}:${tx.transaction.paid}')
+        .join(',')
+        .hashCode
+        .toString();
+    _isInitialized = true;
+
+    // Load first page only if we have transactions
+    if (_allTransactions.isNotEmpty) {
+      fetchNextPage();
+    }
+    notifyListeners();
+  }
+
+  // Clear all data and reset state (used when filter changes)
+  void clearAllData() {
+    print('DEBUG: MonthPageProvider.clearAllData - clearing all data');
+    _allTransactions = [];
+    _paginatedTransactions = [];
+    _currentPage = 0;
+    _hasReachedEnd = false;
+    _error = '';
+    _lastDataHash = '';
+    _isInitialized = false;
+    notifyListeners();
+  }
+
+  // Force complete reset and re-initialization (used when filter changes)
+  void forceReset() {
+    print('DEBUG: MonthPageProvider.forceReset - forcing complete reset');
+    _allTransactions = [];
+    _paginatedTransactions = [];
+    _currentPage = 0;
+    _hasReachedEnd = false;
+    _error = '';
+    _lastDataHash = '';
+    _isInitialized = false;
+    _isLoading = false;
+    notifyListeners();
+  }
+
   // Fetch next page of transactions
   Future<void> fetchNextPage() async {
     if (_isLoading || _hasReachedEnd || _allTransactions.isEmpty) return;
@@ -306,17 +354,18 @@ class MonthPageDataManager {
     int monthIndex,
     DateTime month,
     bool isVacation,
+    bool includeVacationTransactions,
   ) {
     // Get the active vacation account ID when in vacation mode
     final activeVacationAccountId =
         isVacation ? _vacationProvider.activeVacationAccountId : null;
 
-    // Create a composite key that includes monthIndex, isVacation status, accountId, and version
+    // Create a composite key that includes monthIndex, isVacation status, accountId, version, and filter state
     final cacheKey =
-        '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}-v$_streamVersion';
+        '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}-v$_streamVersion-includeVac$includeVacationTransactions';
 
     print(
-        'DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId');
+        'DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, includeVacation=$includeVacationTransactions');
     print('DEBUG: Cache key: $cacheKey');
 
     // In vacation mode without an active account, bypass caching to avoid stale 'all' cache reuse.
@@ -338,8 +387,8 @@ class MonthPageDataManager {
     final startOfMonth = DateTime(month.year, month.month, 1);
     final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
 
-    // For normal mode, fetch both normal and vacation transactions
     // For vacation mode, fetch only vacation transactions
+    // For normal mode, fetch normal transactions and optionally vacation transactions based on filter
     final Stream<List<FirestoreTransaction>> transactionStream = isVacation
         ? _firestoreService.streamTransactionsForDateRange(
             startOfMonth,
@@ -347,23 +396,29 @@ class MonthPageDataManager {
             isVacation: true,
             accountId: activeVacationAccountId,
           )
-        : Rx.combineLatest2(
-            _firestoreService.streamTransactionsForDateRange(
-              startOfMonth,
-              endOfMonth,
-              isVacation: false,
-            ),
-            _firestoreService.streamTransactionsForDateRange(
-              startOfMonth,
-              endOfMonth,
-              isVacation: true,
-            ),
-            (List<FirestoreTransaction> normalTxns,
-                List<FirestoreTransaction> vacationTxns) {
-              // Combine both normal and vacation transactions
-              return [...normalTxns, ...vacationTxns];
-            },
-          );
+        : (includeVacationTransactions
+            ? Rx.combineLatest2(
+                _firestoreService.streamTransactionsForDateRange(
+                  startOfMonth,
+                  endOfMonth,
+                  isVacation: false,
+                ),
+                _firestoreService.streamTransactionsForDateRange(
+                  startOfMonth,
+                  endOfMonth,
+                  isVacation: true,
+                ),
+                (List<FirestoreTransaction> normalTxns,
+                    List<FirestoreTransaction> vacationTxns) {
+                  // Combine both normal and vacation transactions
+                  return [...normalTxns, ...vacationTxns];
+                },
+              )
+            : _firestoreService.streamTransactionsForDateRange(
+                startOfMonth,
+                endOfMonth,
+                isVacation: false,
+              ));
 
     final stream = Rx.combineLatest4(
       transactionStream,
@@ -654,11 +709,14 @@ class _MonthPageViewState extends State<MonthPageView> {
 
     // Initialize the provider with data if it hasn't been initialized yet
     if (_provider.allTransactions.isEmpty) {
+      // Get includeVacationTransactions from context
+      final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
       widget.dataManager
           .getStreamForMonth(
             widget.monthIndex,
             widget.month,
             widget.isVacation,
+            homeScreenProvider.includeVacationTransactions,
           )
           .first
           .then((data) {
@@ -682,6 +740,7 @@ class _MonthPageViewState extends State<MonthPageView> {
       child: Consumer<MonthPageProvider>(
         builder: (context, provider, child) {
           final currencyProvider = context.watch<CurrencyProvider>();
+          final homeScreenProvider = context.watch<HomeScreenProvider>();
 
           // Listen to the stream for data updates
           return StreamBuilder<MonthPageData>(
@@ -689,6 +748,7 @@ class _MonthPageViewState extends State<MonthPageView> {
               widget.monthIndex,
               widget.month,
               widget.isVacation,
+              homeScreenProvider.includeVacationTransactions,
             ),
             builder: (context, snapshot) {
               // Update provider when new data arrives
@@ -1931,6 +1991,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context,
       listen: false,
     ).isVacationMode;
+    final homeScreenProvider = Provider.of<HomeScreenProvider>(
+      context,
+      listen: false,
+    );
 
     // Pre-load next month
     if (currentIndex + 1 < _months.length) {
@@ -1940,6 +2004,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           currentIndex + 1,
           _months[currentIndex + 1],
           isVacation,
+          homeScreenProvider.includeVacationTransactions,
         );
         nextStream.first.then((data) {
           if (mounted && !data.isLoading && data.error == null) {
@@ -1957,6 +2022,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           currentIndex - 1,
           _months[currentIndex - 1],
           isVacation,
+          homeScreenProvider.includeVacationTransactions,
         );
         prevStream.first.then((data) {
           if (mounted && !data.isLoading && data.error == null) {
@@ -2036,6 +2102,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             context,
             listen: false,
           ).isVacationMode;
+          final homeScreenProvider = Provider.of<HomeScreenProvider>(
+            context,
+            listen: false,
+          );
           final provider = _getOrCreateProvider(_selectedMonthIndex);
 
           // Only initialize if the provider hasn't been initialized yet
@@ -2044,6 +2114,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               _selectedMonthIndex,
               _months[_selectedMonthIndex],
               isVacation,
+              homeScreenProvider.includeVacationTransactions,
             );
             stream.first.then((data) {
               if (mounted && !data.isLoading && data.error == null) {
@@ -2080,7 +2151,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final vacationProvider = context.watch<VacationProvider>();
     final homeScreenProvider = context.watch<HomeScreenProvider>();
 
-    // Prioritize transaction-specific refresh; also handle month jump if date provided
+    // Handle transaction refresh
     if (homeScreenProvider.shouldRefreshTransactions) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         // If a transactionDate is provided, jump to that month first
@@ -2100,18 +2171,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
         }
 
-        // Invalidate all cached months and reset their providers to force a full list refresh
-        final refreshBoth = homeScreenProvider.shouldRefreshBothModes;
-        for (final monthIndex in _monthProviders.keys) {
-          if (refreshBoth) {
-            // Explicitly invalidate both vacation and normal mode caches
-            _pageDataManager.invalidateMonth(monthIndex, true);
-            _pageDataManager.invalidateMonth(monthIndex, false);
-          } else {
-            // Keep the existing, less specific invalidation for other cases
-            _pageDataManager.invalidateMonth(monthIndex);
-          }
-          _monthProviders[monthIndex]!.reset();
+        // Clear cache and reset all providers
+        _pageDataManager.clearCache();
+        for (final provider in _monthProviders.values) {
+          provider.forceReset();
         }
 
         // Mark refresh as complete and rebuild
@@ -2129,7 +2192,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ).isVacationMode;
         for (final monthIndex in _monthProviders.keys) {
           _pageDataManager.invalidateMonth(monthIndex, isVacation);
-          _monthProviders[monthIndex]!.reset();
+          _monthProviders[monthIndex]!.forceReset();
         }
         homeScreenProvider.completeRefresh();
         if (mounted) setState(() {});
@@ -2158,7 +2221,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         // Reset the provider for the current month
         if (_monthProviders.containsKey(_selectedMonthIndex)) {
-          _monthProviders[_selectedMonthIndex]!.reset();
+          _monthProviders[_selectedMonthIndex]!.forceReset();
         }
         // Mark refresh as complete
         homeScreenProvider.completeRefresh();
@@ -2236,12 +2299,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     vacationProvider.isVacationMode;
                                 final activeVacationAccountId =
                                     vacationProvider.activeVacationAccountId;
+                                // Also watch includeVacation filter so that key changes and child remounts when filter toggles
+                                final includeVacation = context
+                                    .watch<HomeScreenProvider>()
+                                    .includeVacationTransactions;
                                 // Get or create provider for this month and pass it to MonthPageView
                                 final provider = _getOrCreateProvider(index);
                                 return MonthPageView(
                                   // Include activeVacationAccountId in the key to avoid stale cached children when account changes
                                   key: ValueKey<String>(
-                                      '$index-$isVacation-${activeVacationAccountId ?? 'all'}'),
+                                      '$index-$isVacation-${activeVacationAccountId ?? 'all'}-includeVac$includeVacation'),
                                   monthIndex: index,
                                   month: _months[index],
                                   isVacation: isVacation,
@@ -2326,6 +2393,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
         }
 
+        final homeScreenProvider = context.read<HomeScreenProvider>();
         final Stream<MonthPageData> topStream = isVacation
             ? _pageDataManager.getVacationAllCurrenciesStream()
             : (_selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length
@@ -2333,6 +2401,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     _selectedMonthIndex,
                     _months[_selectedMonthIndex],
                     isVacation,
+                    homeScreenProvider.includeVacationTransactions,
                   )
                 : Stream.value(MonthPageData.loading()));
 
@@ -2553,7 +2622,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 // Reset all providers and clear the data manager cache to force fresh streams.
                                 for (final provider
                                     in _monthProviders.values) {
-                                  provider.reset();
+                                  provider.forceReset();
                                 }
                                 // Prefer clearing cached page streams instead of recreating the manager
                                 _pageDataManager.clearCache();
@@ -2576,17 +2645,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             );
                           },
                         ),
-                        _buildAppBarButton(
-                          HugeIcons.strokeRoundedStar,
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return const FeedbackModal();
-                              },
-                            );
-                          },
-                        ),
+                        // Only show 3-dot menu in normal mode
+                        if (!vacationProvider.isVacationMode)
+                          _build3DotMenuButton(context, homeScreenProvider),
                       ],
                     ),
                   ],
@@ -2623,6 +2684,129 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         icon: HugeIcon(icon: icon, color: Colors.black87, size: 22),
       ),
     );
+  }
+
+  Widget _build3DotMenuButton(BuildContext context, HomeScreenProvider homeScreenProvider) {
+    final isFilterActive = !homeScreenProvider.includeVacationTransactions;
+    
+    return Stack(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          margin: const EdgeInsets.only(left: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.5),
+            shape: BoxShape.circle,
+          ),
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              _show3DotMenu(context, homeScreenProvider);
+            },
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedMoreVertical,
+              color: Colors.black87,
+              size: 22,
+            ),
+          ),
+        ),
+        // Notification badge when filter is active
+        if (isFilterActive)
+          Positioned(
+            right: 6,
+            top: 0,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _show3DotMenu(BuildContext context, HomeScreenProvider homeScreenProvider) async {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+    
+    // Hide navbar while showing menu
+    navbarProvider.setDialogMode(true);
+    navbarProvider.setNavBarVisibility(false);
+
+    try {
+      await showMenu(
+        context: context,
+        position: position,
+        items: [
+          PopupMenuItem(
+            enabled: false,
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return CheckboxListTile(
+                  title: const Text(
+                    'Include Vacation Transactions',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  subtitle: const Text(
+                    'Show vacation transactions in normal mode',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  value: homeScreenProvider.includeVacationTransactions,
+                  onChanged: (bool? value) async {
+                    if (value != null) {
+                      // Update the filter state
+                      await homeScreenProvider.setIncludeVacationTransactions(value);
+                      
+                      // Close the menu
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                      
+                      // Force complete reset of all providers and cache
+                      if (mounted) {
+                        // Clear all cached streams first
+                        _pageDataManager.clearCache();
+                        // Dispose and recreate all month providers to avoid stale paginated data
+                        for (final provider in _monthProviders.values) {
+                          provider.dispose();
+                        }
+                        _monthProviders.clear();
+
+                        // Trigger a rebuild to get fresh data
+                        this.setState(() {});
+                      }
+                    }
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                );
+              },
+            ),
+          ),
+        ],
+        elevation: 8,
+      );
+    } finally {
+      // Restore navbar visibility
+      if (context.mounted) {
+        navbarProvider.setNavBarVisibility(true);
+        navbarProvider.setDialogMode(false);
+      }
+    }
   }
 
   Widget _buildMonthSelector() {
@@ -2674,6 +2858,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildBalanceCards() {
     final currencyProvider = context.watch<CurrencyProvider>();
     final vacationProvider = context.watch<VacationProvider>();
+    final homeScreenProvider = context.watch<HomeScreenProvider>();
 
     return StreamBuilder<MonthPageData>(
       stream: vacationProvider.isVacationMode
@@ -2682,7 +2867,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? _pageDataManager.getStreamForMonth(
                   _selectedMonthIndex,
                   _months[_selectedMonthIndex],
-                  false, // Normal mode - will fetch both normal and vacation transactions
+                  false, // Normal mode - will fetch normal or both based on filter
+                  homeScreenProvider.includeVacationTransactions,
                 )
               : Stream.value(MonthPageData.loading())),
       builder: (context, monthSnapshot) {
