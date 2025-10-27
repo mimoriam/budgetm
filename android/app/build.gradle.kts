@@ -11,15 +11,16 @@ plugins {
 android {
     namespace = "com.example.budgetm.budgetm"
     compileSdk = 36
-    ndkVersion = flutter.ndkVersion
+    buildToolsVersion "36.0.0"
+    ndkVersion = 28.0.13004108
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_21.toString()
     }
 
     defaultConfig {
