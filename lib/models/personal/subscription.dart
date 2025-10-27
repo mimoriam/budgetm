@@ -1,18 +1,22 @@
 import 'contracts.dart';
 
-enum Recurrence { weekly, monthly, quarterly, yearly }
+enum Recurrence { monthly, yearly }
 
 class TransactionHistoryEntry {
   final String id;            // could map to an existing transaction ID
-  final DateTime timestamp;   // when the charge happened
+  final DateTime timestamp;   // when the charge happened (paidDate)
   final double amount;        // charge amount at that time
   final String? note;
+  final DateTime? billingDate; // the date the payment was due
+  final DateTime? paidDate;    // when user marked it as paid
 
   const TransactionHistoryEntry({
     required this.id,
     required this.timestamp,
     required this.amount,
     this.note,
+    this.billingDate,
+    this.paidDate,
   });
 
   Map<String, dynamic> toJson() => {
@@ -20,6 +24,8 @@ class TransactionHistoryEntry {
     'timestamp': timestamp.toIso8601String(),
     'amount': amount,
     'note': note,
+    'billingDate': billingDate?.toIso8601String(),
+    'paidDate': paidDate?.toIso8601String(),
   };
 
   factory TransactionHistoryEntry.fromJson(Map<String, dynamic> json) =>
@@ -28,6 +34,8 @@ class TransactionHistoryEntry {
         timestamp: DateTime.parse(json['timestamp'] as String),
         amount: (json['amount'] as num).toDouble(),
         note: json['note'] as String?,
+        billingDate: json['billingDate'] != null ? DateTime.parse(json['billingDate'] as String) : null,
+        paidDate: json['paidDate'] != null ? DateTime.parse(json['paidDate'] as String) : null,
       );
 }
 
@@ -36,6 +44,7 @@ class Subscription with DueDateContract {
   final String name;
   final double price;
   final bool isActive;
+  final bool isPaused;         // NEW: track paused status separately from isActive
   final DateTime date;         // startDate (mandatory)
   final DateTime dueDate;      // mirrors nextBillingDate to satisfy cross-model constraints
   final DateTime nextBillingDate;
@@ -48,6 +57,7 @@ class Subscription with DueDateContract {
     required this.name,
     required this.price,
     required this.isActive,
+    this.isPaused = false,     // NEW: default to false
     required DateTime startDate,
     required this.nextBillingDate,
     required this.recurrence,
@@ -67,6 +77,7 @@ class Subscription with DueDateContract {
     String? name,
     double? price,
     bool? isActive,
+    bool? isPaused,     // NEW: add isPaused parameter
     DateTime? startDate,
     DateTime? nextBillingDate,
     Recurrence? recurrence,
@@ -80,6 +91,7 @@ class Subscription with DueDateContract {
       name: name ?? this.name,
       price: price ?? this.price,
       isActive: isActive ?? this.isActive,
+      isPaused: isPaused ?? this.isPaused,  // NEW: include isPaused
       startDate: effectiveStartDate,
       nextBillingDate: effectiveNextBilling,
       recurrence: recurrence ?? this.recurrence,
@@ -94,6 +106,7 @@ class Subscription with DueDateContract {
         'name': name,
         'price': price,
         'isActive': isActive,
+        'isPaused': isPaused,  // NEW: include isPaused in JSON
         'date': date.toIso8601String(),
         'dueDate': dueDate.toIso8601String(), // redundant mirror for uniformity
         'nextBillingDate': nextBillingDate.toIso8601String(),
@@ -110,6 +123,7 @@ class Subscription with DueDateContract {
       name: json['name'] as String,
       price: (json['price'] as num).toDouble(),
       isActive: json['isActive'] as bool,
+      isPaused: json['isPaused'] as bool? ?? false,  // NEW: handle isPaused with default
       startDate: startDate,
       nextBillingDate: nextBill,
       recurrence: Recurrence.values.firstWhere(

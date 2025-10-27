@@ -19,10 +19,8 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  bool _isActive = true;
   Recurrence _recurrence = Recurrence.monthly;
   DateTime? _startDate;
-  DateTime? _nextBillingDate;
   bool _isLoading = false;
   bool _isMoreOptionsVisible = false;
   final FirestoreService _firestoreService = FirestoreService.instance;
@@ -94,6 +92,60 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 10),
+                        _buildFormSection(
+                          context,
+                          'Recurrence',
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(30.0),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            child: Center(
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: Recurrence.values.map((recurrence) {
+                                  final isSelected = _recurrence == recurrence;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _recurrence = recurrence;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected 
+                                            ? AppColors.gradientEnd 
+                                            : Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isSelected 
+                                              ? AppColors.gradientEnd 
+                                              : Colors.grey.shade300,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _getRecurrenceLabel(recurrence),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: isSelected 
+                                              ? Colors.white 
+                                              : Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 10),
                         _buildMoreOptionsToggle(),
@@ -184,89 +236,6 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Active',
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30.0),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
-            child: Row(
-              children: [
-                const Text(
-                  'Mark as active',
-                  style: TextStyle(fontSize: 13),
-                ),
-                const Spacer(),
-                Switch(
-                  value: _isActive,
-                  activeColor: Theme.of(context).primaryColor,
-                  onChanged: (value) {
-                    setState(() {
-                      _isActive = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
-          'Recurrence',
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30.0),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: Recurrence.values.map((recurrence) {
-                final isSelected = _recurrence == recurrence;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _recurrence = recurrence;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected 
-                          ? AppColors.gradientEnd 
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected 
-                            ? AppColors.gradientEnd 
-                            : Colors.grey.shade300,
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      _getRecurrenceLabel(recurrence),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: isSelected 
-                            ? Colors.white 
-                            : Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
           'Start Date',
           GestureDetector(
             onTap: _selectStartDate,
@@ -285,37 +254,6 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         color: _startDate == null
-                            ? AppColors.lightGreyBackground
-                            : AppColors.primaryTextColorLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildFormSection(
-          context,
-          'Next Billing Date',
-          GestureDetector(
-            onTap: _selectNextBillingDate,
-            child: InputDecorator(
-              decoration: _inputDecoration(
-                hintText: 'Select Next Billing Date',
-                suffixIcon: HugeIcons.strokeRoundedCalendar01,
-              ),
-              child: SizedBox(
-                height: 20,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _nextBillingDate == null ? 'Select Next Billing Date' : _formatDate(_nextBillingDate!)!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: _nextBillingDate == null
                             ? AppColors.lightGreyBackground
                             : AppColors.primaryTextColorLight,
                       ),
@@ -381,45 +319,34 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
     if (picked != null) {
       setState(() {
         _startDate = picked;
-        if (_nextBillingDate != null && _nextBillingDate!.isBefore(picked)) {
-          _nextBillingDate = null;
-        }
       });
     }
   }
 
-  Future<void> _selectNextBillingDate() async {
-    final initial = _nextBillingDate ?? _startDate ?? DateTime.now();
-    final first = _startDate ?? DateTime(2000);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: first,
-      lastDate: DateTime(2101),
-    );
-    if (picked != null) {
-      setState(() {
-        _nextBillingDate = picked;
-      });
-    }
-  }
 
   String _getRecurrenceLabel(Recurrence recurrence) {
     switch (recurrence) {
-      case Recurrence.weekly:
-        return 'Weekly';
       case Recurrence.monthly:
         return 'Monthly';
       case Recurrence.yearly:
         return 'Yearly';
-      case Recurrence.quarterly:
-        return 'Quarterly';
     }
   }
 
   String? _formatDate(DateTime? date) {
     if (date == null) return null;
     return DateFormat('dd/MM/yyyy').format(date);
+  }
+
+  DateTime _calculateNextBillingDate(DateTime startDate, Recurrence recurrence) {
+    switch (recurrence) {
+      case Recurrence.monthly:
+        // Add 1 month while preserving day (Oct 27 → Nov 27)
+        return DateTime(startDate.year, startDate.month + 1, startDate.day);
+      case Recurrence.yearly:
+        // Add 1 year while preserving month and day (Oct 27, 2024 → Oct 27, 2025)
+        return DateTime(startDate.year + 1, startDate.month, startDate.day);
+    }
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
@@ -609,15 +536,9 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    if (_startDate == null || _nextBillingDate == null) {
+    if (_startDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select both start and next billing dates')),
-      );
-      return;
-    }
-    if (_nextBillingDate!.isBefore(_startDate!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Next billing date cannot be before start date')),
+        const SnackBar(content: Text('Please select a start date')),
       );
       return;
     }
@@ -628,13 +549,17 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
 
     try {
       final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+      // Auto-calculate next billing date based on start date and recurrence
+      final nextBillingDate = _calculateNextBillingDate(_startDate!, _recurrence);
+      
       final subscription = Subscription(
         id: 'sub_${DateTime.now().microsecondsSinceEpoch}',
         name: _nameController.text.trim(),
         price: double.parse(_priceController.text.trim()),
-        isActive: _isActive,
+        isActive: true,  // Always active by default
+        isPaused: false, // Not paused by default
         startDate: _startDate!,
-        nextBillingDate: _nextBillingDate!,
+        nextBillingDate: nextBillingDate,
         recurrence: _recurrence,
         currency: currencyProvider.selectedCurrencyCode,
       );

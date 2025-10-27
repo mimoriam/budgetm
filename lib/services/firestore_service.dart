@@ -2385,6 +2385,38 @@ class FirestoreService {
     }
   }
 
+  // Add payment to subscription history
+  Future<void> addSubscriptionPayment(String subscriptionId, TransactionHistoryEntry entry) async {
+    try {
+      final subscription = await getSubscriptionById(subscriptionId);
+      if (subscription == null) throw Exception('Subscription not found');
+
+      // Add entry to history
+      final updatedHistory = List<TransactionHistoryEntry>.from(subscription.history)..add(entry);
+      final updatedSubscription = subscription.copyWith(history: updatedHistory);
+      
+      await updateSubscription(subscriptionId, updatedSubscription);
+    } catch (e) {
+      print('Error adding subscription payment: $e');
+      rethrow;
+    }
+  }
+
+  // Toggle subscription paused status
+  Future<void> toggleSubscriptionPaused(String subscriptionId) async {
+    try {
+      final subscription = await getSubscriptionById(subscriptionId);
+      if (subscription == null) throw Exception('Subscription not found');
+
+      // Toggle paused status
+      final updatedSubscription = subscription.copyWith(isPaused: !subscription.isPaused);
+      await updateSubscription(subscriptionId, updatedSubscription);
+    } catch (e) {
+      print('Error toggling subscription paused status: $e');
+      rethrow;
+    }
+  }
+
   // Delete subscription
   Future<void> deleteSubscription(String id) async {
     try {

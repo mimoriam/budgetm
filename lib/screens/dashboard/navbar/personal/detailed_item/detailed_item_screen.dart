@@ -103,7 +103,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'DUE DATE',
+                        widget.itemType.toLowerCase() == 'subscription' ? 'DATE' : 'DUE DATE',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.secondaryTextColorLight,
                           fontWeight: FontWeight.bold,
@@ -181,20 +181,20 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
     final bool isSubscription = widget.itemType.toLowerCase() == 'subscription';
     
     if (isSubscription) {
-      // Only show delete button for subscriptions
+      final subscription = widget.item as Subscription;
       return Row(
         children: [
           Expanded(
             child: ElevatedButton(
-              onPressed: _isDeleting ? null : () => _showDeleteConfirmation(context),
+              onPressed: _isUpdating ? null : () => _showMarkPaidDialog(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.gradientEnd,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: _isDeleting
+              child: _isUpdating
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -204,7 +204,36 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                       ),
                     )
                   : Text(
-                      'Delete',
+                      'Mark Paid',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _isUpdating ? null : () => _togglePauseStatus(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: subscription.isPaused ? Colors.green : Colors.orange,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                ),
+              ),
+              child: _isUpdating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      subscription.isPaused ? 'Continue' : 'Pause',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,
@@ -302,6 +331,177 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
 
     if (confirmed == true) {
       await _markAsReturned();
+    }
+  }
+
+  Future<void> _showMarkPaidDialog(BuildContext context) async {
+    final subscription = widget.item as Subscription;
+    DateTime selectedDate = DateTime.now();
+    
+    final result = await showDialog<DateTime>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Mark Payment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('When did you pay for this subscription?'),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      selectedDate = picked;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const HugeIcon(
+                        icon: HugeIcons.strokeRoundedCalendar01,
+                        size: 18,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(DateFormat('MMM d, yyyy').format(selectedDate)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, selectedDate),
+              child: const Text('Mark Paid'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      await _markSubscriptionPaid(subscription, result);
+    }
+  }
+
+  Future<void> _markSubscriptionPaid(Subscription subscription, DateTime paidDate) async {
+    setState(() {
+      _isUpdating = true;
+    });
+
+    try {
+      // Calculate the correct billing date for this payment
+      final billingDate = subscription.nextBillingDate;
+      
+      // Create new history entry
+      final entry = TransactionHistoryEntry(
+        id: 'payment_${DateTime.now().microsecondsSinceEpoch}',
+        timestamp: paidDate,
+        amount: subscription.price,
+        note: 'Payment for billing date: ${DateFormat('MMM d, yyyy').format(billingDate)}',
+        billingDate: billingDate,
+        paidDate: paidDate,
+      );
+
+      // Calculate the next billing date after this payment
+      final nextBillingDate = _calculateNextBillingDate(billingDate, subscription.recurrence);
+
+      // Add to subscription history and update next billing date
+      final updatedHistory = List<TransactionHistoryEntry>.from(subscription.history)..add(entry);
+      final updatedSubscription = subscription.copyWith(
+        history: updatedHistory,
+        nextBillingDate: nextBillingDate,
+      );
+      
+      
+      await _firestoreService.updateSubscription(subscription.id, updatedSubscription);
+      print('DEBUG: Updated subscription - nextBillingDate: ${updatedSubscription.nextBillingDate}, dueDate: ${updatedSubscription.dueDate}');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment marked successfully')),
+        );
+        // Navigate back - the stream will automatically refresh the data
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
+    }
+  }
+
+  DateTime _calculateNextBillingDate(DateTime currentBillingDate, Recurrence recurrence) {
+    DateTime result;
+    switch (recurrence) {
+      case Recurrence.monthly:
+        // Add 1 month while preserving day (Oct 27 → Nov 27)
+        result = DateTime(currentBillingDate.year, currentBillingDate.month + 1, currentBillingDate.day);
+        break;
+      case Recurrence.yearly:
+        // Add 1 year while preserving month and day (Oct 27, 2024 → Oct 27, 2025)
+        result = DateTime(currentBillingDate.year + 1, currentBillingDate.month, currentBillingDate.day);
+        break;
+    }
+    return result;
+  }
+
+  Future<void> _togglePauseStatus(BuildContext context) async {
+    final subscription = widget.item as Subscription;
+    
+    setState(() {
+      _isUpdating = true;
+    });
+
+    try {
+      final updatedSubscription = subscription.copyWith(isPaused: !subscription.isPaused);
+      await _firestoreService.updateSubscription(subscription.id, updatedSubscription);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Subscription ${subscription.isPaused ? 'continued' : 'paused'} successfully')),
+        );
+        // Navigate back - the stream will automatically refresh the data
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
     }
   }
 
@@ -454,7 +654,29 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 36),
+              if (widget.itemType.toLowerCase() == 'subscription')
+                GestureDetector(
+                  onTap: () => _showDeleteConfirmation(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [AppColors.gradientStart, AppColors.gradientEnd],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: const HugeIcon(
+                      icon: HugeIcons.strokeRoundedDelete01,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(width: 36),
             ],
           ),
         ),
@@ -612,33 +834,15 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
   }
 
   List<DateTime> _calculateUpcomingBillingDates(Subscription sub) {
-    if (!sub.isActive) return [];
+    if (!sub.isActive || sub.isPaused) return [];
     
     final List<DateTime> upcomingDates = [];
     DateTime currentDate = sub.nextBillingDate;
     final now = DateTime.now();
     
-    // Calculate next 5 billing dates
-    for (int i = 0; i < 5; i++) {
-      if (currentDate.isAfter(now)) {
-        upcomingDates.add(currentDate);
-      }
-      
-      // Calculate next billing date based on recurrence
-      switch (sub.recurrence) {
-        case Recurrence.weekly:
-          currentDate = currentDate.add(const Duration(days: 7));
-          break;
-        case Recurrence.monthly:
-          currentDate = DateTime(currentDate.year, currentDate.month + 1, currentDate.day);
-          break;
-        case Recurrence.quarterly:
-          currentDate = DateTime(currentDate.year, currentDate.month + 3, currentDate.day);
-          break;
-        case Recurrence.yearly:
-          currentDate = DateTime(currentDate.year + 1, currentDate.month, currentDate.day);
-          break;
-      }
+    // Calculate only the next 1 billing date
+    if (currentDate.isAfter(now)) {
+      upcomingDates.add(currentDate);
     }
     
     return upcomingDates;
