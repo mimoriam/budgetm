@@ -1,4 +1,5 @@
 import 'package:budgetm/auth_gate.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/viewmodels/theme_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -13,15 +14,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/firebase_options.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
   // Enable Firestore offline persistence
-  FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
 
   final bool onboardingDone = prefs.getBool('onboardingDone') ?? false;
 
@@ -33,27 +37,51 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
         ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
-        ChangeNotifierProxyProvider3<CurrencyProvider, VacationProvider, HomeScreenProvider, BudgetProvider>(
+        ChangeNotifierProxyProvider3<
+          CurrencyProvider,
+          VacationProvider,
+          HomeScreenProvider,
+          BudgetProvider
+        >(
           create: (context) => BudgetProvider(
-            currencyProvider: Provider.of<CurrencyProvider>(context, listen: false),
-            vacationProvider: Provider.of<VacationProvider>(context, listen: false),
-            homeScreenProvider: Provider.of<HomeScreenProvider>(context, listen: false),
+            currencyProvider: Provider.of<CurrencyProvider>(
+              context,
+              listen: false,
+            ),
+            vacationProvider: Provider.of<VacationProvider>(
+              context,
+              listen: false,
+            ),
+            homeScreenProvider: Provider.of<HomeScreenProvider>(
+              context,
+              listen: false,
+            ),
           ),
-          update: (context, currencyProvider, vacationProvider, homeScreenProvider, budgetProvider) =>
-              budgetProvider ?? BudgetProvider(
-                currencyProvider: currencyProvider,
-                vacationProvider: vacationProvider,
-                homeScreenProvider: homeScreenProvider,
-              ),
+          update:
+              (
+                context,
+                currencyProvider,
+                vacationProvider,
+                homeScreenProvider,
+                budgetProvider,
+              ) =>
+                  budgetProvider ??
+                  BudgetProvider(
+                    currencyProvider: currencyProvider,
+                    vacationProvider: vacationProvider,
+                    homeScreenProvider: homeScreenProvider,
+                  ),
         ),
         ChangeNotifierProxyProvider<CurrencyProvider, GoalsProvider>(
           create: (context) => GoalsProvider(
-            currencyProvider: Provider.of<CurrencyProvider>(context, listen: false),
+            currencyProvider: Provider.of<CurrencyProvider>(
+              context,
+              listen: false,
+            ),
           ),
           update: (context, currencyProvider, goalsProvider) =>
-              goalsProvider ?? GoalsProvider(
-                currencyProvider: currencyProvider,
-              ),
+              goalsProvider ??
+              GoalsProvider(currencyProvider: currencyProvider),
         ),
       ],
       child: MyApp(onboardingDone: onboardingDone),
@@ -71,6 +99,8 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme(),
           darkTheme: AppTheme.darkTheme(),

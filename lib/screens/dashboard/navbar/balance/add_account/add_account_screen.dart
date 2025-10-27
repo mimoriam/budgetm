@@ -30,6 +30,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   late FirestoreService _firestoreService;
   late FocusNode _amountFocusNode;
   String? _selectedAccountCurrencyCode; // Used for non-vacation account creation
+  String? _selectedVacationCurrencyCode; // Used for vacation account creation
 
   @override
   void initState() {
@@ -40,6 +41,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     if (widget.isCreatingVacationAccount) {
       _isCreditSelected = true;
       _selectedAccountType = 'Credit';
+      // Initialize default currency from CurrencyProvider for vacation accounts
+      try {
+        final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+        _selectedVacationCurrencyCode = currencyProvider.selectedCurrencyCode;
+      } catch (_) {}
     } else {
       // Show account type selection bottom sheet immediately after first frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -177,6 +183,49 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      // Show currency picker for vacation accounts
+                      if (widget.isCreatingVacationAccount)
+                        _buildFormSection(
+                          context,
+                          'Currency',
+                          GestureDetector(
+                            onTap: () {
+                              showCurrencyPicker(
+                                context: context,
+                                showFlag: true,
+                                showSearchField: true,
+                                onSelect: (Currency currency) {
+                                  setState(() {
+                                    _selectedVacationCurrencyCode = currency.code;
+                                  });
+                                },
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 10.0,
+                                horizontal: 16.0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30.0),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _selectedVacationCurrencyCode ?? 'Select Currency',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (widget.isCreatingVacationAccount)
+                        const SizedBox(height: 16),
                       _buildCreditLimitOrBalanceField(),
                       const SizedBox(height: 16),
                       if (!widget.isCreatingVacationAccount)
@@ -687,8 +736,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                           // Determine currency code
                           String selectedCurrencyCode = 'USD';
                           if (widget.isCreatingVacationAccount) {
-                            // Vacation accounts don't have a specific currency - use empty string or special flag
-                            selectedCurrencyCode = 'MULTI';
+                            // Vacation accounts use the selected vacation currency
+                            selectedCurrencyCode = _selectedVacationCurrencyCode ??
+                                (context.read<CurrencyProvider>().selectedCurrencyCode);
                           } else {
                             selectedCurrencyCode = _selectedAccountCurrencyCode ??
                                 (context.read<CurrencyProvider>().selectedCurrencyCode);

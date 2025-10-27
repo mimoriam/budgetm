@@ -172,8 +172,8 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
   Widget _buildBody() {
     // Determine the correct currency code for the account being viewed
     final accountCurrencyCode = widget.account.currency;
-    // For vacation accounts, don't show currency code as they are multi-currency
-    final currencyCode = widget.account.isVacationAccount == true ? '' : accountCurrencyCode;
+    // For vacation accounts, show the account's specific currency code
+    final currencyCode = accountCurrencyCode;
     final currencyFormat = NumberFormat.currency(symbol: currencyCode);
 
     // Calculate current balance (only from paid transactions)

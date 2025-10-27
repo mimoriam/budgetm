@@ -1522,6 +1522,7 @@ Future<void> _showCurrencyBreakdownDialog(
   CurrencyProvider currencyProvider,
   bool isVacationMode,
   double totalBudget,
+  String? vacationAccountCurrency,
 ) async {
   final navbarProvider =
       Provider.of<NavbarVisibilityProvider>(context, listen: false);
@@ -1547,6 +1548,7 @@ Future<void> _showCurrencyBreakdownDialog(
               currencyProvider,
               isVacationMode,
               totalBudget,
+              vacationAccountCurrency,
             ),
           ),
           actions: [
@@ -1574,6 +1576,7 @@ Widget _buildCurrencyBreakdownContent(
   CurrencyProvider currencyProvider,
   bool isVacationMode,
   double totalBudget,
+  String? vacationAccountCurrency,
 ) {
   // Get all unique currencies
   final allCurrencies = <String>{}
@@ -1620,7 +1623,7 @@ Widget _buildCurrencyBreakdownContent(
                 Icon(Icons.account_balance_wallet, color: Colors.blue.shade600, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Total Budget: ${currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
+                  'Total Budget: ${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade700,
@@ -2302,6 +2305,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       stream: _firestoreService.streamAccounts(),
       builder: (context, accountsSnapshot) {
         double totalBudget = 0.0;
+        String? vacationAccountCurrency;
 
         if (accountsSnapshot.hasData &&
             vacationProvider.activeVacationAccountId != null) {
@@ -2318,6 +2322,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           if (activeVacationAccount != null) {
             totalBudget = activeVacationAccount.initialBalance;
+            vacationAccountCurrency = activeVacationAccount.currency;
           }
         }
 
@@ -2407,7 +2412,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${currencyProvider.selectedCurrencyCode} ${topBalance.toStringAsFixed(2)}',
+                                  '${vacationProvider.isVacationMode && vacationAccountCurrency != null ? vacationAccountCurrency : currencyProvider.selectedCurrencyCode} ${topBalance.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -2423,6 +2428,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     currencyProvider,
                                     vacationProvider.isVacationMode,
                                     totalBudget,
+                                    vacationAccountCurrency,
                                   ),
                                   child: Icon(
                                     Icons.keyboard_arrow_down,
@@ -2685,6 +2691,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           stream: _firestoreService.streamAccounts(),
           builder: (context, accountsSnapshot) {
             double totalBudget = 0.0;
+            String? vacationAccountCurrency;
 
             if (accountsSnapshot.hasData &&
                 vacationProvider.activeVacationAccountId != null) {
@@ -2701,6 +2708,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
               if (activeVacationAccount != null) {
                 totalBudget = activeVacationAccount.initialBalance;
+                vacationAccountCurrency = activeVacationAccount.currency;
               }
             }
 
@@ -2716,7 +2724,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           Expanded(
                             child: _buildInfoCard(
                               'Total Budget',
-                              '${currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
+                              '${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
                               Colors.blue,
                               HugeIcons.strokeRoundedWallet01,
                               Colors.blue.shade50,
