@@ -9,10 +9,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.budgetm.budgetm"
+    namespace = "xtra.budget.manager"
     compileSdk = 36
-    buildToolsVersion "36.0.0"
-    ndkVersion = 28.0.13004108
+    ndkVersion = "28.0.13004108"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -25,7 +24,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.budgetm.budgetm"
+        applicationId = "xtra.budget.manager"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 25

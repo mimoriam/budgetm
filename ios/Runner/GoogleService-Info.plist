@@ -2,18 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>303407537831-kan2o60ub4rc45lar8bki293ls5igvbt.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.303407537831-kan2o60ub4rc45lar8bki293ls5igvbt</string>
 	<key>API_KEY</key>
-	<string>AIzaSyB82jj2Z_Rns50Ujlodjv0pFPP3YXclTQU</string>
+	<string>AIzaSyDzY4okIqT7pl1vKGqNm7GvIFZ32qVRWuY</string>
 	<key>GCM_SENDER_ID</key>
-	<string>715255991379</string>
+	<string>303407537831</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.budgetm.budgetm</string>
+	<string>xtra.budget.manager</string>
 	<key>PROJECT_ID</key>
-	<string>budgetm-27e53</string>
+	<string>cashora-be2be</string>
 	<key>STORAGE_BUCKET</key>
-	<string>budgetm-27e53.firebasestorage.app</string>
+	<string>cashora-be2be.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:715255991379:ios:5584729c595872cd658aa6</string>
+	<string>1:303407537831:ios:9a0f306f41050eac9c0582</string>
 </dict>
 </plist>
