@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/utils/appTheme.dart';
@@ -16,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/firebase_options.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +30,8 @@ Future<void> main() async {
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
   );
+
+  await _configureRevenueCat();
 
   final bool onboardingDone = prefs.getBool('onboardingDone') ?? false;
 
@@ -90,6 +95,29 @@ Future<void> main() async {
       child: MyApp(onboardingDone: onboardingDone),
     ),
   );
+}
+
+Future<void> _configureRevenueCat() async {
+  // Set to debug level for testing
+  await Purchases.setLogLevel(LogLevel.debug);
+
+  PurchasesConfiguration configuration;
+
+  // --- !! IMPORTANT !! ---
+  // Get these API keys from your RevenueCat dashboard:
+  // RevenueCat Dashboard > Project > Apps > (Your App)
+  const String appleApiKey = "test_vqgFeMgiflyEiUsqXKaCGhdBcEf";
+  const String googleApiKey = "test_vqgFeMgiflyEiUsqXKaCGhdBcEf";
+
+  if (Platform.isIOS) {
+    configuration = PurchasesConfiguration(appleApiKey);
+  } else if (Platform.isAndroid) {
+    configuration = PurchasesConfiguration(googleApiKey);
+  } else {
+    return; // Unsupported platform
+  }
+
+  await Purchases.configure(configuration);
 }
 
 class MyApp extends StatelessWidget {

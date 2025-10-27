@@ -1,9 +1,9 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:flutter/services.dart'; // Import for PlatformException
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-
-enum Plan { monthly, yearly }
+import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -13,16 +13,34 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
-  Plan _selectedPlan = Plan.yearly; // Yearly plan is selected by default
+  // Store the selected RevenueCat Package
+  Package? _selectedPackage;
+  bool _isPurchasing = false;
 
   @override
   Widget build(BuildContext context) {
+    // Get offerings from the provider
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
+    final offerings = subscriptionProvider.offerings;
+
+    // Get the current offering (e.g., 'default')
+    final currentOffering = offerings?.current;
+
+    // Get the monthly and yearly packages from the offering
+    final monthlyPackage = currentOffering?.monthly;
+    final yearlyPackage = currentOffering?.annual; // RevenueCat uses 'annual'
+
+    // Set default selected package if not already set
+    if (_selectedPackage == null && yearlyPackage != null) {
+      _selectedPackage = yearlyPackage;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       // Use Stack to layer the sticky button over the scrollable content
       body: Stack(
         children: [
-          // Scrollable content area (takes up all space except the button area)
+          // Scrollable content area
           Positioned.fill(
             bottom: 90, // Reserve space for the sticky button container
             child: SingleChildScrollView(
@@ -30,140 +48,186 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 horizontal: 24.0,
                 vertical: 12.0,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(
-                    height: kToolbarHeight - 20,
-                  ), // Reduced space for status bar + potential app bar area
-                  // Crown Icon
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orangeAccent.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.sim_card_download_rounded, // Using Material Icon as HugeIcons might not have a direct match
-                      color: Colors.orange,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Title
-                  Text(
-                    'Choose Your Plan',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: 24, // Reduced font size
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryTextColorLight,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 6),
-                  // Subtitle
-                  Text(
-                    'Invest in your financial freedom today', // Adapted subtitle
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.secondaryTextColorLight,
-                      fontSize: 14, // Reduced font size
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  // Plan Selection Cards
-                  _buildPlanCard(
-                    context: context,
-                    plan: Plan.monthly,
-                    title: 'Monthly Plan',
-                    price: '\$12.99',
-                    pricePeriod: 'per month',
-                    pricePerDay: '\$0.43/day',
-                    isSelected: _selectedPlan == Plan.monthly,
-                    isPopular: true,
-                    onTap: () => setState(() => _selectedPlan = Plan.monthly),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildPlanCard(
-                    context: context,
-                    plan: Plan.yearly,
-                    title: 'Yearly Plan',
-                    price: '\$49.99',
-                    pricePeriod: 'per year',
-                    pricePerDay: '\$0.14/day',
-                    saveAmount: 'Save \$209', // Example save amount
-                    isSelected: _selectedPlan == Plan.yearly,
-                    isBestValue: true,
-                    onTap: () => setState(() => _selectedPlan = Plan.yearly),
-                  ),
-                  const SizedBox(height: 24),
-                  // Features Section
-                  Text(
-                    'Everything included:',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryTextColorLight,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildFeatureItem(context, 'Personalized budget insights', Icons.insights),
-                  _buildFeatureItem(context, 'Daily progress tracking', Icons.trending_up),
-                  _buildFeatureItem(context, 'Expense management tools', Icons.account_balance_wallet),
-                  _buildFeatureItem(context, 'Financial health timeline', Icons.timeline),
-                  _buildFeatureItem(context, 'Expert guidance & tips', Icons.lightbulb),
-                  _buildFeatureItem(context, 'Community support access', Icons.people),
-                  const SizedBox(height: 24),
-                  // Savings Box
-                  Container(
-                    padding: const EdgeInsets.all(20.0),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(20.0),
-                      border: Border.all(color: Colors.green.shade100),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.green.shade200,
-                              width: 2,
+              child: (subscriptionProvider.isLoading && offerings == null)
+                  // Show loading spinner while offerings are being fetched
+                  ? const Center(
+                      heightFactor: 15,
+                      child: CircularProgressIndicator(),
+                    )
+                  // Show error if no offerings are found
+                  : (currentOffering == null)
+                      ? Center(
+                          heightFactor: 15,
+                          child: Text(
+                            'Could not load plans.\nPlease try again later.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.secondaryTextColorLight,
+                                ),
+                          ),
+                        )
+                      // Show paywall content
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              height: kToolbarHeight - 20,
                             ),
-                          ),
-                          child: const Icon(
-                            Icons.check_rounded,
-                            color: Colors.green,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Save your finances and future', // Adapted text
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green.shade800,
+                            // Crown Icon
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orangeAccent.shade100,
+                                shape: BoxShape.circle,
                               ),
-                          textAlign: TextAlign.center,
+                              child: Icon(
+                                Icons.sim_card_download_rounded,
+                                color: Colors.orange,
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Title
+                            Text(
+                              'Choose Your Plan',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displayLarge
+                                  ?.copyWith(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryTextColorLight,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            // Subtitle
+                            Text(
+                              'Invest in your financial freedom today',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: AppColors.secondaryTextColorLight,
+                                    fontSize: 14,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 24),
+
+                            // --- Refactored Dynamic Plan Cards ---
+                            if (monthlyPackage != null)
+                              _buildPlanCard(
+                                context: context,
+                                package: monthlyPackage,
+                                // These are examples, you can calculate this
+                                pricePerDay: '\$0.43/day',
+                                isPopular: true,
+                                isSelected: _selectedPackage == monthlyPackage,
+                                onTap: () =>
+                                    setState(() => _selectedPackage = monthlyPackage),
+                              ),
+
+                            const SizedBox(height: 16),
+
+                            if (yearlyPackage != null)
+                              _buildPlanCard(
+                                context: context,
+                                package: yearlyPackage,
+                                // These are examples, you can calculate this
+                                pricePerDay: '\$0.14/day',
+                                saveAmount: 'Save \$209', // Example
+                                isBestValue: true,
+                                isSelected: _selectedPackage == yearlyPackage,
+                                onTap: () =>
+                                    setState(() => _selectedPackage = yearlyPackage),
+                              ),
+                            // ------------------------------------
+
+                            const SizedBox(height: 24),
+                            // Features Section
+                            Text(
+                              'Everything included:',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryTextColorLight,
+                                  ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildFeatureItem(context, 'Personalized budget insights',
+                                Icons.insights),
+                            _buildFeatureItem(context, 'Daily progress tracking',
+                                Icons.trending_up),
+                            _buildFeatureItem(context, 'Expense management tools',
+                                Icons.account_balance_wallet),
+                            _buildFeatureItem(context, 'Financial health timeline',
+                                Icons.timeline),
+                            _buildFeatureItem(
+                                context, 'Expert guidance & tips', Icons.lightbulb),
+                            _buildFeatureItem(context, 'Community support access',
+                                Icons.people),
+                            const SizedBox(height: 24),
+                            // Savings Box
+                            Container(
+                              padding: const EdgeInsets.all(20.0),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(20.0),
+                                border: Border.all(color: Colors.green.shade100),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.green.shade200,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.green,
+                                      size: 32,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Save your finances and future',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green.shade800,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Average user saves ~\u00A32,500 per year by budgeting effectively',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(color: Colors.green.shade600),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 20,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Average user saves ~\u00A32,500 per year by budgeting effectively', // Adapted text
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: Colors.green.shade600),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ), // Extra space before the sticky button area starts
-                ],
-              ),
             ),
           ),
           // Sticky Bottom Button Container
@@ -188,42 +252,135 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                onPressed: () async {
-                  // For development: Set subscription flag to true
-                  final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-                  final success = await subscriptionProvider.subscribeUser();
-                  
-                  if (success) {
-                    // Show success message
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Subscription activated! You now have access to premium features.'),
-                          backgroundColor: Colors.green,
+                // --- Refactored onPressed with RevenueCat Purchase Logic ---
+                onPressed: _isPurchasing
+                    ? null // Disable button while purchase is in progress
+                    : () async {
+                        if (_selectedPackage == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please select a plan.'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
+
+                        setState(() {
+                          _isPurchasing = true;
+                        });
+
+                        try {
+                          // Make the purchase
+                          // *** FIX 1: 'purchasePackage' returns 'PurchaseResult' ***
+                          PurchaseResult purchaseResult =
+                              await Purchases.purchasePackage(_selectedPackage!);
+
+                          // Check if the "pro" entitlement is now active
+                          // *** FIX 1 (continued): Access 'customerInfo' from 'purchaseResult' ***
+                          if (purchaseResult.customerInfo.entitlements.active['pro'] != null) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Subscription activated! You now have access to premium features.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              // Pop the paywall screen on success
+                              Navigator.of(context).pop();
+                            }
+                          }
+                        } on PlatformException catch (e) {
+                          var errorCode = PurchasesErrorHelper.getErrorCode(e);
+                          if (errorCode !=
+                              PurchasesErrorCode.purchaseCancelledError) {
+                            // Show error if it wasn't a user cancellation
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to purchase: ${e.message}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          // Handle other errors
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('An unexpected error occurred: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isPurchasing = false;
+                            });
+                          }
+                        }
+                      },
+                // -----------------------------------------------------------
+                child: _isPurchasing
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
                         ),
-                      );
-                      // Navigate back
-                      Navigator.of(context).pop();
-                    }
-                  } else {
-                    // Show error message
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to activate subscription: ${subscriptionProvider.error}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: Text(
-                  'Subscribe Your Plan',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white, // Ensure text is visible
-                    fontSize: 16,
+                      )
+                    : Text(
+                        'Subscribe Your Plan',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.white, // Ensure text is visible
+                              fontSize: 16,
+                            ),
+                      ),
+              ),
+            ),
+          ),
+          // Restore/Manage links section above the sticky button
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 90,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () async {
+                      final provider = context.read<SubscriptionProvider>();
+                      final ok = await provider.restorePurchases();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ok
+                                  ? 'Purchases restored successfully!'
+                                  : 'No active subscription found. You are now on the free plan.',
+                            ),
+                            backgroundColor: ok ? Colors.green : Colors.orange,
+                          ),
+                        );
+                        if (ok) Navigator.of(context).pop();
+                      }
+                    },
+                    child: const Text('Restore purchases'),
                   ),
-                ),
+                  TextButton(
+                    onPressed: () async {
+                      final provider = context.read<SubscriptionProvider>();
+                      await provider.openManagementPage();
+                    },
+                    child: const Text('Manage subscription'),
+                  ),
+                ],
               ),
             ),
           ),
@@ -232,12 +389,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
+  // --- Refactored _buildPlanCard to use RevenueCat's 'Package' ---
   Widget _buildPlanCard({
     required BuildContext context,
-    required Plan plan,
-    required String title,
-    required String price,
-    required String pricePeriod,
+    required Package package, // Use RevenueCat Package
     required String pricePerDay,
     String? saveAmount,
     required bool isSelected,
@@ -245,6 +400,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
     bool isBestValue = false,
     required VoidCallback onTap,
   }) {
+    // *** FIX 2: Access 'storeProduct' instead of 'product' ***
+    final product = package.storeProduct; // Get product details
+
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -284,7 +442,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        product.title, // Dynamic title from RevenueCat
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.bold,
@@ -297,7 +455,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            price,
+                            product.priceString, // Dynamic price from RevenueCat
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -306,7 +464,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            pricePeriod,
+                            // Dynamic period
+                            package.packageType == PackageType.monthly
+                                ? 'per month'
+                                : package.packageType == PackageType.annual
+                                    ? 'per year'
+                                    : '', // Handle other cases if needed
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppColors.secondaryTextColorLight,
@@ -318,7 +481,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       Row(
                         children: [
                           Text(
-                            pricePerDay,
+                            pricePerDay, // This is still hardcoded, you can calculate it
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppColors.secondaryTextColorLight,
@@ -417,6 +580,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
+  // --- This function remains unchanged ---
   Widget _buildFeatureItem(BuildContext context, String text, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -445,3 +609,4 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 }
+

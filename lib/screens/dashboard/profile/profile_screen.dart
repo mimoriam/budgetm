@@ -13,6 +13,7 @@ import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
@@ -26,10 +27,13 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService();
 
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    final showChangePassword = currentUser?.providerData.any((p) => p.providerId == 'password') ?? false;
+    final showChangePassword =
+        currentUser?.providerData.any((p) => p.providerId == 'password') ??
+        false;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -48,25 +52,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     builder: (context, subscriptionProvider, child) {
                       final isSubscribed = subscriptionProvider.isSubscribed;
                       final isLoading = subscriptionProvider.isLoading;
-                      
+
                       return Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           gradient: isSubscribed
                               ? const LinearGradient(
-                                  colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                                  colors: [
+                                    Color(0xFF4CAF50),
+                                    Color(0xFF2E7D32),
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 )
                               : const LinearGradient(
-                                  colors: [Color(0xFFFF9800), Color(0xFFE65100)],
+                                  colors: [
+                                    Color(0xFFFF9800),
+                                    Color(0xFFE65100),
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                           borderRadius: BorderRadius.circular(16.0),
                           boxShadow: [
                             BoxShadow(
-                              color: (isSubscribed ? Colors.green : Colors.orange).withOpacity(0.3),
+                              color:
+                                  (isSubscribed ? Colors.green : Colors.orange)
+                                      .withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -81,7 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                isSubscribed ? Icons.workspace_premium : Icons.lock_outline,
+                                isSubscribed
+                                    ? Icons.workspace_premium
+                                    : Icons.lock_outline,
                                 color: Colors.white,
                                 size: 24,
                               ),
@@ -92,7 +106,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isSubscribed ? 'Premium Active' : 'Get Premium',
+                                    isSubscribed
+                                        ? 'Premium Active'
+                                        : 'Get Premium',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 18,
@@ -101,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    isSubscribed 
+                                    isSubscribed
                                         ? 'You have access to all premium features'
                                         : 'Unlock unlimited vacation accounts, color picker, and recurring budgets',
                                     style: TextStyle(
@@ -109,32 +125,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       fontSize: 14,
                                     ),
                                   ),
+                                  if (isSubscribed)
+                                    Builder(
+                                      builder: (context) {
+                                        final renewalText = context.read<SubscriptionProvider>().renewalCopy;
+                                        if (renewalText == null) return const SizedBox.shrink();
+                                        return Padding(
+                                          padding: const EdgeInsets.only(top: 4.0),
+                                          child: Text(
+                                            renewalText,
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.9),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                 ],
                               ),
                             ),
-                            if (isLoading)
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            if (isLoading) // <-- Check loading flag
+                              Container(
+                                padding: const EdgeInsets.all(8), // Match size
+                                child: const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
                                 ),
                               )
                             else
                               GestureDetector(
                                 onTap: () {
                                   if (isSubscribed) {
-                                    // Show subscription management or details
-                                    _showSubscriptionDetails(context);
+                                    _showSubscriptionActionsSheet(context);
                                   } else {
-                                    // Navigate to paywall
                                     PersistentNavBarNavigator.pushNewScreen(
                                       context,
                                       screen: const PaywallScreen(),
                                       withNavBar: false,
-                                      pageTransitionAnimation:
-                                          PageTransitionAnimation.cupertino,
+                                      pageTransitionAnimation: PageTransitionAnimation.cupertino,
                                     );
                                   }
                                 },
@@ -160,7 +195,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSectionHeader('ACCOUNT'),
                   // _buildProfileMenuItem(Icons.person_outline, 'Edit profile'),
                   if (showChangePassword)
-                    _buildProfileMenuItem(Icons.lock_outline, 'Change Password'),
+                    _buildProfileMenuItem(
+                      Icons.lock_outline,
+                      'Change Password',
+                    ),
                   _buildProfileMenuItem(
                     Icons.category_outlined,
                     'Categories',
@@ -372,19 +410,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     child: const Text('Edit display name'),
                                   ),
                                   content: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
                                     child: TextField(
                                       controller: _controller,
                                       autofocus: true,
                                       decoration: InputDecoration(
                                         hintText: 'Enter display name',
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8.0),
+                                          borderRadius: BorderRadius.circular(
+                                            8.0,
+                                          ),
                                         ),
-                                        contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 16.0,
-                                          vertical: 12.0,
-                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16.0,
+                                              vertical: 12.0,
+                                            ),
                                       ),
                                     ),
                                   ),
@@ -399,11 +442,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       onPressed: isSaving
                                           ? null
                                           : () async {
-                                              final newName = _controller.text.trim();
+                                              final newName = _controller.text
+                                                  .trim();
                                               if (newName.isEmpty) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
                                                   const SnackBar(
-                                                    content: Text('Display name cannot be empty'),
+                                                    content: Text(
+                                                      'Display name cannot be empty',
+                                                    ),
                                                     backgroundColor: Colors.red,
                                                   ),
                                                 );
@@ -413,41 +461,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 isSaving = true;
                                               });
                                               try {
-                                                final user = FirebaseAuth.instance.currentUser;
+                                                final user = FirebaseAuth
+                                                    .instance
+                                                    .currentUser;
                                                 if (user != null) {
-                                                  await user.updateDisplayName(newName);
+                                                  await user.updateDisplayName(
+                                                    newName,
+                                                  );
                                                   await user.reload();
                                                   // Also update the user's Firestore profile document so the
                                                   // display name is persisted in Firestore and works with
                                                   // offline persistence.
                                                   try {
-                                                    await FirestoreService.instance.updateUserData(
-                                                      user.uid,
-                                                      {'displayName': newName},
-                                                    );
+                                                    await FirestoreService
+                                                        .instance
+                                                        .updateUserData(
+                                                          user.uid,
+                                                          {
+                                                            'displayName':
+                                                                newName,
+                                                          },
+                                                        );
                                                   } catch (e) {
                                                     // Non-fatal: log and continue; UI already updated from auth.
-                                                    print('Failed to update Firestore user document: $e');
+                                                    print(
+                                                      'Failed to update Firestore user document: $e',
+                                                    );
                                                   }
                                                 }
                                                 if (context.mounted) {
                                                   Navigator.of(context).pop();
                                                 }
-                                              } on FirebaseAuthException catch (e) {
+                                              } on FirebaseAuthException catch (
+                                                e
+                                              ) {
                                                 if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
                                                     SnackBar(
-                                                      content: Text(e.message ?? 'Failed to update display name.'),
-                                                      backgroundColor: Colors.red,
+                                                      content: Text(
+                                                        e.message ??
+                                                            'Failed to update display name.',
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.red,
                                                     ),
                                                   );
                                                 }
                                               } catch (e) {
                                                 if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
                                                     SnackBar(
-                                                      content: Text('Error: $e'),
-                                                      backgroundColor: Colors.red,
+                                                      content: Text(
+                                                        'Error: $e',
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.red,
                                                     ),
                                                   );
                                                 }
@@ -463,7 +535,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           ? const SizedBox(
                                               width: 20,
                                               height: 20,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
                                             )
                                           : const Text('Save'),
                                     ),
@@ -484,11 +558,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(
-                      Icons.edit,
-                      size: 18,
-                      color: Colors.black54,
-                    ),
+                    const Icon(Icons.edit, size: 18, color: Colors.black54),
                   ],
                 );
               },
@@ -525,12 +595,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onChanged: (value) async {
                         if (value) {
                           // Trigger the check and dialog flow from the provider.
-                          await Provider.of<VacationProvider>(context, listen: false)
-                              .checkAndShowVacationDialog(context);
+                          await Provider.of<VacationProvider>(
+                            context,
+                            listen: false,
+                          ).checkAndShowVacationDialog(context);
                         } else {
                           // Deactivate vacation mode immediately.
-                          await Provider.of<VacationProvider>(context, listen: false)
-                              .setVacationMode(false);
+                          await Provider.of<VacationProvider>(
+                            context,
+                            listen: false,
+                          ).setVacationMode(false);
                         }
                       },
                       activeColor: AppColors.gradientEnd,
@@ -591,132 +665,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Helper method to get the appropriate profile image
   ImageProvider _getProfileImage(UserProvider userProvider) {
     final user = userProvider.currentUser;
-    
+
     // Check if user is logged in via Google and has a photo URL
     if (user != null &&
         userProvider.hasGoogleProvider &&
         userProvider.photoURL != null) {
       return NetworkImage(userProvider.photoURL!);
     }
-    
+
     // Fall back to the default asset image
     return const AssetImage('images/backgrounds/onboarding1.png');
   }
 
-  // Show subscription details dialog
-  void _showSubscriptionDetails(BuildContext context) {
-    showDialog(
+
+
+  // (Removed legacy restore dialog in favor of bottom sheet actions)
+
+  // Bottom sheet with Manage / Restore / Refresh actions
+  void _showSubscriptionActionsSheet(BuildContext context) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.workspace_premium, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Premium Status'),
-            ],
+      builder: (ctx) {
+        return SafeArea(
+          child: Consumer<SubscriptionProvider>(
+            builder: (context, subscriptionProvider, child) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.manage_accounts),
+                    title: const Text('Manage subscription'),
+                    onTap: subscriptionProvider.isLoading
+                        ? null
+                        : () async {
+                            Navigator.of(ctx).pop();
+                            await subscriptionProvider.openManagementPage();
+                          },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.restore),
+                    title: const Text('Restore purchases'),
+                    onTap: subscriptionProvider.isLoading
+                        ? null
+                        : () async {
+                            final ok = await subscriptionProvider.restorePurchases();
+                            if (mounted) {
+                              Navigator.of(ctx).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    ok
+                                        ? 'Purchases restored successfully!'
+                                        : 'No active subscription found. You are now on the free plan.',
+                                  ),
+                                  backgroundColor: ok ? Colors.green : Colors.orange,
+                                ),
+                              );
+                            }
+                          },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.refresh),
+                    title: const Text('Refresh status'),
+                    onTap: subscriptionProvider.isLoading
+                        ? null
+                        : () async {
+                            Navigator.of(ctx).pop();
+                            await subscriptionProvider.refreshSubscriptionStatus();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Subscription status refreshed'),
+                                ),
+                              );
+                            }
+                          },
+                  ),
+                ],
+              );
+            },
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Your premium subscription is active!',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              const Text('Premium features you have access to:'),
-              const SizedBox(height: 8),
-              _buildFeatureItem('✓', 'Unlimited vacation accounts'),
-              _buildFeatureItem('✓', 'Color picker for transactions and goals'),
-              _buildFeatureItem('✓', 'Recurring budgets'),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.green.shade600, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This is a development subscription. In production, this would be managed through your app store account.',
-                        style: TextStyle(
-                          color: Colors.green.shade700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-            Consumer<SubscriptionProvider>(
-              builder: (context, subscriptionProvider, child) {
-                return TextButton(
-                  onPressed: subscriptionProvider.isLoading
-                      ? null
-                      : () async {
-                          // For development: Allow unsubscribing
-                          await subscriptionProvider.unsubscribeUser();
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Subscription cancelled (development only)'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          }
-                        },
-                  child: subscriptionProvider.isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Cancel Subscription'),
-                );
-              },
-            ),
-          ],
         );
       },
-    );
-  }
-
-  Widget _buildFeatureItem(String icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Text(
-            icon,
-            style: const TextStyle(
-              color: Colors.green,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

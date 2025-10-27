@@ -813,6 +813,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5+1"
+  purchases_flutter:
+    dependency: "direct main"
+    description:
+      name: purchases_flutter
+      sha256: "6d3058a30887aa879b276120f9b1390212aadd39561b0c14c7448650aba50d96"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.9.0"
   rxdart:
     dependency: "direct main"
     description:
