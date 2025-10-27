@@ -813,7 +813,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             ],
                           ),
                         ),
-                        if (widget.transactionType == TransactionType.income)
                         StreamBuilder<List<FirestoreGoal>>(
                           stream: Provider.of<GoalsProvider>(
                             context,
@@ -1693,9 +1692,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final updatedAccount = selectedAccount.copyWith(balance: newBalance);
       await _firestoreService.updateAccount(updatedAccount.id, updatedAccount);
 
-      // If income linked to a goal, notify that goal data needs refresh
-      if (widget.transactionType == TransactionType.income &&
-          selectedGoalId != null) {
+      // If transaction linked to a goal, notify that goal data needs refresh
+      if (selectedGoalId != null) {
         print('Transaction added to goal: $selectedGoalId, amount: $amount');
         // Notify GoalsProvider to refresh the goals screen
         Provider.of<GoalsProvider>(context, listen: false).notifyGoalTransactionAdded();

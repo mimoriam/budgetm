@@ -50,19 +50,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBlGSqir63H1SKXczV7TdXnlKB36p_EKtM',
-    appId: '1:715255991379:android:fbb555677a78bbf8658aa6',
-    messagingSenderId: '715255991379',
-    projectId: 'budgetm-27e53',
-    storageBucket: 'budgetm-27e53.firebasestorage.app',
+    apiKey: 'AIzaSyCHU9m3Ua0rIt-zQp2DoWrLgKczAGSb8Gg',
+    appId: '1:303407537831:android:31e490e9397b44da9c0582',
+    messagingSenderId: '303407537831',
+    projectId: 'cashora-be2be',
+    storageBucket: 'cashora-be2be.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB82jj2Z_Rns50Ujlodjv0pFPP3YXclTQU',
-    appId: '1:715255991379:ios:5584729c595872cd658aa6',
-    messagingSenderId: '715255991379',
-    projectId: 'budgetm-27e53',
-    storageBucket: 'budgetm-27e53.firebasestorage.app',
-    iosBundleId: 'com.example.budgetm.budgetm',
+    apiKey: 'AIzaSyDzY4okIqT7pl1vKGqNm7GvIFZ32qVRWuY',
+    appId: '1:303407537831:ios:9a0f306f41050eac9c0582',
+    messagingSenderId: '303407537831',
+    projectId: 'cashora-be2be',
+    storageBucket: 'cashora-be2be.firebasestorage.app',
+    iosClientId: '303407537831-kan2o60ub4rc45lar8bki293ls5igvbt.apps.googleusercontent.com',
+    iosBundleId: 'xtra.budget.manager',
   );
+
 }

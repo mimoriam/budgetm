@@ -73,9 +73,13 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder<User?>(
       stream: _authService.userChanges(),
       builder: (context, authSnapshot) {
-        // Update UserProvider with current user
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        userProvider.setUser(authSnapshot.data);
+        // Update UserProvider with current user after the frame is built
+        if (authSnapshot.hasData || authSnapshot.data == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final userProvider = Provider.of<UserProvider>(context, listen: false);
+            userProvider.setUser(authSnapshot.data);
+          });
+        }
         
         // Show loading indicator only during initial connection
         if (authSnapshot.connectionState == ConnectionState.waiting && authSnapshot.data == null) {

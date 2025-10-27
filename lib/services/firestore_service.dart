@@ -1216,9 +1216,11 @@ class FirestoreService {
 
       for (final doc in querySnapshot.docs) {
         final transaction = doc.data();
-        // Only count income transactions for goal progress
+        // Count both income and expense transactions for goal progress
         if (transaction.type == 'income') {
           totalAmount += transaction.amount;
+        } else if (transaction.type == 'expense') {
+          totalAmount += transaction.amount; // Add absolute value
         }
       }
     } catch (e) {
