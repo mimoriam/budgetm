@@ -5,6 +5,7 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/currency/currency_rates.dart';
 import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -41,7 +42,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const PaywallScreen(),
+                        withNavBar: false,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       shape: RoundedRectangleBorder(

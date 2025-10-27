@@ -655,26 +655,10 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                 ),
               ),
               if (widget.itemType.toLowerCase() == 'subscription')
-                GestureDetector(
-                  onTap: () => _showDeleteConfirmation(context),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [AppColors.gradientStart, AppColors.gradientEnd],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedDelete01,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                  ),
-                )
+              IconButton(
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete04, color: Colors.red),
+                    onPressed: () => _showDeleteConfirmation(context),
+                  )
               else
                 const SizedBox(width: 36),
             ],
