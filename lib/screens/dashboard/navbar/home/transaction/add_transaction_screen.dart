@@ -20,9 +20,11 @@ import 'package:budgetm/utils/account_icon_utils.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:intl/intl.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:currency_picker/currency_picker.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType transactionType;
@@ -196,6 +198,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   void _showColorPicker() {
+    // Check subscription status before showing color picker
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+    
+    if (!subscriptionProvider.canUseColorPicker()) {
+      // Show paywall if user is not subscribed
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const PaywallScreen(),
+        ),
+      );
+      return;
+    }
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {

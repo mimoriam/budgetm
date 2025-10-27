@@ -1,4 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 
 enum Plan { monthly, yearly }
@@ -186,9 +188,34 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                onPressed: () {
-                  // TODO: Implement subscription logic
-                  print('Selected Plan: $_selectedPlan');
+                onPressed: () async {
+                  // For development: Set subscription flag to true
+                  final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                  final success = await subscriptionProvider.subscribeUser();
+                  
+                  if (success) {
+                    // Show success message
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Subscription activated! You now have access to premium features.'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      // Navigate back
+                      Navigator.of(context).pop();
+                    }
+                  } else {
+                    // Show error message
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to activate subscription: ${subscriptionProvider.error}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: Text(
                   'Subscribe Your Plan',

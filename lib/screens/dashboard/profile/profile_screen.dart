@@ -9,6 +9,8 @@ import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:budgetm/viewmodels/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -41,55 +43,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const PaywallScreen(),
-                        withNavBar: false,
-                        pageTransitionAnimation:
-                            PageTransitionAnimation.cupertino,
+                  // Premium Status Card
+                  Consumer<SubscriptionProvider>(
+                    builder: (context, subscriptionProvider, child) {
+                      final isSubscribed = subscriptionProvider.isSubscribed;
+                      final isLoading = subscriptionProvider.isLoading;
+                      
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: isSubscribed
+                              ? const LinearGradient(
+                                  colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : const LinearGradient(
+                                  colors: [Color(0xFFFF9800), Color(0xFFE65100)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                          borderRadius: BorderRadius.circular(16.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isSubscribed ? Colors.green : Colors.orange).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isSubscribed ? Icons.workspace_premium : Icons.lock_outline,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isSubscribed ? 'Premium Active' : 'Get Premium',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isSubscribed 
+                                        ? 'You have access to all premium features'
+                                        : 'Unlock unlimited vacation accounts, color picker, and recurring budgets',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isLoading)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            else
+                              GestureDetector(
+                                onTap: () {
+                                  if (isSubscribed) {
+                                    // Show subscription management or details
+                                    _showSubscriptionDetails(context);
+                                  } else {
+                                    // Navigate to paywall
+                                    PersistentNavBarNavigator.pushNewScreen(
+                                      context,
+                                      screen: const PaywallScreen(),
+                                      withNavBar: false,
+                                      pageTransitionAnimation:
+                                          PageTransitionAnimation.cupertino,
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isSubscribed ? Icons.settings : Icons.arrow_forward_ios,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.0),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 20,
-                        horizontal: 20,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Icon(
-                          Icons.workspace_premium,
-                          color: Colors.white,
-                        ),
-                        const Text(
-                          'Get Premium',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                   const SizedBox(height: 20),
                   _buildSectionHeader('ACCOUNT'),
@@ -273,22 +338,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            CircleAvatar(
-              radius: 40,
-              backgroundImage: _getProfileImage(),
+            Consumer<UserProvider>(
+              builder: (context, userProvider, child) {
+                return CircleAvatar(
+                  radius: 40,
+                  backgroundImage: _getProfileImage(userProvider),
+                );
+              },
             ),
             const SizedBox(height: 12),
-            StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.userChanges(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                }
-                if (!snapshot.hasData) {
+            Consumer<UserProvider>(
+              builder: (context, userProvider, child) {
+                if (userProvider.currentUser == null) {
                   return const Text('User not found');
                 }
-                final user = snapshot.data!;
-                final displayName = user.displayName ?? user.email ?? 'User Name';
+                final displayName = userProvider.displayName;
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -430,18 +494,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
             const SizedBox(height: 4),
-            StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.userChanges(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            Consumer<UserProvider>(
+              builder: (context, userProvider, child) {
+                if (userProvider.currentUser == null) {
                   return const SizedBox.shrink();
                 }
-                if (!snapshot.hasData) {
-                  return const SizedBox.shrink();
-                }
-                final user = snapshot.data!;
                 return Text(
-                  user.email ?? 'No email available',
+                  userProvider.email,
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
                 );
               },
@@ -530,17 +589,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // Helper method to get the appropriate profile image
-  ImageProvider _getProfileImage() {
-    final user = FirebaseAuth.instance.currentUser;
+  ImageProvider _getProfileImage(UserProvider userProvider) {
+    final user = userProvider.currentUser;
     
     // Check if user is logged in via Google and has a photo URL
     if (user != null &&
-        user.providerData.any((p) => p.providerId == 'google.com') &&
-        user.photoURL != null) {
-      return NetworkImage(user.photoURL!);
+        userProvider.hasGoogleProvider &&
+        userProvider.photoURL != null) {
+      return NetworkImage(userProvider.photoURL!);
     }
     
     // Fall back to the default asset image
     return const AssetImage('images/backgrounds/onboarding1.png');
+  }
+
+  // Show subscription details dialog
+  void _showSubscriptionDetails(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Premium Status'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your premium subscription is active!',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text('Premium features you have access to:'),
+              const SizedBox(height: 8),
+              _buildFeatureItem('✓', 'Unlimited vacation accounts'),
+              _buildFeatureItem('✓', 'Color picker for transactions and goals'),
+              _buildFeatureItem('✓', 'Recurring budgets'),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.green.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This is a development subscription. In production, this would be managed through your app store account.',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+            Consumer<SubscriptionProvider>(
+              builder: (context, subscriptionProvider, child) {
+                return TextButton(
+                  onPressed: subscriptionProvider.isLoading
+                      ? null
+                      : () async {
+                          // For development: Allow unsubscribing
+                          await subscriptionProvider.unsubscribeUser();
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Subscription cancelled (development only)'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
+                        },
+                  child: subscriptionProvider.isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Cancel Subscription'),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureItem(String icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(
+            icon,
+            style: const TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

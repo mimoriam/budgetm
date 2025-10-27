@@ -8,13 +8,14 @@ import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:budgetm/viewmodels/user_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/firebase_options.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,10 +34,12 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => VacationProvider()),
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
         ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         ChangeNotifierProxyProvider3<
           CurrencyProvider,
           VacationProvider,

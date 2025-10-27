@@ -9,9 +9,11 @@ import 'package:intl/intl.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:currency_picker/currency_picker.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 
 class CreateGoalScreen extends StatefulWidget {
   final GoalType goalType;
@@ -29,6 +31,19 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   bool _isLoading = false;
 
   void _showColorPicker() {
+    // Check subscription status before showing color picker
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+    
+    if (!subscriptionProvider.canUseColorPicker()) {
+      // Show paywall if user is not subscribed
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const PaywallScreen(),
+        ),
+      );
+      return;
+    }
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {

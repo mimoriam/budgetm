@@ -6,7 +6,9 @@ import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_detail_screen.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -511,6 +513,25 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           _buildSectionHeaderWithButton(
                             'VACATION',
                             () async {
+                              // Check subscription status before allowing vacation account creation
+                              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                              final firestoreService = FirestoreService.instance;
+                              
+                              // Load existing vacation accounts to check limit
+                              final allAccounts = await firestoreService.getAllAccounts();
+                              final existingVacationAccounts = allAccounts.where((a) => a.isVacationAccount == true).toList();
+                              
+                              // Only check subscription if user already has vacation accounts
+                              if (!subscriptionProvider.canCreateMultipleVacationAccounts() && existingVacationAccounts.isNotEmpty) {
+                                // Show paywall if user is not subscribed and already has a vacation account
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const PaywallScreen(),
+                                  ),
+                                );
+                                return;
+                              }
+                              
                               final result =
                                   await PersistentNavBarNavigator.pushNewScreen(
                                 context,
@@ -1109,6 +1130,25 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           _buildSectionHeaderWithButton(
             'VACATION',
             () async {
+              // Check subscription status before allowing vacation account creation
+              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+              final firestoreService = FirestoreService.instance;
+              
+              // Load existing vacation accounts to check limit
+              final allAccounts = await firestoreService.getAllAccounts();
+              final existingVacationAccounts = allAccounts.where((a) => a.isVacationAccount == true).toList();
+              
+              // Only check subscription if user already has vacation accounts
+              if (!subscriptionProvider.canCreateMultipleVacationAccounts() && existingVacationAccounts.isNotEmpty) {
+                // Show paywall if user is not subscribed and already has a vacation account
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PaywallScreen(),
+                  ),
+                );
+                return;
+              }
+              
               final result =
                   await PersistentNavBarNavigator.pushNewScreen(
                 context,

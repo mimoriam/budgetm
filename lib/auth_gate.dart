@@ -4,8 +4,10 @@ import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/viewmodels/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthGate extends StatefulWidget {
@@ -71,6 +73,10 @@ class _AuthGateState extends State<AuthGate> {
     return StreamBuilder<User?>(
       stream: _authService.userChanges(),
       builder: (context, authSnapshot) {
+        // Update UserProvider with current user
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        userProvider.setUser(authSnapshot.data);
+        
         // Show loading indicator only during initial connection
         if (authSnapshot.connectionState == ConnectionState.waiting && authSnapshot.data == null) {
           return const Scaffold(

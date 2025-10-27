@@ -3,7 +3,9 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -95,6 +97,21 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                                 IconButton(
                                   icon: const Icon(Icons.add_circle, size: 30),
                                   onPressed: () async {
+                                    // Check subscription status before allowing vacation account creation
+                                    final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                                    
+                                    // Only check subscription if user already has vacation accounts
+                                    if (!subscriptionProvider.canCreateMultipleVacationAccounts() && vacationAccounts.isNotEmpty) {
+                                      // Show paywall if user is not subscribed and already has a vacation account
+                                      Navigator.of(context).pop(); // Close the current dialog
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const PaywallScreen(),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    
                                     Navigator.of(context).pop(); // Close the current dialog
                                     await PersistentNavBarNavigator.pushNewScreen(
                                       context,

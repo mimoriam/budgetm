@@ -2,6 +2,8 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -456,32 +458,51 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                           borderRadius: BorderRadius.circular(12.0),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
-                        child: CheckboxListTile(
-                          title: Text(
-                            'Recurring Budget',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.primaryTextColorLight,
-                            ),
-                          ),
-                          subtitle: Text(
-                            _selectedType == BudgetType.daily
-                                ? 'Applies to every day'
-                                : 'Automatically renew this budget for each period',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.secondaryTextColorLight,
-                            ),
-                          ),
-                          value: _isRecurring,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _isRecurring = value ?? false;
-                            });
+                        child: Consumer<SubscriptionProvider>(
+                          builder: (context, subscriptionProvider, child) {
+                            final canCreateRecurring = subscriptionProvider.canCreateRecurringBudgets();
+                            
+                            return CheckboxListTile(
+                              title: Text(
+                                'Recurring Budget',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: canCreateRecurring 
+                                      ? AppColors.primaryTextColorLight 
+                                      : AppColors.secondaryTextColorLight,
+                                ),
+                              ),
+                              subtitle: Text(
+                                canCreateRecurring
+                                    ? (_selectedType == BudgetType.daily
+                                        ? 'Applies to every day'
+                                        : 'Automatically renew this budget for each period')
+                                    : 'Premium feature - Subscribe to enable',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: canCreateRecurring 
+                                      ? AppColors.secondaryTextColorLight 
+                                      : Colors.orange.shade600,
+                                ),
+                              ),
+                              value: _isRecurring,
+                              onChanged: canCreateRecurring ? (bool? value) {
+                                setState(() {
+                                  _isRecurring = value ?? false;
+                                });
+                              } : (bool? value) {
+                                // Show paywall if user tries to enable recurring budget without subscription
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const PaywallScreen(),
+                                  ),
+                                );
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              activeColor: AppColors.gradientEnd,
+                            );
                           },
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          activeColor: AppColors.gradientEnd,
                         ),
                       ),
                     ],
