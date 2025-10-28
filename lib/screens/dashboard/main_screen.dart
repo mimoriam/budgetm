@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
@@ -60,7 +61,7 @@ class _MainScreenState extends State<MainScreen> {
       PersistentBottomNavBarItem(
         icon: const Icon(IconlyBold.home),
         inactiveIcon: const Icon(IconlyLight.home),
-        title: ("Home"),
+        title: AppLocalizations.of(context)!.mainScreenHome,
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -75,7 +76,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedDollar02,
           color: Colors.black,
         ),
-        title: ("Budget"),
+        title: AppLocalizations.of(context)!.mainScreenBudget,
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -90,7 +91,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedChartUp,
           color: Colors.black54,
         ),
-        title: ("Balance"),
+        title: AppLocalizations.of(context)!.mainScreenBalance,
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -105,7 +106,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedWallet02,
           color: Colors.black,
         ),
-        title: ("Goals"),
+        title: AppLocalizations.of(context)!.mainScreenGoals,
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -120,7 +121,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: HugeIcons.strokeRoundedShoppingBag01,
           color: Colors.black,
         ),
-        title: ("Personal"),
+        title: AppLocalizations.of(context)!.mainScreenPersonal,
         activeColorPrimary: Colors.white,
         activeColorSecondary: Colors.black,
         inactiveColorPrimary: Colors.black,
@@ -259,7 +260,7 @@ navbarVisibility.setNavBarVisibility(true);
         if (vacationProvider.isAiMode) {
           return [
             _buildFabMenuItem(
-              label: "Budget",
+              label: AppLocalizations.of(context)!.mainScreenBudget,
               icon: HugeIcons.strokeRoundedDollar02,
               color: Colors.blue,
               onPressed: () {
@@ -269,7 +270,7 @@ navbarVisibility.setNavBarVisibility(true);
             ),
             const SizedBox(height: 16),
             _buildFabMenuItem(
-              label: "Expense",
+              label: AppLocalizations.of(context)!.mainScreenExpense,
               icon: HugeIcons.strokeRoundedChartDown,
               color: Colors.red,
               onPressed: () async {
@@ -302,7 +303,7 @@ navbarVisibility.setNavBarVisibility(true);
         }
         return [
           _buildFabMenuItem(
-            label: "Income",
+            label: AppLocalizations.of(context)!.mainScreenIncome,
             icon: HugeIcons.strokeRoundedChartUp,
             color: Colors.green,
             onPressed: () async {
@@ -333,7 +334,7 @@ navbarVisibility.setNavBarVisibility(true);
           ),
           const SizedBox(height: 16),
           _buildFabMenuItem(
-            label: "Expense",
+            label: AppLocalizations.of(context)!.mainScreenExpense,
             icon: HugeIcons.strokeRoundedChartDown,
             color: Colors.red,
             onPressed: () async {

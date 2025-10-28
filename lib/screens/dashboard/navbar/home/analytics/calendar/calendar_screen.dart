@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:scrollable_clean_calendar/controllers/clean_calendar_controller.dart';
 import 'package:scrollable_clean_calendar/scrollable_clean_calendar.dart';
 import 'package:scrollable_clean_calendar/utils/enums.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -57,7 +58,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    String rangeText = 'Select Date';
+    String rangeText = AppLocalizations.of(context)!.calendarSelectDate;
     if (_rangeStart != null) {
       rangeText = _formatDateRange(_rangeStart!, _rangeEnd);
     }
@@ -83,9 +84,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Select Date',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.calendarSelectDate,
+                          style: const TextStyle(
                             color: AppColors.secondaryTextColorLight,
                             fontSize: 14,
                           ),
@@ -136,9 +137,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.buttonCancel,
+                        style: const TextStyle(
                           fontSize: 16,
                           color: AppColors.gradientEnd,
                           fontWeight: FontWeight.bold,
@@ -150,9 +151,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       onPressed: () {
                         Navigator.of(context).pop();
                       },
-                      child: const Text(
-                        'OK',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.buttonOk,
+                        style: const TextStyle(
                           fontSize: 16,
                           color: AppColors.gradientEnd,
                           fontWeight: FontWeight.bold,
@@ -218,7 +219,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Analytics',
+                  AppLocalizations.of(context)!.analyticsTitle,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,

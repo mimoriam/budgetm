@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
@@ -105,7 +106,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     final selected = _selectedAccountType ?? types.first;
 
     final result = await _showPrettySelectionBottomSheet(
-      title: 'Select Account Type',
+      title: AppLocalizations.of(context)!.titleSelectAccountType,
       items: types,
       selectedItem: selected,
       getDisplayName: (t) => t.toString(),
@@ -172,11 +173,11 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       const SizedBox(height: 16),
                       _buildFormSection(
                         context,
-                        'Name',
+                        AppLocalizations.of(context)!.name,
                         FormBuilderTextField(
                           name: 'name',
                           style: const TextStyle(fontSize: 13),
-                          decoration: _inputDecoration(hintText: 'Enter Name'),
+                          decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintEnterName),
                           validator: FormBuilderValidators.required(
                             errorText: 'Name is required',
                           ),
@@ -187,7 +188,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       if (widget.isCreatingVacationAccount)
                         _buildFormSection(
                           context,
-                          'Currency',
+                          AppLocalizations.of(context)!.addAccountCurrency,
                           GestureDetector(
                             onTap: () {
                               showCurrencyPicker(
@@ -231,7 +232,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       if (!widget.isCreatingVacationAccount)
                         _buildFormSection(
                           context,
-                          'Currency',
+                          AppLocalizations.of(context)!.addAccountCurrency,
                           GestureDetector(
                             onTap: () {
                               showCurrencyPicker(
@@ -274,7 +275,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       if (!widget.isCreatingVacationAccount)
                         _buildFormSection(
                           context,
-                          'Account Type',
+                          AppLocalizations.of(context)!.addAccountAccountType,
                           Column(
                             children: [
                               GestureDetector(
@@ -528,14 +529,14 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   children: [
                     Expanded(
                       child: _buildChip(
-                        'Balance',
+                        AppLocalizations.of(context)!.addAccountBalance,
                         !_isCreditSelected,
                         () => setState(() => _isCreditSelected = false),
                       ),
                     ),
                     Expanded(
                       child: _buildChip(
-                        'Credit',
+                        AppLocalizations.of(context)!.addAccountCredit,
                         _isCreditSelected,
                         () => setState(() => _isCreditSelected = true),
                       ),
@@ -575,7 +576,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           child: Text(
             widget.isCreatingVacationAccount
                 ? 'Total Budget'
-                : 'Initial Balance',
+                : AppLocalizations.of(context)!.addAccountInitialBalance,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.secondaryTextColorLight,
               fontSize: 16,
@@ -628,7 +629,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
     return _buildFormSection(
       context,
-      _isCreditSelected ? 'Credit Limit' : 'Transaction Limit',
+      _isCreditSelected ? 'Credit Limit' : AppLocalizations.of(context)!.addAccountTransactionLimit,
       FormBuilderTextField(
         name: _isCreditSelected ? 'credit_limit' : 'transaction_limit',
         style: const TextStyle(fontSize: 13),
@@ -714,7 +715,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 side: const BorderSide(color: Colors.black, width: 1.5),
               ),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context)!.cancel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.black,
                   fontSize: 14,
@@ -898,7 +899,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       ),
                     )
                   : Text(
-                      'Add',
+                      AppLocalizations.of(context)!.add,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,

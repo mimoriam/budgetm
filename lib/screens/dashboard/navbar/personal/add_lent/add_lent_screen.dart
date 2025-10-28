@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 
 class AddLentScreen extends StatefulWidget {
   const AddLentScreen({super.key});
@@ -75,12 +76,12 @@ class _AddLentScreenState extends State<AddLentScreen> {
                             Expanded(
                               child: _buildFormSection(
                                 context,
-                                'Name',
+                                AppLocalizations.of(context)!.addLentName,
                                 TextFormField(
                                   controller: _nameController,
                                   style: const TextStyle(fontSize: 13),
                                   decoration: _inputDecoration(
-                                    hintText: 'Name',
+                                    hintText: AppLocalizations.of(context)!.hintName,
                                   ),
                                   textInputAction: TextInputAction.next,
                                   validator: (value) {
@@ -124,7 +125,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
       children: [
         Center(
           child: Text(
-            'Amount',
+            AppLocalizations.of(context)!.addLentAmount,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.secondaryTextColorLight,
                   fontSize: 12,
@@ -173,18 +174,18 @@ class _AddLentScreenState extends State<AddLentScreen> {
       children: [
         _buildFormSection(
           context,
-          'Notes',
+          AppLocalizations.of(context)!.addLentNotes,
           TextFormField(
             controller: _descriptionController,
             style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(hintText: 'Description'),
+            decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintDescription),
             maxLines: 2,
           ),
         ),
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Date',
+          AppLocalizations.of(context)!.addLentDate,
           GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
@@ -204,7 +205,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
             },
             child: InputDecorator(
               decoration: _inputDecoration(
-                hintText: 'Select Date',
+                hintText: AppLocalizations.of(context)!.hintSelectDate,
                 suffixIcon: HugeIcons.strokeRoundedCalendar01,
               ),
               child: SizedBox(
@@ -230,7 +231,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Due Date',
+          AppLocalizations.of(context)!.addLentDueDate,
           GestureDetector(
             onTap: () async {
               final initial = _dueDate ?? _date ?? DateTime.now();
@@ -249,7 +250,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
             },
             child: InputDecorator(
               decoration: _inputDecoration(
-                hintText: 'Select Due Date',
+                hintText: AppLocalizations.of(context)!.hintSelectDueDate,
                 suffixIcon: HugeIcons.strokeRoundedCalendar01,
               ),
               child: SizedBox(
@@ -275,7 +276,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Returned',
+          AppLocalizations.of(context)!.addLentReturned,
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -285,8 +286,8 @@ class _AddLentScreenState extends State<AddLentScreen> {
             padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
             child: Row(
               children: [
-                const Text(
-              'Mark as returned',
+                Text(
+                AppLocalizations.of(context)!.addLentMarkReturned,
                   style: TextStyle(fontSize: 13),
                 ),
                 const Spacer(),
@@ -325,7 +326,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'More',
+                AppLocalizations.of(context)!.addLentMore,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.bold,
@@ -349,7 +350,7 @@ class _AddLentScreenState extends State<AddLentScreen> {
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
-    const String title = 'Add Lent Item';
+    final String title = AppLocalizations.of(context)!.addLentTitle;
 
     return Container(
       padding: const EdgeInsets.only(bottom: 14),
@@ -541,13 +542,13 @@ class _AddLentScreenState extends State<AddLentScreen> {
     }
     if (_date == null || _dueDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select both date and due date')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.lentSelectBothDates)),
       );
       return;
     }
     if (_dueDate!.isBefore(_date!)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Due date cannot be before the lent date')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.lentDueDateBeforeLentDate)),
       );
       return;
     }
@@ -575,14 +576,14 @@ class _AddLentScreenState extends State<AddLentScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lent item added successfully')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.lentItemAddedSuccessfully)),
         );
         Navigator.of(context).pop(lent);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.lentItemError(e.toString()))),
         );
       }
     } finally {

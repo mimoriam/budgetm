@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:flutter/services.dart'; // Import for PlatformException
 import 'package:provider/provider.dart';
@@ -59,7 +60,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ? Center(
                           heightFactor: 15,
                           child: Text(
-                            'Could not load plans.\nPlease try again later.',
+                            AppLocalizations.of(context)!.paywallCouldNotLoadPlans,
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme
@@ -92,7 +93,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             const SizedBox(height: 12),
                             // Title
                             Text(
-                              'Choose Your Plan',
+                              AppLocalizations.of(context)!.paywallChooseYourPlan,
                               style: Theme.of(context)
                                   .textTheme
                                   .displayLarge
@@ -106,7 +107,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             const SizedBox(height: 6),
                             // Subtitle
                             Text(
-                              'Invest in your financial freedom today',
+                              AppLocalizations.of(context)!.paywallInvestInFinancialFreedom,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -124,7 +125,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 context: context,
                                 package: monthlyPackage,
                                 // These are examples, you can calculate this
-                                pricePerDay: '\$0.43/day',
+                                pricePerDay: AppLocalizations.of(context)!.paywallPricePerDay('\$0.43'),
                                 isPopular: true,
                                 isSelected: _selectedPackage == monthlyPackage,
                                 onTap: () =>
@@ -138,8 +139,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 context: context,
                                 package: yearlyPackage,
                                 // These are examples, you can calculate this
-                                pricePerDay: '\$0.14/day',
-                                saveAmount: 'Save \$209', // Example
+                                pricePerDay: AppLocalizations.of(context)!.paywallPricePerDay('\$0.14'),
+                                saveAmount: AppLocalizations.of(context)!.paywallSaveAmount('\$209'), // Example
                                 isBestValue: true,
                                 isSelected: _selectedPackage == yearlyPackage,
                                 onTap: () =>
@@ -150,7 +151,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             const SizedBox(height: 24),
                             // Features Section
                             Text(
-                              'Everything included:',
+                              AppLocalizations.of(context)!.paywallEverythingIncluded,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -160,17 +161,17 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                   ),
                             ),
                             const SizedBox(height: 12),
-                            _buildFeatureItem(context, 'Personalized budget insights',
+                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallPersonalizedBudgetInsights,
                                 Icons.insights),
-                            _buildFeatureItem(context, 'Daily progress tracking',
+                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallDailyProgressTracking,
                                 Icons.trending_up),
-                            _buildFeatureItem(context, 'Expense management tools',
+                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallExpenseManagementTools,
                                 Icons.account_balance_wallet),
-                            _buildFeatureItem(context, 'Financial health timeline',
+                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallFinancialHealthTimeline,
                                 Icons.timeline),
                             _buildFeatureItem(
-                                context, 'Expert guidance & tips', Icons.lightbulb),
-                            _buildFeatureItem(context, 'Community support access',
+                                context, AppLocalizations.of(context)!.paywallExpertGuidanceTips, Icons.lightbulb),
+                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallCommunitySupportAccess,
                                 Icons.people),
                             const SizedBox(height: 24),
                             // Savings Box
@@ -201,7 +202,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Save your finances and future',
+                                    AppLocalizations.of(context)!.paywallSaveYourFinances,
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium
@@ -213,7 +214,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Average user saves ~\u00A32,500 per year by budgeting effectively',
+                                    AppLocalizations.of(context)!.paywallAverageUserSaves,
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
@@ -258,8 +259,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     : () async {
                         if (_selectedPackage == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please select a plan.'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context)!.paywallPleaseSelectPlan),
                               backgroundColor: Colors.orange,
                             ),
                           );
@@ -281,9 +282,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           if (purchaseResult.customerInfo.entitlements.active['pro'] != null) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text(
-                                      'Subscription activated! You now have access to premium features.'),
+                                      AppLocalizations.of(context)!.paywallSubscriptionActivated),
                                   backgroundColor: Colors.green,
                                 ),
                               );
@@ -299,7 +300,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Failed to purchase: ${e.message}'),
+                                  content: Text(AppLocalizations.of(context)!.paywallFailedToPurchase(e.message ?? 'Unknown error')),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -310,7 +311,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('An unexpected error occurred: $e'),
+                                content: Text(AppLocalizations.of(context)!.paywallUnexpectedError(e.toString())),
                                 backgroundColor: Colors.red,
                               ),
                             );
@@ -334,7 +335,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         ),
                       )
                     : Text(
-                        'Subscribe Your Plan',
+                        AppLocalizations.of(context)!.paywallSubscribeYourPlan,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               color: Colors.white, // Ensure text is visible
                               fontSize: 16,
@@ -344,46 +345,46 @@ class _PaywallScreenState extends State<PaywallScreen> {
             ),
           ),
           // Restore/Manage links section above the sticky button
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 90,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () async {
-                      final provider = context.read<SubscriptionProvider>();
-                      final ok = await provider.restorePurchases();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              ok
-                                  ? 'Purchases restored successfully!'
-                                  : 'No active subscription found. You are now on the free plan.',
-                            ),
-                            backgroundColor: ok ? Colors.green : Colors.orange,
-                          ),
-                        );
-                        if (ok) Navigator.of(context).pop();
-                      }
-                    },
-                    child: const Text('Restore purchases'),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final provider = context.read<SubscriptionProvider>();
-                      await provider.openManagementPage();
-                    },
-                    child: const Text('Manage subscription'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Positioned(
+          //   left: 0,
+          //   right: 0,
+          //   bottom: 90,
+          //   child: Padding(
+          //     padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          //     child: Row(
+          //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //       children: [
+          //         TextButton(
+          //           onPressed: () async {
+          //             final provider = context.read<SubscriptionProvider>();
+          //             final ok = await provider.restorePurchases();
+          //             if (context.mounted) {
+          //               ScaffoldMessenger.of(context).showSnackBar(
+          //                 SnackBar(
+          //                   content: Text(
+          //                     ok
+          //                         ? AppLocalizations.of(context)!.paywallPurchasesRestoredSuccessfully
+          //                         : AppLocalizations.of(context)!.paywallNoActiveSubscriptionFound,
+          //                   ),
+          //                   backgroundColor: ok ? Colors.green : Colors.orange,
+          //                 ),
+          //               );
+          //               if (ok) Navigator.of(context).pop();
+          //             }
+          //           },
+          //           child: Text(AppLocalizations.of(context)!.paywallRestorePurchases),
+          //         ),
+          //         TextButton(
+          //           onPressed: () async {
+          //             final provider = context.read<SubscriptionProvider>();
+          //             await provider.openManagementPage();
+          //           },
+          //           child: Text(AppLocalizations.of(context)!.paywallManageSubscription),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -466,9 +467,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           Text(
                             // Dynamic period
                             package.packageType == PackageType.monthly
-                                ? 'per month'
+                                ? AppLocalizations.of(context)!.paywallPerMonth
                                 : package.packageType == PackageType.annual
-                                    ? 'per year'
+                                    ? AppLocalizations.of(context)!.paywallPerYear
                                     : '', // Handle other cases if needed
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
@@ -566,7 +567,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ],
                 ),
                 child: Text(
-                  isBestValue ? 'Best Value' : 'Most Popular',
+                  isBestValue ? AppLocalizations.of(context)!.paywallBestValue : AppLocalizations.of(context)!.paywallMostPopular,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,

@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
@@ -157,7 +158,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Budget',
+                    AppLocalizations.of(context)!.budgetTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
@@ -201,9 +202,9 @@ class _BudgetScreenState extends State<BudgetScreen>
                               color: Colors.black,
                             ),
                             const SizedBox(width: 6),
-                            const Text(
-                              "Add Budget",
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.budgetAddBudget,
+                              style: const TextStyle(
                                 color: Colors.black,
                                 fontWeight: FontWeight.w500,
                                 fontSize: 12,
@@ -318,7 +319,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                         children: [
                           _buildTypeChip(
                             context,
-                            'Daily',
+                            AppLocalizations.of(context)!.budgetDaily,
                             BudgetType.daily,
                             provider.selectedBudgetType == BudgetType.daily,
                             () => provider.changeBudgetType(BudgetType.daily),
@@ -326,7 +327,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                           const SizedBox(width: 12),
                           _buildTypeChip(
                             context,
-                            'Weekly',
+                            AppLocalizations.of(context)!.budgetWeekly,
                             BudgetType.weekly,
                             provider.selectedBudgetType == BudgetType.weekly,
                             () => provider.changeBudgetType(BudgetType.weekly),
@@ -334,7 +335,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                           const SizedBox(width: 12),
                           _buildTypeChip(
                             context,
-                            'Monthly',
+                            AppLocalizations.of(context)!.budgetMonthly,
                             BudgetType.monthly,
                             provider.selectedBudgetType == BudgetType.monthly,
                             () => provider.changeBudgetType(BudgetType.monthly),
@@ -544,10 +545,10 @@ class _BudgetScreenState extends State<BudgetScreen>
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
                         provider.selectedBudgetType == BudgetType.weekly
-                            ? 'Select Week'
+                            ? AppLocalizations.of(ctx)!.budgetSelectWeek
                             : provider.selectedBudgetType == BudgetType.monthly
-                            ? 'Select Date'
-                            : 'Select Day',
+                            ? AppLocalizations.of(ctx)!.budgetSelectDate
+                            : AppLocalizations.of(ctx)!.budgetSelectDay,
                         style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryTextColorLight,
@@ -561,7 +562,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('Cancel'),
+                          child: Text(AppLocalizations.of(ctx)!.budgetCancel),
                         ),
                         const Spacer(),
                         TextButton(
@@ -569,7 +570,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                             provider.setSelectedDate(tempSelected);
                             Navigator.of(ctx).pop();
                           },
-                          child: const Text('Apply'),
+                          child: Text(AppLocalizations.of(ctx)!.budgetApply),
                         ),
                       ],
                     ),
@@ -664,7 +665,7 @@ class _BudgetScreenState extends State<BudgetScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                showingAll ? 'Total Spending' : 'Category Breakdown',
+                showingAll ? AppLocalizations.of(context)!.budgetTotalSpending : AppLocalizations.of(context)!.budgetCategoryBreakdown,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -679,7 +680,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                     if (availableCurrencies.length > 1) const SizedBox(width: 8),
                     TextButton(
                       onPressed: provider.clearCategorySelection,
-                      child: const Text('View All'),
+                      child: Text(AppLocalizations.of(context)!.budgetViewAll),
                     ),
                   ],
                 ],
@@ -819,7 +820,7 @@ class _BudgetScreenState extends State<BudgetScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Budgets',
+              AppLocalizations.of(context)!.budgetBudgets,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -982,7 +983,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                             Row(
                               children: [
                                 Text(
-                                  '$transactionCount transactions',
+                                  '${AppLocalizations.of(context)!.budgetTransactions} $transactionCount',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade600,
@@ -1050,7 +1051,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                                 Row(
                                   children: [
                                     Text(
-                                      '$transactionCount transactions',
+                                      '${AppLocalizations.of(context)!.budgetTransactions} $transactionCount',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey.shade600,
@@ -1083,27 +1084,27 @@ class _BudgetScreenState extends State<BudgetScreen>
                                   context: context,
                                   builder: (ctx) {
                                     return AlertDialog(
-                                      title: const Text('Set spending limit'),
+                                      title: Text(AppLocalizations.of(context)!.budgetSetSpendingLimit),
                                       content: TextField(
                                         controller: controller,
                                         keyboardType:
                                             const TextInputType.numberWithOptions(
                                               decimal: true,
                                             ),
-                                        decoration: const InputDecoration(
-                                          hintText: 'Enter limit amount',
+                                        decoration: InputDecoration(
+                                          hintText: AppLocalizations.of(context)!.budgetEnterLimitAmount,
                                         ),
                                       ),
                                       actions: [
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.of(ctx).pop(false),
-                                          child: const Text('Cancel'),
+                                          child: Text(AppLocalizations.of(context)!.budgetCancel),
                                         ),
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.of(ctx).pop(true),
-                                          child: const Text('Save'),
+                                          child: Text(AppLocalizations.of(context)!.budgetSave),
                                         ),
                                       ],
                                     );
@@ -1114,8 +1115,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                                   final parsed = double.tryParse(text);
                                   if (parsed == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Enter a valid number'),
+                                      SnackBar(
+                                        content: Text(AppLocalizations.of(context)!.budgetEnterValidNumber),
                                       ),
                                     );
                                     return;
@@ -1132,8 +1133,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Budget limit saved'),
+                                          SnackBar(
+                                            content: Text(AppLocalizations.of(context)!.budgetLimitSaved),
                                           ),
                                         );
                                       }
@@ -1154,8 +1155,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Budget created'),
+                                          SnackBar(
+                                            content: Text(AppLocalizations.of(context)!.budgetCreated),
                                           ),
                                         );
                                       }
@@ -1243,8 +1244,8 @@ class _BudgetScreenState extends State<BudgetScreen>
                             const SizedBox(height: 4),
                             Text(
                               isOverBudget
-                                  ? '${_formatAmountForCard(spent - limit, currencyCode: data.budget.currency)} over budget'
-                                  : '${_formatAmountForCard(remaining, currencyCode: data.budget.currency)} remaining',
+                                  ? AppLocalizations.of(context)!.budgetOverBudget(_formatAmountForCard(spent - limit, currencyCode: data.budget.currency))
+                                  : AppLocalizations.of(context)!.budgetRemaining(_formatAmountForCard(remaining, currencyCode: data.budget.currency)),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
@@ -1286,14 +1287,14 @@ class _BudgetScreenState extends State<BudgetScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            'No budget created',
+            AppLocalizations.of(context)!.budgetNoBudgetCreated,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
-            'Start by creating a budget to see your spending breakdown here.',
+            AppLocalizations.of(context)!.budgetStartCreatingBudget,
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),

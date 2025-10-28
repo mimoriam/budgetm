@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -48,7 +49,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Pick a color'),
+          title: Text(AppLocalizations.of(context)!.pickColor),
           content: SingleChildScrollView(
             child: BlockPicker(
               pickerColor: _selectedColor,
@@ -96,12 +97,12 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                             Expanded(
                               child: _buildFormSection(
                                 context,
-                                'Name',
+                                AppLocalizations.of(context)!.createGoalName,
                                 FormBuilderTextField(
                                   name: 'name',
                                   style: const TextStyle(fontSize: 13),
                                   decoration: _inputDecoration(
-                                    hintText: 'Name',
+                                    hintText: AppLocalizations.of(context)!.hintName,
                                   ),
                                   validator: FormBuilderValidators.required(
                                     errorText: 'Name is required',
@@ -113,7 +114,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                             Expanded(
                               child: _buildFormSection(
                                 context,
-                                'Currency',
+                                AppLocalizations.of(context)!.createGoalCurrency,
                                 FormBuilderField<String>(
                                   name: 'currency',
                                   initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
@@ -204,7 +205,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       children: [
         Center(
           child: Text(
-            'Amount',
+            AppLocalizations.of(context)!.createGoalAmount,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.secondaryTextColorLight,
               fontSize: 12,
@@ -245,19 +246,19 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       children: [
         _buildFormSection(
           context,
-          'Notes',
+          AppLocalizations.of(context)!.createGoalNotes,
           FormBuilderTextField(
             name: 'description',
             style: const TextStyle(fontSize: 13),
             // initialValue: "Hi there, I'm designing this app.....",
-            decoration: _inputDecoration(hintText: 'Description'),
+            decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintDescription),
             maxLines: 2,
           ),
         ),
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Date',
+          AppLocalizations.of(context)!.createGoalDate,
           FormBuilderDateTimePicker(
             name: 'targetDate',
             initialValue: DateTime.now(),
@@ -272,14 +273,14 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Color',
+          AppLocalizations.of(context)!.createGoalColor,
           GestureDetector(
             onTap: _showColorPicker,
             child: FormBuilderField(
               name: 'color',
               builder: (FormFieldState<dynamic> field) {
                 return InputDecorator(
-                  decoration: _inputDecoration(hintText: 'Select Color'),
+                  decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintSelectColor),
                   child: SizedBox(
                     height: 20,
                     child: Row(
@@ -331,7 +332,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'More',
+                AppLocalizations.of(context)!.createGoalMore,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.bold,
@@ -357,9 +358,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   Widget _buildCustomAppBar(BuildContext context) {
     String title;
     if (widget.goalType == GoalType.pending) {
-      title = 'Create a Pending Goal';
+      title = AppLocalizations.of(context)!.createGoalTitle;
     } else {
-      title = 'Create a Fulfilled Goal';
+      title = AppLocalizations.of(context)!.createGoalTitle;
     }
 
     return Container(
@@ -529,7 +530,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   final bool exists = await context.read<GoalsProvider>().doesGoalExist(name);
                   if (exists) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('A goal with this name already exists')),
+                      SnackBar(content: Text(AppLocalizations.of(context)!.goalNameAlreadyExistsSnackbar)),
                     );
                     return;
                   }
@@ -577,7 +578,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 } catch (e) {
                   // Handle any errors that might occur during goal creation
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error creating goal: ${e.toString()}')),
+                    SnackBar(content: Text(AppLocalizations.of(context)!.errorCreatingGoal(e.toString()))),
                   );
                 } finally {
                   if (mounted) {

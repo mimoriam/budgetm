@@ -5,6 +5,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 
 class AddBorrowedScreen extends StatefulWidget {
   const AddBorrowedScreen({super.key});
@@ -23,7 +24,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Pick a color'),
+          title: Text(AppLocalizations.of(context)!.pickColor),
           content: SingleChildScrollView(
             child: BlockPicker(
               pickerColor: _selectedColor,
@@ -71,15 +72,15 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                             Expanded(
                               child: _buildFormSection(
                                 context,
-                                'Name',
+                                AppLocalizations.of(context)!.name,
                                 FormBuilderTextField(
                                   name: 'name',
                                   style: const TextStyle(fontSize: 13),
                                   decoration: _inputDecoration(
-                                    hintText: 'Item Name',
+                                    hintText: AppLocalizations.of(context)!.hintName,
                                   ),
                                   validator: FormBuilderValidators.required(
-                                    errorText: 'Name is required',
+                                    errorText: AppLocalizations.of(context)!.nameRequired,
                                   ),
                                 ),
                               ),
@@ -88,11 +89,11 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                             Expanded(
                               child: _buildFormSection(
                                 context,
-                                'Account',
+                                AppLocalizations.of(context)!.account,
                                 FormBuilderDropdown(
                                   name: 'icon',
                                   decoration: _inputDecoration(
-                                    hintText: 'Select Icon',
+                                    hintText: AppLocalizations.of(context)!.hintSelectIcon,
                                   ),
                                   isDense: true,
                                   items: ['Icon 1', 'Icon 2']
@@ -109,7 +110,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                                       )
                                       .toList(),
                                   validator: FormBuilderValidators.required(
-                                    errorText: 'Please select an icon',
+                                    errorText: AppLocalizations.of(context)!.selectIcon,
                                   ),
                                 ),
                               ),
@@ -145,7 +146,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       children: [
         Center(
           child: Text(
-            'Value',
+            AppLocalizations.of(context)!.value,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.secondaryTextColorLight,
               fontSize: 12,
@@ -162,7 +163,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
             fontWeight: FontWeight.bold,
           ),
           textAlign: TextAlign.center,
-          decoration: _inputDecoration(hintText: '0.00').copyWith(
+          decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintAmount).copyWith(
             hintStyle: const TextStyle(
               fontSize: 26,
               color: AppColors.lightGreyBackground,
@@ -170,9 +171,9 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
           validator: FormBuilderValidators.compose([
-            FormBuilderValidators.required(errorText: 'Amount is required'),
+            FormBuilderValidators.required(errorText: AppLocalizations.of(context)!.amountRequired),
             FormBuilderValidators.numeric(
-              errorText: 'Please enter a valid number',
+              errorText: AppLocalizations.of(context)!.validNumber,
             ),
           ]),
           keyboardType: TextInputType.number,
@@ -187,10 +188,10 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       children: [
         _buildFormSection(
           context,
-          'Category',
+          AppLocalizations.of(context)!.category,
           FormBuilderDropdown(
             name: 'category',
-            decoration: _inputDecoration(hintText: 'Select'),
+            decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintSelect),
             items: ['Category 1', 'Category 2']
                 .map(
                   (category) => DropdownMenuItem(
@@ -204,7 +205,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Date',
+          AppLocalizations.of(context)!.date,
           FormBuilderDateTimePicker(
             name: 'date',
             initialValue: DateTime.now().add(const Duration(days: 7)),
@@ -219,22 +220,22 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Color',
+          AppLocalizations.of(context)!.color,
           GestureDetector(
             onTap: _showColorPicker,
             child: FormBuilderField(
               name: 'color',
               builder: (FormFieldState<dynamic> field) {
                 return InputDecorator(
-                  decoration: _inputDecoration(hintText: 'Select Color'),
+                  decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintSelectColor),
                   child: SizedBox(
                     height: 20,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Select Color',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.selectColor,
+                          style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.lightGreyBackground,
                           ),
@@ -259,11 +260,11 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Notes',
+          AppLocalizations.of(context)!.notes,
           FormBuilderTextField(
             name: 'notes',
             style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(hintText: 'Notes'),
+            decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintNotes),
             maxLines: 2,
           ),
         ),
@@ -289,7 +290,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'More',
+                AppLocalizations.of(context)!.more,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.bold,
@@ -355,7 +356,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Add Borrowed Item',
+                AppLocalizations.of(context)!.addBorrowedItem,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -451,7 +452,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                 side: const BorderSide(color: Colors.black, width: 1.5),
               ),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context)!.cancel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.black,
                   fontSize: 14,
@@ -476,7 +477,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                 ),
               ),
               child: Text(
-                'Add',
+                AppLocalizations.of(context)!.add,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.white,
                   fontSize: 14,

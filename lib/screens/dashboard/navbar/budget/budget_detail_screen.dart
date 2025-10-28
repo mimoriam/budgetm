@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
@@ -233,19 +234,19 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                         barrierDismissible: false,
                         builder: (ctx) {
                           return AlertDialog(
-                            title: const Text('Delete Budget'),
-                            content: Text('Are you sure you want to delete "${widget.category.name ?? 'this budget'}"? This action cannot be undone.'),
+                            title: Text(AppLocalizations.of(context)!.budgetDetailDelete),
+                            content: Text(AppLocalizations.of(context)!.budgetDetailDeleteConfirm),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
-                                child: const Text('Cancel'),
+                                child: Text(AppLocalizations.of(context)!.budgetDetailCancel),
                               ),
                               TextButton(
                                 onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
                                 style: TextButton.styleFrom(
                                   foregroundColor: Colors.red,
                                 ),
-                                child: const Text('Delete'),
+                                child: Text(AppLocalizations.of(context)!.budgetDetailDelete),
                               ),
                             ],
                           );
@@ -324,8 +325,8 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                               // If no real budget exists, this is just a placeholder - show message and return
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('No budget to delete. This is just a placeholder for transactions.'),
+                                  SnackBar(
+                                    content: Text(AppLocalizations.of(context)!.budgetDetailNoBudgetToDelete),
                                   ),
                                 );
                               }
@@ -372,7 +373,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                           // Optionally show an error
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Failed to delete budget')),
+                              SnackBar(content: Text(AppLocalizations.of(context)!.failedToDeleteBudget)),
                             );
                           }
                         }

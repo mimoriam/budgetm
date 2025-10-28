@@ -2,6 +2,7 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 
 class ExportDataScreen extends StatefulWidget {
   const ExportDataScreen({super.key});
@@ -80,7 +81,7 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Your Data',
+                AppLocalizations.of(context)!.yourData,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -95,55 +96,28 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
 
   Widget _buildToggleChips() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 0.0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          return Container(
-            height: 50,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildChip(
+              AppLocalizations.of(context)!.exportTabExport,
+              _isExportSelected,
+              () {
+                setState(() => _isExportSelected = true);
+              },
             ),
-            child: Stack(
-              children: [
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  left: _isExportSelected ? 0 : (width / 2) - 4,
-                  right: _isExportSelected ? (width / 2) - 4 : 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.gradientEnd,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    height: 42,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildChip(
-                        'Export',
-                        _isExportSelected,
-                        () => setState(() => _isExportSelected = true),
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildChip(
-                        'Import',
-                        !_isExportSelected,
-                        () => setState(() => _isExportSelected = false),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          ),
+          Expanded(
+            child: _buildChip(
+              AppLocalizations.of(context)!.exportTabImport,
+              !_isExportSelected,
+              () {
+                setState(() => _isExportSelected = false);
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -181,10 +155,10 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
             ),
             options:
                 [
-                      'Current Month',
-                      'Last 30 Days',
-                      'Last 90 Days',
-                      'Last 365 Days',
+                      AppLocalizations.of(context)!.exportCurrentMonth,
+                      AppLocalizations.of(context)!.exportLast30Days,
+                      AppLocalizations.of(context)!.exportLast90Days,
+                      AppLocalizations.of(context)!.exportLast365Days,
                     ]
                     .map(
                       (period) => FormBuilderFieldOption(
@@ -196,9 +170,9 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
             orientation: OptionsOrientation.vertical,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Format',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          Text(
+            AppLocalizations.of(context)!.exportFormat,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           FormBuilderDropdown<String>(
@@ -209,7 +183,7 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
               color: Colors.black,
             ),
             decoration: _inputDecoration(),
-            items: ['CSV', 'JSON']
+            items: [AppLocalizations.of(context)!.exportCsv, AppLocalizations.of(context)!.exportJson]
                 .map(
                   (format) =>
                       DropdownMenuItem(value: format, child: Text(format)),
@@ -217,13 +191,13 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
                 .toList(),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Options',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          Text(
+            AppLocalizations.of(context)!.exportOptions,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           FormBuilderCheckbox(
             name: 'export_account_data',
-            title: const Text('Export Account Data'),
+            title: Text(AppLocalizations.of(context)!.exportAccountData),
             initialValue: false,
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
@@ -231,7 +205,7 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
           ),
           FormBuilderCheckbox(
             name: 'export_goals_data',
-            title: const Text('Export Goals Data'),
+            title: Text(AppLocalizations.of(context)!.exportGoalsData),
             initialValue: true,
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
@@ -248,53 +222,43 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
       children: [
         Image.asset('images/icons/import_data.png', height: 220),
         const SizedBox(height: 16),
-        const Text(
-          'You can import your data from a CSV file into the app.',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        Text(
+          AppLocalizations.of(context)!.exportImportInstructions,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-        const ListTile(
-          leading: Text('•', style: textStyle),
+        ListTile(
+          leading: const Text('•', style: textStyle),
           title: Text(
-            'Save the example file to see the required data format;',
+            AppLocalizations.of(context)!.exportInstructions1,
             style: textStyle,
           ),
           dense: true,
           contentPadding: EdgeInsets.zero,
           minLeadingWidth: 10,
         ),
-        const ListTile(
-          leading: Text('•', style: textStyle),
+        ListTile(
+          leading: const Text('•', style: textStyle),
           title: Text(
-            'Format your data according to the template. Make sure that the columns, their order and names are exactly the same as in the template. The names of columns should be in English;',
+            AppLocalizations.of(context)!.exportInstructions2,
             style: textStyle,
           ),
           dense: true,
           contentPadding: EdgeInsets.zero,
           minLeadingWidth: 10,
         ),
-        const ListTile(
-          leading: Text('•', style: textStyle),
-          title: Text('Press Import and select your file;', style: textStyle),
+        ListTile(
+          leading: const Text('•', style: textStyle),
+          title: Text(AppLocalizations.of(context)!.exportInstructions3, style: textStyle),
           dense: true,
           contentPadding: EdgeInsets.zero,
           minLeadingWidth: 10,
         ),
-        const ListTile(
-          leading: Text('•', style: textStyle),
+        ListTile(
+          leading: const Text('•', style: textStyle),
           title: Text(
-            'Choose whether to override existing data or add imported data to the existing data. When choosing the override option, existing data will be permanently deleted;',
-            style: textStyle,
-          ),
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          minLeadingWidth: 10,
-        ),
-        const ListTile(
-          leading: Text('•', style: textStyle),
-          title: Text(
-            'If the imported transactions use currencies that are not in your list of currencies, you will be prompted to add them.',
+            AppLocalizations.of(context)!.exportInstructions4,
             style: textStyle,
           ),
           dense: true,
@@ -353,7 +317,7 @@ class _ExportDataScreenState extends State<ExportDataScreen> {
             ),
           ),
           child: Text(
-            _isExportSelected ? 'Export' : 'Import',
+            _isExportSelected ? AppLocalizations.of(context)!.exportButtonExport : AppLocalizations.of(context)!.exportButtonImport,
             style: Theme.of(
               context,
             ).textTheme.labelLarge?.copyWith(color: Colors.white, fontSize: 16),

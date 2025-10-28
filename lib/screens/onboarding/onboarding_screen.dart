@@ -1,6 +1,7 @@
 // onboarding_screen.dart
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,24 +17,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, String>> _onboardingData = [
+  List<Map<String, String>> _getOnboardingData(BuildContext context) => [
     {
       'imagePath': 'images/backgrounds/onboarding1.png',
-      'title': 'Save Smarter',
-      'description':
-          'Set aside money effortlessly and watch your savings grow with every step.',
+      'title': AppLocalizations.of(context)!.onboardingPage1Title,
+      'description': AppLocalizations.of(context)!.onboardingPage1Description,
     },
     {
       'imagePath': 'images/backgrounds/onboarding2.png',
-      'title': 'Achieve Your Goals',
-      'description':
-          'Create financial goals, from a new gadget to your dream trip, and track your progress.',
+      'title': AppLocalizations.of(context)!.onboardingPage2Title,
+      'description': AppLocalizations.of(context)!.onboardingPage2Description,
     },
     {
       'imagePath': 'images/backgrounds/onboarding3.png',
-      'title': 'Stay on Track',
-      'description':
-          'Monitor your spending, income, and savings all in one simple dashboard.',
+      'title': AppLocalizations.of(context)!.onboardingPage3Title,
+      'description': AppLocalizations.of(context)!.onboardingPage3Description,
     },
   ];
 
@@ -68,18 +66,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final onboardingData = _getOnboardingData(context);
     return Scaffold(
       body: Column(
         children: [
           Expanded(
             child: PageView.builder(
               controller: _pageController,
-              itemCount: _onboardingData.length,
+              itemCount: onboardingData.length,
               itemBuilder: (context, index) {
                 return OnboardingPageContent(
-                  imagePath: _onboardingData[index]['imagePath']!,
-                  title: _onboardingData[index]['title']!,
-                  description: _onboardingData[index]['description']!,
+                  imagePath: onboardingData[index]['imagePath']!,
+                  title: onboardingData[index]['title']!,
+                  description: onboardingData[index]['description']!,
                 );
               },
             ),
@@ -91,7 +90,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 Row(
                   children: List.generate(
-                    _onboardingData.length,
+                    onboardingData.length,
                     (index) => _buildIndicator(index),
                   ),
                 ),
@@ -123,7 +122,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildProceedButton() {
     return GestureDetector(
       onTap: () {
-        if (_currentPage == _onboardingData.length - 1) {
+        final onboardingData = _getOnboardingData(context);
+        if (_currentPage == onboardingData.length - 1) {
           _onOnboardingDone();
         } else {
           _pageController.nextPage(

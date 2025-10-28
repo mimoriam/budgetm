@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 
 class AddBorrowedScreen extends StatefulWidget {
   const AddBorrowedScreen({super.key});
@@ -80,7 +81,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                                   controller: _nameController,
                                   style: const TextStyle(fontSize: 13),
                                   decoration: _inputDecoration(
-                                    hintText: 'Name',
+                                    hintText: AppLocalizations.of(context)!.hintName,
                                   ),
                                   textInputAction: TextInputAction.next,
                                   validator: (value) {
@@ -177,7 +178,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
           TextFormField(
             controller: _descriptionController,
             style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(hintText: 'Description'),
+            decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintDescription),
             maxLines: 2,
           ),
         ),
@@ -204,7 +205,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
             },
             child: InputDecorator(
               decoration: _inputDecoration(
-                hintText: 'Select Date',
+                hintText: AppLocalizations.of(context)!.hintSelectDate,
                 suffixIcon: HugeIcons.strokeRoundedCalendar01,
               ),
               child: SizedBox(
@@ -249,7 +250,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
             },
             child: InputDecorator(
               decoration: _inputDecoration(
-                hintText: 'Select Due Date',
+                hintText: AppLocalizations.of(context)!.hintSelectDueDate,
                 suffixIcon: HugeIcons.strokeRoundedCalendar01,
               ),
               child: SizedBox(
@@ -541,13 +542,13 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
     }
     if (_date == null || _dueDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select both date and due date')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.borrowedSelectBothDates)),
       );
       return;
     }
     if (_dueDate!.isBefore(_date!)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Due date cannot be before the borrowed date')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.borrowedDueDateBeforeBorrowedDate)),
       );
       return;
     }
@@ -575,14 +576,14 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Borrowed item added successfully')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.borrowedItemAddedSuccessfully)),
         );
         Navigator.of(context).pop(borrowed);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.borrowedItemError(e.toString()))),
         );
       }
     } finally {

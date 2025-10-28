@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/services/firestore_service.dart';
@@ -73,12 +74,12 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                             Expanded(
                               child: _buildFormSection(
                           context,
-                          'Name',
+                          AppLocalizations.of(context)!.addSubscriptionName,
                           TextFormField(
                             controller: _nameController,
                             style: const TextStyle(fontSize: 13),
                             decoration: _inputDecoration(
-                              hintText: 'Name',
+                              hintText: AppLocalizations.of(context)!.hintName,
                             ),
                             textInputAction: TextInputAction.next,
                             validator: (value) {
@@ -96,7 +97,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                         const SizedBox(height: 10),
                         _buildFormSection(
                           context,
-                          'Recurrence',
+                          AppLocalizations.of(context)!.addSubscriptionRecurrence,
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -176,7 +177,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
       children: [
         Center(
           child: Text(
-            'Price',
+            AppLocalizations.of(context)!.addSubscriptionPrice,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.secondaryTextColorLight,
               fontSize: 12,
@@ -225,23 +226,23 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
       children: [
         _buildFormSection(
           context,
-          'Notes',
+          AppLocalizations.of(context)!.addSubscriptionNotes,
           TextFormField(
             controller: _descriptionController,
             style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(hintText: 'Description'),
+            decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintDescription),
             maxLines: 2,
           ),
         ),
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Start Date',
+          AppLocalizations.of(context)!.addSubscriptionStartDate,
           GestureDetector(
             onTap: _selectStartDate,
             child: InputDecorator(
               decoration: _inputDecoration(
-                hintText: 'Select Date',
+                hintText: AppLocalizations.of(context)!.hintSelectDate,
                 suffixIcon: HugeIcons.strokeRoundedCalendar01,
               ),
               child: SizedBox(
@@ -286,7 +287,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'More',
+                AppLocalizations.of(context)!.addSubscriptionMore,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.bold,
@@ -350,7 +351,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
-    const title = 'Add Subscription';
+    final title = AppLocalizations.of(context)!.personalAddSubscription;
 
     return Container(
       padding: const EdgeInsets.only(bottom: 14),
@@ -538,7 +539,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
     }
     if (_startDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a start date')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.personalStartDateRequired)),
       );
       return;
     }
@@ -568,14 +569,14 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Subscription created successfully')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.subscriptionCreatedSuccessfully)),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.subscriptionError(e.toString()))),
         );
       }
     } finally {

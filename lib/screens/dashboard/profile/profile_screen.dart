@@ -2,6 +2,7 @@
 
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/category_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/currency/currency_rates.dart';
 import 'package:budgetm/screens/dashboard/profile/feedback/feedback_screen.dart';
@@ -107,8 +108,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 children: [
                                   Text(
                                     isSubscribed
-                                        ? 'Premium Active'
-                                        : 'Get Premium',
+                                        ? AppLocalizations.of(context)!.profilePremiumActive
+                                        : AppLocalizations.of(context)!.profileFreePlan,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 18,
@@ -118,8 +119,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     isSubscribed
-                                        ? 'You have access to all premium features'
-                                        : 'Unlock unlimited vacation accounts, color picker, and recurring budgets',
+                                        ? AppLocalizations.of(context)!.profilePremiumDescription
+                                        : AppLocalizations.of(context)!.profileUpgradeDescription,
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
                                       fontSize: 14,
@@ -192,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  _buildSectionHeader('ACCOUNT'),
+                  _buildSectionHeader(AppLocalizations.of(context)!.profileAccount),
                   // _buildProfileMenuItem(Icons.person_outline, 'Edit profile'),
                   if (showChangePassword)
                     _buildProfileMenuItem(
@@ -201,7 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   _buildProfileMenuItem(
                     Icons.category_outlined,
-                    'Categories',
+                    AppLocalizations.of(context)!.profileCategories,
                     onTap: () {
                       PersistentNavBarNavigator.pushNewScreen(
                         context,
@@ -214,7 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   _buildProfileMenuItem(
                     Icons.attach_money_outlined,
-                    'Currency',
+                    AppLocalizations.of(context)!.profileMenuCurrency,
                     onTap: () {
                       PersistentNavBarNavigator.pushNewScreen(
                         context,
@@ -239,21 +240,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   //   },
                   // ),
                   const SizedBox(height: 12),
-                  _buildSectionHeader('LEGAL'),
+                  _buildSectionHeader(AppLocalizations.of(context)!.profileLegal),
                   _buildProfileMenuItem(
                     Icons.description_outlined,
-                    'Terms & Conditions',
+                    AppLocalizations.of(context)!.profileTermsConditions,
                   ),
                   _buildProfileMenuItem(
                     Icons.privacy_tip_outlined,
-                    'Privacy Policy',
+                    AppLocalizations.of(context)!.profilePrivacyPolicy,
                   ),
                   const SizedBox(height: 12),
-                  _buildSectionHeader('SUPPORT'),
-                  _buildProfileMenuItem(Icons.help_outline, 'Help & Support'),
+                  _buildSectionHeader(AppLocalizations.of(context)!.profileSupport),
+                  _buildProfileMenuItem(Icons.help_outline, AppLocalizations.of(context)!.profileHelpSupport),
                   _buildProfileMenuItem(
                     Icons.star_outline,
-                    'Feedback',
+                    AppLocalizations.of(context)!.profileFeedback,
                     onTap: () {
                       PersistentNavBarNavigator.pushNewScreen(
                         context,
@@ -265,7 +266,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  _buildSectionHeader('DANGER ZONE'),
+                  _buildSectionHeader(AppLocalizations.of(context)!.profileDangerZone),
                   // _buildProfileMenuItem(
                   //   Icons.delete_outline,
                   //   'Delete Account',
@@ -273,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // ),
                   _buildProfileMenuItem(
                     Icons.logout,
-                    'Logout',
+                    AppLocalizations.of(context)!.profileLogout,
                     color: Colors.red,
                     onTap: () async {
                       try {
@@ -291,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Error signing out: $e'),
+                              content: Text(AppLocalizations.of(context)!.profileErrorSigningOut(e.toString())),
                               backgroundColor: Colors.red,
                             ),
                           );
@@ -342,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // ),
                   // const SizedBox(width: 16),
                   Text(
-                    'Profile',
+                    AppLocalizations.of(context)!.profileTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
@@ -388,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Consumer<UserProvider>(
               builder: (context, userProvider, child) {
                 if (userProvider.currentUser == null) {
-                  return const Text('User not found');
+                  return Text(AppLocalizations.of(context)!.profileUserNotFound);
                 }
                 final displayName = userProvider.displayName;
                 return Row(
@@ -407,7 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               builder: (context, setState) {
                                 return AlertDialog(
                                   title: Center(
-                                    child: const Text('Edit display name'),
+                                    child: Text(AppLocalizations.of(context)!.profileEditDisplayName),
                                   ),
                                   content: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -417,7 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       controller: _controller,
                                       autofocus: true,
                                       decoration: InputDecoration(
-                                        hintText: 'Enter display name',
+                                        hintText: AppLocalizations.of(context)!.hintEnterDisplayName,
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(
                                             8.0,
@@ -436,7 +437,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       onPressed: () {
                                         Navigator.of(context).pop();
                                       },
-                                      child: const Text('Cancel'),
+                                      child: Text(AppLocalizations.of(context)!.profileCancel),
                                     ),
                                     ElevatedButton(
                                       onPressed: isSaving
@@ -539,7 +540,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : const Text('Save'),
+                                          : Text(AppLocalizations.of(context)!.profileSave),
                                     ),
                                   ],
                                 );
@@ -581,9 +582,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      'Vacation Mode',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.profileVacationMode,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
@@ -694,7 +695,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.manage_accounts),
-                    title: const Text('Manage subscription'),
+                    title: Text(AppLocalizations.of(context)!.profileManageSubscription),
                     onTap: subscriptionProvider.isLoading
                         ? null
                         : () async {
@@ -704,7 +705,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.restore),
-                    title: const Text('Restore purchases'),
+                    title: Text(AppLocalizations.of(context)!.profileRestorePurchases),
                     onTap: subscriptionProvider.isLoading
                         ? null
                         : () async {
@@ -726,7 +727,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.refresh),
-                    title: const Text('Refresh status'),
+                    title: Text(AppLocalizations.of(context)!.profileRefreshStatus),
                     onTap: subscriptionProvider.isLoading
                         ? null
                         : () async {
@@ -734,8 +735,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             await subscriptionProvider.refreshSubscriptionStatus();
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Subscription status refreshed'),
+                                SnackBar(
+                                  content: Text(AppLocalizations.of(context)!.profileSubscriptionRefreshed),
                                 ),
                               );
                             }

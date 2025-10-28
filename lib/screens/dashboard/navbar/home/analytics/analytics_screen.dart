@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/analytics/calendar/calendar_screen.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -50,7 +51,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   const SizedBox(height: 24),
                   _buildTransactionItem(
                     icon: HugeIcons.strokeRoundedHome01,
-                    title: 'Home',
+                    title: AppLocalizations.of(context)!.labelHome,
                     amount: 20.00,
                     iconColor: Colors.green,
                     iconBgColor: Colors.green.shade100,
@@ -122,7 +123,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Analytics',
+                    AppLocalizations.of(context)!.analyticsTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,

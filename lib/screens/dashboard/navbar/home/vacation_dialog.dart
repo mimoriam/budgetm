@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 
 /// Shows the vacation account selection dialog using showGeneralDialog.
 /// This function provides a robust implementation that correctly handles non-dismissible behavior.
@@ -58,7 +59,7 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
             child: vacationAccounts.isEmpty
                 ? Container(
                     padding: const EdgeInsets.all(16),
-                    child: const Text('No vacation accounts available.'),
+                    child: Text(AppLocalizations.of(context)!.vacationNoAccountsAvailable),
                   )
                 : () {
                     // Maintain selection outside the StatefulBuilder so it persists across rebuilds
@@ -86,9 +87,9 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'Vacation Mode',
-                                  style: TextStyle(
+                                Text(
+                                  AppLocalizations.of(context)!.vacationDialogTitle,
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.primaryTextColorLight,
@@ -213,7 +214,7 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                             padding: const EdgeInsets.all(16),
                             child: ElevatedButton(
                               onPressed: () => Navigator.of(context).pop(selectedAccount),
-                              child: const Text('Enable Vacation Mode'),
+                              child: Text(AppLocalizations.of(context)!.enableVacationMode),
                             ),
                           ),
                         ],

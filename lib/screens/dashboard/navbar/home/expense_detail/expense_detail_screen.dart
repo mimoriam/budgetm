@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
@@ -201,7 +202,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update payment status: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context)!.expenseDetailErrorSaving),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -252,7 +253,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                     return const Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
                     return Center(
-                      child: Text('Error loading data: ${snapshot.error}'),
+                      child: Text(AppLocalizations.of(context)!.homeErrorLoadingData),
                     );
                   }
 
@@ -381,13 +382,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           children: [
                             _buildInfoCard(
                               context,
-                              'Total',
+                              AppLocalizations.of(context)!.expenseDetailTotal,
                               '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
                             ),
                             const SizedBox(width: 16),
                             _buildInfoCard(
                               context,
-                              'Accumulated Amount',
+                              AppLocalizations.of(context)!.expenseDetailAccumulatedAmount,
                               !_isPaid
                                   ? '${_getCurrencyCode(widget.transaction.currency)} 0.00'
                                   : '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
@@ -493,7 +494,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'DATE',
+                              AppLocalizations.of(context)!.date,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: AppColors.secondaryTextColorLight,
@@ -725,7 +726,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'VACATION',
+                                    AppLocalizations.of(context)!.expenseDetailVacation,
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
                                           color:
@@ -881,7 +882,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                             ),
                                             _isPaid
                                                 ? 'Mark as Unpaid'
-                                                : 'Mark as Paid',
+                                                : AppLocalizations.of(context)!.expenseDetailMarkPaid,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .labelLarge
@@ -919,7 +920,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                                   onPressed: () => Navigator.of(
                                                     context,
                                                   ).pop(false),
-                                                  child: const Text('Cancel'),
+                                                  child: Text(AppLocalizations.of(context)!.cancel),
                                                 ),
                                                 TextButton(
                                                   onPressed: () => Navigator.of(
@@ -928,7 +929,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                                   style: TextButton.styleFrom(
                                                     foregroundColor: Colors.red,
                                                   ),
-                                                  child: const Text('Delete'),
+                                                  child: Text(AppLocalizations.of(context)!.delete),
                                                 ),
                                               ],
                                             );
@@ -963,7 +964,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                         ),
                                       )
                                     : Text(
-                                        'Delete',
+                                        AppLocalizations.of(context)!.delete,
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelLarge

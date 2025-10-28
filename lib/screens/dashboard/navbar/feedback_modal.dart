@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
@@ -35,7 +36,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Text(
-            "Enjoying the app?",
+            AppLocalizations.of(context)!.feedbackModalTitle,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
               fontSize: 22,
@@ -43,7 +44,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
           ),
           const SizedBox(height: 12),
           Text(
-            "Your feedback keeps us motivated and helps us improve.",
+            AppLocalizations.of(context)!.feedbackModalDescription,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,

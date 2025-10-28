@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   final String? initialCategoryType;
@@ -76,7 +77,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
         // Show a success message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Category added successfully')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.categoryAddedSuccessfully)),
           );
           
           // Navigate back to the previous screen
@@ -87,7 +88,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
         // Show an error message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to add category: $e')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.failedToAddCategory(e.toString()))),
           );
         }
       } finally {
@@ -126,7 +127,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                         'Name',
                         FormBuilderTextField(
                           name: 'name',
-                          decoration: _inputDecoration(hintText: 'Enter category name'),
+                          decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintEnterCategoryName),
                           validator: FormBuilderValidators.required(),
                         ),
                       ),
@@ -144,7 +145,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                             return GestureDetector(
                               onTap: () async {
                                 final result = await _showPrettySelectionBottomSheet(
-                                  title: 'Select Type',
+                                  title: AppLocalizations.of(context)!.titleSelectType,
                                   items: const ['Income', 'Expense'],
                                   selectedItem: _selectedType != null
                                       ? (_selectedType == 'income' ? 'Income' : 'Expense')

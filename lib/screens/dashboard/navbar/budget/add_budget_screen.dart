@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/budget.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
@@ -68,7 +69,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
       
       if (_selectedCategoryId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a category')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.addBudgetCategoryRequired)),
         );
         return;
       }
@@ -77,7 +78,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
       final limit = double.tryParse(limitText ?? '');
       if (limit == null || limit <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a valid limit amount')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.addBudgetAmountRequired)),
         );
         return;
       }
@@ -91,7 +92,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
         if (mounted) {
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Budget added successfully')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.addBudgetCreated)),
           );
         }
       } catch (e) {
@@ -150,10 +151,10 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
     );
 
     final result = await _openBottomSheet<Category>(
-      title: 'Select Category',
+      title: AppLocalizations.of(context)!.titleSelectCategory,
       items: provider.expenseCategories,
       selectedItem: selectedCategory,
-      getDisplayName: (category) => category.name ?? 'Unnamed Category',
+      getDisplayName: (category) => category.name ?? AppLocalizations.of(context)!.unnamedCategory,
       getLeading: (category) => HugeIcon(
         icon: getIcon(category.icon),
         color: AppColors.secondaryTextColorLight,
@@ -199,7 +200,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                         children: [
                           Center(
                             child: Text(
-                              'Limit Amount',
+                              AppLocalizations.of(context)!.addBudgetLimitAmount,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: AppColors.secondaryTextColorLight,
                                 fontSize: 12,
@@ -225,10 +226,10 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                             ),
                             validator: FormBuilderValidators.compose([
                               FormBuilderValidators.required(
-                                errorText: 'Amount is required',
+                                errorText: AppLocalizations.of(context)!.amountRequired,
                               ),
                               FormBuilderValidators.numeric(
-                                errorText: 'Please enter a valid number',
+                                errorText: AppLocalizations.of(context)!.pleaseEnterValidNumber,
                               ),
                             ]),
                             keyboardType: const TextInputType.numberWithOptions(
@@ -246,7 +247,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                           Expanded(
                             child: _buildFormSection(
                               context,
-                              'Select Category',
+                              AppLocalizations.of(context)!.addBudgetSelectCategory,
                               Consumer<BudgetProvider>(
                                 builder: (context, provider, child) {
                                   return GestureDetector(
@@ -288,8 +289,8 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                                   ? (provider.expenseCategories.firstWhere(
                                                       (cat) => cat.id == _selectedCategoryId,
                                                       orElse: () => provider.expenseCategories.first,
-                                                    ).name ?? 'Unnamed Category')
-                                                  : 'Select',
+                                                    ).name ?? AppLocalizations.of(context)!.unnamedCategory)
+                                                  : AppLocalizations.of(context)!.select,
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: _selectedCategoryId != null
@@ -314,7 +315,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                           Expanded(
                             child: _buildFormSection(
                               context,
-                              'Budget Type',
+                              AppLocalizations.of(context)!.addBudgetBudgetType,
                               GestureDetector(
                                 onTap: () async {
                                   final budgetTypes = [
@@ -324,17 +325,17 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                   ];
                                   
                                   final selected = await _openBottomSheet<BudgetType>(
-                                    title: 'Select Budget Type',
+                                    title: AppLocalizations.of(context)!.titleSelectBudgetType,
                                     items: budgetTypes,
                                     selectedItem: _selectedType,
                                     getDisplayName: (type) {
                                       switch (type) {
                                         case BudgetType.daily:
-                                          return 'Daily';
+                                          return AppLocalizations.of(context)!.daily;
                                         case BudgetType.weekly:
-                                          return 'Weekly';
+                                          return AppLocalizations.of(context)!.weekly;
                                         case BudgetType.monthly:
-                                          return 'Monthly';
+                                          return AppLocalizations.of(context)!.monthly;
                                       }
                                     },
                                   );
@@ -363,10 +364,10 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                                       Expanded(
                                         child: Text(
                                           _selectedType == BudgetType.daily
-                                              ? 'Daily'
+                                              ? AppLocalizations.of(context)!.daily
                                               : _selectedType == BudgetType.weekly
-                                                  ? 'Weekly'
-                                                  : 'Monthly',
+                                                  ? AppLocalizations.of(context)!.weekly
+                                                  : AppLocalizations.of(context)!.monthly,
                                           style: const TextStyle(
                                             fontSize: 13,
                                             color: AppColors.primaryTextColorLight,
@@ -391,7 +392,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                       if (!widget.isVacationMode) ...[
                         _buildFormSection(
                           context,
-                          'Currency',
+                          AppLocalizations.of(context)!.addBudgetCurrency,
                           GestureDetector(
                             onTap: () {
                               showCurrencyPicker(
@@ -464,7 +465,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                             
                             return CheckboxListTile(
                               title: Text(
-                                'Recurring Budget',
+                                AppLocalizations.of(context)!.addBudgetRecurring,
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: canCreateRecurring 
@@ -475,9 +476,9 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                               subtitle: Text(
                                 canCreateRecurring
                                     ? (_selectedType == BudgetType.daily
-                                        ? 'Applies to every day'
-                                        : 'Automatically renew this budget for each period')
-                                    : 'Premium feature - Subscribe to enable',
+                                        ? AppLocalizations.of(context)!.addBudgetRecurringDailySubtitle
+                                        : AppLocalizations.of(context)!.addBudgetRecurringSubtitle)
+                                    : AppLocalizations.of(context)!.addBudgetRecurringPremiumSubtitle,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: canCreateRecurring 
@@ -559,7 +560,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Add Budget',
+                AppLocalizations.of(context)!.addBudget,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -642,7 +643,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                 side: const BorderSide(color: Colors.black, width: 1.5),
               ),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context)!.addBudgetCancel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.black,
                   fontSize: 14,
@@ -671,7 +672,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                       ),
                     )
                   : Text(
-                      'Save Budget',
+                      AppLocalizations.of(context)!.addBudgetSaveBudget,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,

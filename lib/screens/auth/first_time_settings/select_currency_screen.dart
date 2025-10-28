@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
@@ -74,14 +75,14 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Select Currency',
+                              AppLocalizations.of(context)!.selectCurrencyTitle,
                               style: Theme.of(
                                 context,
                               ).textTheme.displayLarge?.copyWith(fontSize: 28),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Select your preferred Currency',
+                              AppLocalizations.of(context)!.selectCurrencySubtitle,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: AppColors.secondaryTextColorLight,
@@ -91,7 +92,7 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Select Currency',
+                                AppLocalizations.of(context)!.selectCurrencyLabel,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),
@@ -130,7 +131,7 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                     Text(
                                       _selectedCurrency != null
                                           ? '${_selectedCurrency!.name} (${_selectedCurrency!.symbol})'
-                                          : 'Select Currency',
+                                          : AppLocalizations.of(context)!.selectCurrencyLabel,
                                       style: const TextStyle(fontSize: 16),
                                     ),
                                     const Icon(Icons.arrow_drop_down),
@@ -198,7 +199,7 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: Text('Error during setup: $e'),
+                                            content: Text(AppLocalizations.of(context)!.errorDuringSetup(e.toString())),
                                             backgroundColor: AppColors.errorColor,
                                           ),
                                         );
@@ -224,7 +225,7 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                         ),
                                       )
                                     : Text(
-                                        'Continue',
+                                        AppLocalizations.of(context)!.continueButton,
                                         style: Theme.of(context).textTheme.labelLarge
                                             ?.copyWith(color: Colors.white),
                                       ),

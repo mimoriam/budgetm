@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/transaction.dart' as model;
@@ -247,19 +248,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       barrierDismissible: false,
                       builder: (ctx) {
                         return AlertDialog(
-                          title: const Text('Delete Goal'),
-                          content: Text('Are you sure you want to delete "${widget.goal.name}"? This action cannot be undone.'),
+                          title: Text(AppLocalizations.of(context)!.goalsDelete),
+                          content: Text(AppLocalizations.of(context)!.goalsDeleteConfirm),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
-                              child: const Text('Cancel'),
+                              child: Text(AppLocalizations.of(context)!.cancel),
                             ),
                             TextButton(
                               onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.red,
                               ),
-                              child: const Text('Delete'),
+                              child: Text(AppLocalizations.of(context)!.delete),
                             ),
                           ],
                         );
@@ -282,7 +283,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to delete goal')),
+                            SnackBar(content: Text(AppLocalizations.of(context)!.failedToDeleteGoal)),
                           );
                         }
                       }

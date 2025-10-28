@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -48,7 +49,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
           ),
-          title: const Text('Back', style: TextStyle(color: Colors.black87)),
+          title: Text(AppLocalizations.of(context)!.backButton, style: const TextStyle(color: Colors.black87)),
         ),
         extendBodyBehindAppBar: true,
         body: Stack(
@@ -101,12 +102,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Forgot Password',
+                            AppLocalizations.of(context)!.forgotPasswordTitle,
                             style: Theme.of(context).textTheme.displayLarge,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Enter your email address to recover password',
+                            AppLocalizations.of(context)!.forgotPasswordSubtitle,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppColors.secondaryTextColorLight,
@@ -114,7 +115,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                           const SizedBox(height: 30),
                           Text(
-                            'Email',
+                            AppLocalizations.of(context)!.emailLabel,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: AppColors.primaryTextColorLight,
@@ -129,7 +130,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 Icons.email_outlined,
                                 size: 20,
                               ),
-                              hintText: 'Email',
+                              hintText: AppLocalizations.of(context)!.emailHint,
                               hintStyle: const TextStyle(
                                 color: AppColors.secondaryTextColorLight,
                                 fontSize: 14,
@@ -201,8 +202,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           // Show success message
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Password reset email sent. Please check your inbox.'),
+                                              SnackBar(
+                                                content: Text(AppLocalizations.of(context)!.passwordResetEmailSent),
                                                 backgroundColor: Colors.green,
                                               ),
                                             );
@@ -239,7 +240,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       ),
                                     )
                                   : Text(
-                                      'Confirm',
+                                      AppLocalizations.of(context)!.confirmButton,
                                       style: Theme.of(context).textTheme.labelLarge
                                           ?.copyWith(color: Colors.white),
                                     ),

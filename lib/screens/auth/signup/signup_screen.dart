@@ -1,5 +1,6 @@
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:flutter/material.dart';
@@ -68,13 +69,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Get Started',
+                          AppLocalizations.of(context)!.getStartedTitle,
                           style: Theme.of(context).textTheme.displayLarge,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Create an account to continue',
+                          AppLocalizations.of(context)!.createAccountSubtitle,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: AppColors.secondaryTextColorLight,
@@ -87,7 +88,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           name: 'name',
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.person_outline),
-                            hintText: 'Name',
+                            hintText: AppLocalizations.of(context)!.nameHint,
                             hintStyle: const TextStyle(
                               color: AppColors.secondaryTextColorLight,
                               fontSize: 14,
@@ -131,7 +132,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           name: 'email',
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.email_outlined),
-                            hintText: 'Email',
+                            hintText: AppLocalizations.of(context)!.emailHint,
                             hintStyle: const TextStyle(
                               color: AppColors.secondaryTextColorLight,
                               fontSize: 14,
@@ -179,7 +180,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           obscureText: _obscureText,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.lock_outline),
-                            hintText: 'Password',
+                            hintText: AppLocalizations.of(context)!.passwordHint,
                             hintStyle: const TextStyle(
                               color: AppColors.secondaryTextColorLight,
                               fontSize: 14,
@@ -237,7 +238,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           obscureText: _obscureText,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.lock_outline),
-                            hintText: 'Confirm Password',
+                            hintText: AppLocalizations.of(context)!.confirmPasswordHint,
                             hintStyle: const TextStyle(
                               color: AppColors.secondaryTextColorLight,
                               fontSize: 14,
@@ -288,7 +289,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     .currentState
                                     ?.fields['password']
                                     ?.value) {
-                              return 'Passwords do not match';
+                              return AppLocalizations.of(context)!.passwordsDoNotMatch;
                             }
                             return null;
                           },
@@ -411,7 +412,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     ),
                                   )
                                 : Text(
-                                    'Sign Up',
+                                    AppLocalizations.of(context)!.signUp,
                                     style: Theme.of(context)
                                         .textTheme
                                         .labelLarge
@@ -420,7 +421,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                         const SizedBox(height: 30),
-                        const Row(
+                        Row(
                           children: [
                             Expanded(
                               child: Divider(
@@ -430,7 +431,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 8.0),
                               child: Text(
-                                'Or Continue with',
+                                AppLocalizations.of(context)!.orContinueWith,
                                 style: TextStyle(
                                   color: AppColors.secondaryTextColorLight,
                                 ),
@@ -449,7 +450,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           height: 45,
                           child: SignInButton(
                             Buttons.google,
-                            text: "Continue with Google",
+                            text: AppLocalizations.of(context)!.continueWithGoogle,
                             onPressed: _isLoading || _isLoadingGoogle
                                 ? () {}
                                 : () async {
@@ -526,7 +527,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           height: 45,
                           child: SignInButton(
                             Buttons.apple,
-                            text: "Continue with Apple",
+                            text: AppLocalizations.of(context)!.continueWithApple,
                             onPressed: _isLoading || _isLoadingGoogle
                                 ? () {}
                                 : () {},
@@ -540,9 +541,9 @@ class _SignupScreenState extends State<SignupScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
-                              "Already have an account?",
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.alreadyHaveAccount,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.secondaryTextColorLight,
                                 fontWeight: FontWeight.bold,
@@ -552,9 +553,9 @@ class _SignupScreenState extends State<SignupScreen> {
                               onPressed: () {
                                 Navigator.of(context).pop();
                               },
-                              child: const Text(
-                                'Login',
-                                style: TextStyle(
+                              child: Text(
+                                AppLocalizations.of(context)!.loginButton,
+                                style: const TextStyle(
                                   decoration: TextDecoration.underline,
                                   fontWeight: FontWeight.bold,
                                   decorationColor: AppColors.gradientEnd,

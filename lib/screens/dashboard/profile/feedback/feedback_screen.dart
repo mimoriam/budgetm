@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -34,8 +35,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Thank you for your feedback!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.profileFeedbackThankYou),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -97,7 +98,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                             maxLines: 8,
                             maxLength: 500, // Added character limit
                             decoration: InputDecoration(
-                              hintText: 'Write about your thoughts here......',
+                              hintText: AppLocalizations.of(context)!.hintWriteThoughts,
                               hintStyle: const TextStyle(
                                 color: AppColors.lightGreyBackground,
                               ),
@@ -258,8 +259,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               if (!await launchUrl(emailUri, mode: LaunchMode.externalApplication)) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Could not open email client.'),
+                    SnackBar(
+                      content: Text(AppLocalizations.of(context)!.profileFeedbackEmailError),
                       backgroundColor: Colors.red,
                     ),
                   );

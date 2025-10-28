@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
@@ -363,7 +364,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               }
               // If there's no data at all, fall back to a simple message
               if (!snapshot.hasData) {
-                return const Center(child: Text('No accounts found.'));
+                return Center(child: Text(AppLocalizations.of(context)!.balanceNoAccountsFound));
               }
 
               final vacationProvider = Provider.of<VacationProvider>(
@@ -434,7 +435,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           ],
                           // My Accounts section
                           _buildSectionHeaderWithButton(
-                            'MY ACCOUNTS',
+                            AppLocalizations.of(context)!.balanceMyAccounts,
                             () async {
                               final vacationProvider =
                                   Provider.of<VacationProvider>(
@@ -511,7 +512,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           // Vacation Accounts section (always shown)
                           const SizedBox(height: 24),
                           _buildSectionHeaderWithButton(
-                            'VACATION',
+                            AppLocalizations.of(context)!.balanceVacation,
                             () async {
                               // Check subscription status before allowing vacation account creation
                               final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
@@ -628,7 +629,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Balance',
+                    AppLocalizations.of(context)!.balanceTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
@@ -665,9 +666,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                               color: Colors.black,
                             ),
                             const SizedBox(width: 6),
-                            const Text(
-                              "Add Account",
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.balanceAddAccount,
+                              style: const TextStyle(
                                 color: Colors.black,
                                 fontWeight: FontWeight.w500,
                                 fontSize: 12,
@@ -1043,14 +1044,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   // ),
                   if (creditLimit != null)
                     Text(
-                      'Credit Limit: ${_getAccountCurrencySymbol(account)}${creditLimit.toStringAsFixed(2)}',
+                      AppLocalizations.of(context)!.balanceCreditLimit(_getAccountCurrencySymbol(account) + creditLimit.toStringAsFixed(2)),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.secondaryTextColorLight,
                           ),
                     )
                   else if (balanceLimit != null)
                     Text(
-                      'Balance Limit: ${_getAccountCurrencySymbol(account)}${balanceLimit.toStringAsFixed(2)}',
+                      AppLocalizations.of(context)!.balanceBalanceLimit(_getAccountCurrencySymbol(account) + balanceLimit.toStringAsFixed(2)),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.secondaryTextColorLight,
                           ),
@@ -1224,7 +1225,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           // ),
           const SizedBox(height: 16),
           Text(
-            'No accounts created',
+            AppLocalizations.of(context)!.balanceNoAccountsCreated,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
@@ -1232,7 +1233,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Create your first account to start tracking balances',
+            AppLocalizations.of(context)!.balanceCreateFirstAccount,
             style: TextStyle(
               color: Colors.grey.shade500,
               fontSize: 14,
@@ -1266,7 +1267,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 12),
           Text(
-            'No accounts created',
+            AppLocalizations.of(context)!.balanceNoAccountsCreated,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
@@ -1274,7 +1275,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Create your first account to start tracking your finances',
+            AppLocalizations.of(context)!.balanceCreateFirstAccountFinances,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey.shade500,
@@ -1309,7 +1310,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 12),
           Text(
-            'No vacations yet',
+            AppLocalizations.of(context)!.balanceNoVacationsYet,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
@@ -1317,7 +1318,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Create your first vacation account to start planning your trips',
+            AppLocalizations.of(context)!.balanceCreateFirstVacation,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey.shade500,
@@ -1455,7 +1456,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           // ),
           const SizedBox(height: 16),
           Text(
-            'Single Account View',
+            AppLocalizations.of(context)!.balanceSingleAccountView,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
@@ -1463,7 +1464,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Add more accounts to see charts',
+            AppLocalizations.of(context)!.balanceAddMoreAccounts,
             style: TextStyle(
               color: Colors.grey.shade500,
               fontSize: 14,

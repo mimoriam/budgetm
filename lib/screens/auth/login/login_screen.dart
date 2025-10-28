@@ -1,5 +1,6 @@
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
@@ -122,14 +123,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Login',
+                          AppLocalizations.of(context)!.loginTitle,
                           style: Theme.of(context).textTheme.displayLarge,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         // 1. Subheading color changed to grey
                         Text(
-                          'Enter your email and password to log in',
+                          AppLocalizations.of(context)!.loginSubtitle,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: AppColors.secondaryTextColorLight,
@@ -141,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           name: 'email',
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.email_outlined),
-                            hintText: 'Email',
+                            hintText: AppLocalizations.of(context)!.emailHint,
                             // 2. Hint style updated
                             hintStyle: const TextStyle(
                               color: AppColors.secondaryTextColorLight,
@@ -190,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: _obscureText,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.lock_outline),
-                            hintText: 'Password',
+                            hintText: AppLocalizations.of(context)!.passwordHint,
                             // 2. Hint style updated
                             hintStyle: const TextStyle(
                               color: AppColors.secondaryTextColorLight,
@@ -261,9 +262,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                               ),
                             ),
-                            const Text(
-                              'Remember me',
-                              style: TextStyle(fontSize: 12),
+                            Text(
+                              AppLocalizations.of(context)!.rememberMe,
+                              style: const TextStyle(fontSize: 12),
                             ),
                             const Spacer(),
                             TextButton(
@@ -278,9 +279,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   );
                                 }
                               },
-                              child: const Text(
-                                'Forgot Password?',
-                                style: TextStyle(
+                              child: Text(
+                                AppLocalizations.of(context)!.forgotPassword,
+                                style: const TextStyle(
                                   decoration: TextDecoration.underline,
                                   decorationColor: AppColors.gradientEnd,
                                   fontSize: 12,
@@ -410,11 +411,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     ),
                                   )
-                                : const Text('Login'),
+                                : Text(AppLocalizations.of(context)!.loginButton),
                           ),
                         ),
                         const SizedBox(height: 30),
-                        const Row(
+                        Row(
                           children: [
                             Expanded(
                               child: Divider(
@@ -424,7 +425,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 8.0),
                               child: Text(
-                                'Or login with',
+                                AppLocalizations.of(context)!.orLoginWith,
                                 style: TextStyle(
                                   color: AppColors.secondaryTextColorLight,
                                 ),
@@ -478,9 +479,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             // 5. "Don't have an account" text styled
-                            const Text(
-                              "Don't have an account?",
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.dontHaveAccount,
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.secondaryTextColorLight,
                                 fontWeight: FontWeight.bold,
@@ -495,9 +496,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 );
                               },
-                              child: const Text(
-                                'Sign Up',
-                                style: TextStyle(
+                              child: Text(
+                                AppLocalizations.of(context)!.signUp,
+                                style: const TextStyle(
                                   decoration: TextDecoration.underline,
                                   fontWeight: FontWeight.bold,
                                   decorationColor: AppColors.gradientEnd,

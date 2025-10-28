@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
@@ -285,7 +286,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
-                            'Initial Balance',
+                            AppLocalizations.of(context)!.balanceDetailInitialBalance,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.black,
                               fontWeight: FontWeight.w500,
@@ -318,7 +319,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Current Balance',
+                                  AppLocalizations.of(context)!.balanceDetailCurrentBalance,
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Colors.black,
                                     fontWeight: FontWeight.w500,
@@ -628,14 +629,14 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Delete Account'),
+              title: Text(AppLocalizations.of(context)!.deleteAccount),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('Are you sure you want to delete "${widget.account.name}"? This action cannot be undone.'),
                   const SizedBox(height: 8),
                   CheckboxListTile(
-                    title: const Text('Delete all associated transactions'),
+                    title: Text(AppLocalizations.of(context)!.deleteAllAssociatedTransactions),
                     value: cascadeDelete,
                     onChanged: (val) => setState(() => cascadeDelete = val ?? false),
                     controlAffinity: ListTileControlAffinity.leading,
@@ -646,14 +647,14 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop({'confirmed': false, 'cascadeDelete': false}),
-                  child: const Text('Cancel'),
+                  child: Text(AppLocalizations.of(context)!.cancel),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop({'confirmed': true, 'cascadeDelete': cascadeDelete}),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.red,
                   ),
-                  child: const Text('Delete'),
+                  child: Text(AppLocalizations.of(context)!.delete),
                 ),
               ],
             );

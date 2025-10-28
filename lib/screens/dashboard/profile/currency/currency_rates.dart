@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
@@ -32,7 +33,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionHeader('MAIN CURRENCY', showChangeButton: true),
+                  _buildSectionHeader(AppLocalizations.of(context)!.profileMainCurrency, showChangeButton: true),
                   _buildCurrencyCard(
                     context,
                     _getCurrencyFlag(selectedCurrency),
@@ -95,7 +96,7 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Currency Rates',
+                AppLocalizations.of(context)!.currencyPageTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -141,9 +142,9 @@ class _CurrencyRatesScreenState extends State<CurrencyRatesScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
-                child: const Text(
-                  'CHANGE',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                child: Text(
+                  AppLocalizations.of(context)!.currencyPageChange,
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

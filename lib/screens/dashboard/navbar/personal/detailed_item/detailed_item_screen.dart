@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -25,13 +26,13 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
   String getAppBarTitle() {
     switch (widget.itemType.toLowerCase()) {
       case 'lent':
-        return 'Lent';
+        return AppLocalizations.of(context)!.personalLent;
       case 'borrowed':
-        return 'Borrowed';
+        return AppLocalizations.of(context)!.personalBorrowed;
       case 'subscription':
-        return 'Subscription';
+        return AppLocalizations.of(context)!.personalSubscriptions;
       default:
-        return 'Item Details';
+        return AppLocalizations.of(context)!.personalItemDetails;
     }
   }
 
@@ -314,16 +315,16 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Mark as Returned'),
+        title: Text(AppLocalizations.of(context)!.markAsReturned),
         content: Text('Are you sure you want to mark this ${widget.itemType.toLowerCase()} item as returned?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
+            child: Text(AppLocalizations.of(context)!.confirm),
           ),
         ],
       ),
@@ -342,7 +343,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Mark Payment'),
+          title: Text(AppLocalizations.of(context)!.markPayment),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -386,11 +387,11 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, selectedDate),
-              child: const Text('Mark Paid'),
+              child: Text(AppLocalizations.of(context)!.markPaid),
             ),
           ],
         ),
@@ -437,7 +438,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment marked successfully')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.paymentMarkedSuccessfully)),
         );
         // Navigate back - the stream will automatically refresh the data
         Navigator.of(context).pop();
@@ -445,7 +446,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.subscriptionError(e.toString()))),
         );
       }
     } finally {
@@ -485,7 +486,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Subscription ${subscription.isPaused ? 'continued' : 'paused'} successfully')),
+          SnackBar(content: Text(subscription.isPaused ? AppLocalizations.of(context)!.subscriptionContinued : AppLocalizations.of(context)!.subscriptionPaused)),
         );
         // Navigate back - the stream will automatically refresh the data
         Navigator.of(context).pop();
@@ -493,7 +494,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.subscriptionError(e.toString()))),
         );
       }
     } finally {
@@ -509,16 +510,16 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Item'),
+        title: Text(AppLocalizations.of(context)!.deleteItem),
         content: Text('Are you sure you want to delete this ${widget.itemType.toLowerCase()} item? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -545,14 +546,14 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item marked as returned successfully')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.itemMarkedAsReturnedSuccessfully)),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.subscriptionError(e.toString()))),
         );
       }
     } finally {
@@ -583,14 +584,14 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item deleted successfully')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.itemDeletedSuccessfully)),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.subscriptionError(e.toString()))),
         );
       }
     } finally {

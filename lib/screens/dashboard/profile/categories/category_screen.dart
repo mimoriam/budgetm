@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/dashboard/profile/categories/add_category/add_category_screen.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:flutter/material.dart';
@@ -377,7 +378,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
           _categories = originalCategories;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to reorder categories. Reverting changes.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToReorderCategories)),
         );
       }
     }
@@ -388,7 +389,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Category'),
+          title: Text(AppLocalizations.of(context)!.deleteCategory),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +408,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -415,7 +416,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Delete'),
+              child: Text(AppLocalizations.of(context)!.delete),
             ),
           ],
         );
@@ -457,8 +458,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Category and associated transactions deleted successfully'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.categoryAndTransactionsDeleted),
             backgroundColor: Colors.green,
           ),
         );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/models/personal/subscription.dart';
@@ -78,7 +79,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Personal',
+                AppLocalizations.of(context)!.personalTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 22,
@@ -105,10 +106,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
                       const SizedBox(width: 6),
                       Text(
                         _isSubscriptionsSelected
-                            ? "Add Subscription"
+                            ? AppLocalizations.of(context)!.personalAddSubscription
                             : _isBorrowedSelected
-                                ? "Add Borrowed"
-                                : "Add Lent",
+                                ? AppLocalizations.of(context)!.personalAddBorrowed
+                                : AppLocalizations.of(context)!.personalAddLent,
                         style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
                       ),
                     ],
@@ -197,7 +198,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   children: [
                     Expanded(
                       child: _buildChip(
-                        'Subscriptions',
+                        AppLocalizations.of(context)!.personalScreenSubscriptions,
                         _isSubscriptionsSelected,
                         () {
                           setState(() {
@@ -210,7 +211,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
                     ),
                     Expanded(
                       child: _buildChip(
-                        'Borrowed',
+                        AppLocalizations.of(context)!.personalScreenBorrowed,
                         _isBorrowedSelected,
                         () {
                           setState(() {
@@ -223,7 +224,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
                     ),
                     Expanded(
                       child: _buildChip(
-                        'Lent',
+                        AppLocalizations.of(context)!.personalScreenLent,
                         _isLentSelected,
                         () {
                           setState(() {
@@ -294,13 +295,13 @@ class _PersonalScreenState extends State<PersonalScreen> {
           return Expanded(
             child: _buildInfoCard(
               context,
-              'Total',
+              AppLocalizations.of(context)!.personalScreenTotal,
               '${snapshot.data!.isNotEmpty ? snapshot.data!.first.currency : 'USD'} ${total.toStringAsFixed(2)}',
             ),
           );
         }
         return Expanded(
-          child: _buildInfoCard(context, 'Total', 'USD 0.00'),
+          child: _buildInfoCard(context, AppLocalizations.of(context)!.personalScreenTotal, 'USD 0.00'),
         );
       },
     );
@@ -314,7 +315,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
           if (snapshot.hasData) {
             return _buildInfoCard(
               context,
-              'Total',
+              AppLocalizations.of(context)!.personalScreenTotal,
               '${snapshot.data!.length} Item(s)',
             );
           }
@@ -332,7 +333,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
           if (snapshot.hasData) {
             return _buildInfoCard(
               context,
-              'Total',
+              AppLocalizations.of(context)!.personalScreenTotal,
               '${snapshot.data!.length} Item(s)',
             );
           }
@@ -351,13 +352,13 @@ class _PersonalScreenState extends State<PersonalScreen> {
           return Expanded(
             child: _buildInfoCard(
               context,
-              'Active',
+              AppLocalizations.of(context)!.personalScreenActive,
               '$activeCount/${snapshot.data!.length}',
             ),
           );
         }
         return Expanded(
-          child: _buildInfoCard(context, 'Active', '0/0'),
+          child: _buildInfoCard(context, AppLocalizations.of(context)!.personalScreenActive, '0/0'),
         );
       },
     );
@@ -445,10 +446,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
             child: Text(
-              'ACTIVE SUBSCRIPTIONS',
+              AppLocalizations.of(context)!.personalSubscriptions,
               style: TextStyle(
                 color: Colors.black54,
                 fontWeight: FontWeight.bold,
@@ -467,9 +468,9 @@ class _PersonalScreenState extends State<PersonalScreen> {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'No subscriptions yet',
+                    AppLocalizations.of(context)!.personalScreenNoSubscriptions,
                     style: TextStyle(color: Colors.grey),
                   ),
                 );
@@ -490,10 +491,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
             child: Text(
-              'BORROWED ITEMS',
+              AppLocalizations.of(context)!.personalScreenBorrowedItems,
               style: TextStyle(
                 color: Colors.black54,
                 fontWeight: FontWeight.bold,
@@ -512,9 +513,9 @@ class _PersonalScreenState extends State<PersonalScreen> {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'No borrowed items yet',
+                    AppLocalizations.of(context)!.personalScreenNoBorrowed,
                     style: TextStyle(color: Colors.grey),
                   ),
                 );
@@ -535,10 +536,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
             child: Text(
-              'LENT ITEMS',
+              AppLocalizations.of(context)!.personalScreenLentItems,
               style: TextStyle(
                 color: Colors.black54,
                 fontWeight: FontWeight.bold,
@@ -557,9 +558,9 @@ class _PersonalScreenState extends State<PersonalScreen> {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'No lent items yet',
+                    AppLocalizations.of(context)!.personalScreenNoLent,
                     style: TextStyle(color: Colors.grey),
                   ),
                 );

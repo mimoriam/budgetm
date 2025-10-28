@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
@@ -172,10 +173,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           );
 
           final result = await _showPrettySelectionBottomSheet<Category>(
-            title: 'Select Category',
+            title: AppLocalizations.of(context)!.titleSelectCategory,
             items: _categories,
             selectedItem: selectedCategory,
-            getDisplayName: (category) => category.name ?? 'Unnamed Category',
+            getDisplayName: (category) => category.name ?? AppLocalizations.of(context)!.unnamedCategory,
             getLeading: (category) => HugeIcon(
               icon: getIcon(category.icon),
               color: AppColors.primaryTextColorLight,
@@ -215,7 +216,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Pick a color'),
+          title: Text(AppLocalizations.of(context)!.transactionPickColor),
           content: SingleChildScrollView(
             child: BlockPicker(
               pickerColor: _selectedColor,
@@ -316,7 +317,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
-                        'Select Date',
+                        AppLocalizations.of(context)!.transactionSelectDate,
                         style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primaryTextColorLight,
@@ -330,8 +331,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       focusedDay: focusedDay,
                       startingDayOfWeek: StartingDayOfWeek.monday,
                       calendarFormat: CalendarFormat.month,
-                      availableCalendarFormats: const {
-                        CalendarFormat.month: 'Month',
+                      availableCalendarFormats: {
+                        CalendarFormat.month: AppLocalizations.of(context)!.month,
                       },
                       headerStyle: HeaderStyle(
                         titleCentered: true,
@@ -385,7 +386,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('Cancel'),
+                          child: Text(AppLocalizations.of(context)!.transactionCancel),
                         ),
                         const Spacer(),
                         TextButton(
@@ -397,7 +398,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             _formKey.currentState?.patchValue({'date': tempSelected});
                             Navigator.of(ctx).pop();
                           },
-                          child: const Text('Apply'),
+                          child: Text(AppLocalizations.of(context)!.transactionApply),
                         ),
                       ],
                     ),
@@ -441,7 +442,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         children: [
                           Center(
                             child: Text(
-                              'Amount',
+                              AppLocalizations.of(context)!.transactionAmount,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: AppColors.secondaryTextColorLight,
@@ -469,10 +470,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                 ),
                             validator: FormBuilderValidators.compose([
                               FormBuilderValidators.required(
-                                errorText: 'Amount is required',
+                                errorText: AppLocalizations.of(context)!.amountRequired,
                               ),
                               FormBuilderValidators.numeric(
-                                errorText: 'Please enter a valid number',
+                                errorText: AppLocalizations.of(context)!.pleaseEnterValidNumber,
                               ),
                             ]),
                             keyboardType: TextInputType.number,
@@ -487,12 +488,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           Expanded(
                             child: _buildFormSection(
                               context,
-                              'Category',
+                              AppLocalizations.of(context)!.category,
                               FormBuilderField<String>(
                                 name: 'category',
                                 initialValue: _selectedCategoryId,
                                 validator: FormBuilderValidators.required(
-                                  errorText: 'Please select a category',
+                                  errorText: AppLocalizations.of(context)!.pleaseSelectCategory,
                                 ),
                                 builder: (FormFieldState<String?> field) {
                                   Category? selectedCategory;
@@ -512,14 +513,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                           await _showPrettySelectionBottomSheet<
                                             Category
                                           >(
-                                            title: 'Select Category',
+                                            title: AppLocalizations.of(context)!.titleSelectCategory,
                                             items: _categories,
                                             selectedItem:
                                                 selectedCategory ??
                                                 _categories.first,
                                             getDisplayName: (category) =>
                                                 category.name ??
-                                                'Unnamed Category',
+                                                AppLocalizations.of(context)!.unnamedCategory,
                                             getLeading: (category) => HugeIcon(
                                               icon: getIcon(category.icon),
                                               color: AppColors
@@ -574,7 +575,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                                 Flexible(
                                                   child: Text(
                                                     selectedCategory?.name ??
-                                                        'Select',
+                                                        AppLocalizations.of(context)!.transactionSelect,
                                                     style: TextStyle(
                                                       fontSize: 13,
                                                       color:
@@ -606,12 +607,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           Expanded(
                             child: _buildFormSection(
                               context,
-                              'Currency',
+                              AppLocalizations.of(context)!.addBudgetCurrency,
                               FormBuilderField<String>(
                                 name: Provider.of<VacationProvider>(context, listen: false).isVacationMode ? 'vacationCurrency' : 'transactionCurrency',
                                 initialValue: Provider.of<CurrencyProvider>(context, listen: false).selectedCurrencyCode,
                                 validator: FormBuilderValidators.required(
-                                  errorText: 'Please select a currency',
+                                  errorText: AppLocalizations.of(context)!.pleaseSelectCurrency,
                                 ),
                                 builder: (FormFieldState<String?> field) {
                                   return Consumer<CurrencyProvider>(
@@ -682,12 +683,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       if (_accounts.isNotEmpty)
                         _buildFormSection(
                           context,
-                          'Account',
+                          AppLocalizations.of(context)!.account,
                           FormBuilderField<String>(
                             name: 'account',
                             initialValue: _selectedAccountId,
                             validator: FormBuilderValidators.required(
-                              errorText: 'Please select an account',
+                              errorText: AppLocalizations.of(context)!.pleaseSelectAccount,
                             ),
                           builder: (FormFieldState<String?> field) {
                             final selectedAccount = _accounts
@@ -704,7 +705,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                     await _showPrettySelectionBottomSheet<
                                       FirestoreAccount
                                     >(
-                                      title: 'Select Account',
+                                      title: AppLocalizations.of(context)!.titleSelectAccount,
                                       items: _accounts,
                                       selectedItem: selectedAccount,
                                       getDisplayName: (account) =>
@@ -759,7 +760,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                             child: Text(
                                               _selectedAccountId != null
                                                   ? selectedAccount.name
-                                                  : 'Select',
+                                                  : AppLocalizations.of(context)!.select,
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color:
@@ -850,7 +851,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               padding: const EdgeInsets.only(top: 8),
                               child: _buildFormSection(
                                 context,
-                                'Goal',
+                                AppLocalizations.of(context)!.goal,
                                 FormBuilderField<String>(
                                   name: 'goal',
                                   initialValue: _selectedGoalId,
@@ -866,11 +867,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                             await _showPrettySelectionBottomSheet<
                                               FirestoreGoal?
                                             >(
-                                              title: 'Select Goal',
+                                              title: AppLocalizations.of(context)!.titleSelectGoal,
                                               items: items,
                                               selectedItem: selectedGoal,
                                               getDisplayName: (g) =>
-                                                  g == null ? 'None' : g.name,
+                                                  g == null ? AppLocalizations.of(context)!.none : g.name,
                                             );
                                         // Update selection and form field
                                         setState(() {
@@ -912,7 +913,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                                                     .first,
                                                           )
                                                           .name)
-                                                    : 'None',
+                                                    : AppLocalizations.of(context)!.none,
                                                 style: TextStyle(
                                                   fontSize: 13,
                                                   color: _selectedGoalId != null
@@ -967,11 +968,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         // Notes field moved to the top
         _buildFormSection(
           context,
-          'Notes',
+          AppLocalizations.of(context)!.addTransactionNotes,
           FormBuilderTextField(
             name: 'notes',
             style: const TextStyle(fontSize: 13),
-            decoration: _inputDecoration(hintText: 'Notes'),
+            decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintNotes),
             maxLines: 2,
           ),
         ),
@@ -985,12 +986,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               flex: 3,
               child: _buildFormSection(
                 context,
-                'Date',
+                AppLocalizations.of(context)!.addTransactionDate,
                 FormBuilderField<DateTime>(
                   name: 'date',
                   initialValue: _selectedDate,
                   validator: FormBuilderValidators.required(
-                    errorText: 'Please select a date',
+                    errorText: AppLocalizations.of(context)!.pleaseSelectDate,
                   ),
                   builder: (FormFieldState<DateTime?> field) {
                     return GestureDetector(
@@ -1017,7 +1018,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               child: Text(
                                 field.value != null
                                     ? DateFormat('dd/MM/yyyy').format(field.value!)
-                                    : 'Select Date',
+                                    : AppLocalizations.of(context)!.hintSelectDate,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: field.value != null
@@ -1044,7 +1045,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               flex: 2,
               child: _buildFormSection(
                 context,
-                'Time',
+                AppLocalizations.of(context)!.addTransactionTime,
                 FormBuilderDateTimePicker(
                   name: 'time',
                   initialValue: DateTime.now(),
@@ -1081,10 +1082,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SizedBox(height: 8),
           _buildFormSection(
             context,
-            'Paid',
+            AppLocalizations.of(context)!.addTransactionPaid,
             FormBuilderSwitch(
               name: 'paid',
-              title: const Text('Paid', style: TextStyle(fontSize: 13)),
+              title: Text(AppLocalizations.of(context)!.transactionPaid, style: const TextStyle(fontSize: 13)),
               initialValue: true,
               decoration: const InputDecoration(
                 border: InputBorder.none,
@@ -1097,10 +1098,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SizedBox(height: 8),
           _buildFormSection(
             context,
-            'Paid',
+            AppLocalizations.of(context)!.addTransactionPaid,
             FormBuilderSwitch(
               name: 'paid',
-              title: const Text('Paid', style: TextStyle(fontSize: 13)),
+              title: Text(AppLocalizations.of(context)!.transactionPaid, style: const TextStyle(fontSize: 13)),
               initialValue: true,
               decoration: const InputDecoration(
                 border: InputBorder.none,
@@ -1139,22 +1140,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Color',
+          AppLocalizations.of(context)!.addTransactionColor,
           GestureDetector(
             onTap: _showColorPicker,
             child: FormBuilderField(
               name: 'color',
               builder: (FormFieldState<dynamic> field) {
                 return InputDecorator(
-                  decoration: _inputDecoration(hintText: 'Select Color'),
+                  decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintSelectColor),
                   child: SizedBox(
                     height: 20,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Select Color',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.addTransactionColor,
+                          style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.lightGreyBackground,
                           ),
@@ -1198,7 +1199,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'More',
+                AppLocalizations.of(context)!.addTransactionMore,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.bold,
@@ -1273,11 +1274,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               Text(
                 widget.transaction != null
                     ? (widget.transactionType == TransactionType.income
-                        ? 'Edit income'
-                        : 'Edit expense')
+                        ? AppLocalizations.of(context)!.transactionEditIncome
+                        : AppLocalizations.of(context)!.transactionEditExpense)
                     : (widget.transactionType == TransactionType.income
-                        ? 'Plan an income'
-                        : 'Plan an expense'),
+                        ? AppLocalizations.of(context)!.transactionPlanIncome
+                        : AppLocalizations.of(context)!.transactionPlanExpense),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -1375,7 +1376,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 side: const BorderSide(color: Colors.black, width: 1.5),
               ),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context)!.addTransactionCancel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.black,
                   fontSize: 14,
@@ -1410,7 +1411,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ),
                     )
                   : Text(
-                      widget.transaction != null ? 'Update' : 'Create',
+                      widget.transaction != null ? AppLocalizations.of(context)!.addTransactionUpdate : AppLocalizations.of(context)!.addTransactionCreate,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,
@@ -1711,7 +1712,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       debugPrint('Error saving transaction: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save transaction: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveTransaction(e.toString()))),
         );
       }
     } finally {

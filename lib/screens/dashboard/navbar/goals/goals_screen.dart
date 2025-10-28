@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/constants/goal_type_enum.dart';
 import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/services/firestore_service.dart';
@@ -204,7 +205,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Goals',
+                AppLocalizations.of(context)!.goalsTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
@@ -229,9 +230,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     children: [
                       const Icon(Icons.add, size: 16, color: Colors.black),
                       const SizedBox(width: 6),
-                      const Text(
-                        "Add Goal",
-                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
+                      Text(
+                        AppLocalizations.of(context)!.goalsAddGoal,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
                       ),
                     ],
                   ),
@@ -295,14 +296,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       children: [
                         Expanded(
                           child: _buildChip(
-                            'Pending Goals',
+                            AppLocalizations.of(context)!.goalsScreenPendingGoals,
                             _isPendingSelected,
                             () => setState(() => _isPendingSelected = true),
                           ),
                         ),
                         Expanded(
                           child: _buildChip(
-                            'Fulfilled Goals',
+                            AppLocalizations.of(context)!.goalsScreenFulfilledGoals,
                             !_isPendingSelected,
                             () => setState(() => _isPendingSelected = false),
                           ),
@@ -408,10 +409,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
             child: Text(
-              'UNFULFILLED GOALS',
+              AppLocalizations.of(context)!.goalsInProgress,
               style: TextStyle(
                 color: Colors.black54,
                 fontWeight: FontWeight.bold,
@@ -605,14 +606,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No goals created',
+            AppLocalizations.of(context)!.goalsNoGoalsCreated,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
-            'Start by creating a goal to track your progress here.',
+            AppLocalizations.of(context)!.goalsStartCreatingGoal,
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
           ),

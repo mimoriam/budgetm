@@ -1,4 +1,5 @@
 import 'package:budgetm/constants/appColors.dart';
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/firestore_task.dart';
@@ -883,7 +884,7 @@ class _MonthPageViewState extends State<MonthPageView> {
                     padding: const EdgeInsets.all(32.0),
                     child: Center(
                       child: Text(
-                        'No more transactions',
+                        AppLocalizations.of(context)!.homeNoMoreTransactions,
                         style: TextStyle(
                           color: Colors.grey.shade500,
                           fontSize: 14,
@@ -952,7 +953,7 @@ class _MonthPageViewState extends State<MonthPageView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Error loading more transactions',
+                  AppLocalizations.of(context)!.homeErrorLoadingMoreTransactions,
                   style: TextStyle(
                     color: Colors.red.shade600,
                     fontWeight: FontWeight.bold,
@@ -969,7 +970,7 @@ class _MonthPageViewState extends State<MonthPageView> {
           TextButton(
             onPressed: () => provider.retryFetch(),
             child: Text(
-              'Retry',
+              AppLocalizations.of(context)!.homeRetry,
               style: TextStyle(
                 color: Colors.red.shade600,
                 fontWeight: FontWeight.bold,
@@ -1200,7 +1201,7 @@ class _MonthPageViewState extends State<MonthPageView> {
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 16),
               Text(
-                'Error loading data',
+                AppLocalizations.of(context)!.homeErrorLoadingData,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
@@ -1228,14 +1229,14 @@ class _MonthPageViewState extends State<MonthPageView> {
         ),
         const SizedBox(height: 16),
         Text(
-          'No transactions recorded',
+          AppLocalizations.of(context)!.homeNoTransactionsRecorded,
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         Text(
-          'Start by adding transactions to see your spending breakdown here.',
+          AppLocalizations.of(context)!.homeStartAddingTransactions,
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
         ),
@@ -1535,14 +1536,14 @@ Future<void> _showCurrencyChangeDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Currency Change'),
+          title: Text(AppLocalizations.of(context)!.homeCurrencyChange),
           content: Text(
             'Do you want to change currencies because your old currency ($currentCurrency) differs from vacation currency ($vacationCurrency)?',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('No'),
+              child: Text(AppLocalizations.of(context)!.homeNo),
             ),
             TextButton(
               onPressed: () async {
@@ -1559,7 +1560,7 @@ Future<void> _showCurrencyChangeDialog(
                   },
                 );
               },
-              child: const Text('Yes'),
+              child: Text(AppLocalizations.of(context)!.homeYes),
             ),
           ],
         );
@@ -1599,10 +1600,11 @@ Future<void> _showCurrencyBreakdownDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(isVacationMode ? 'Vacation Budget Breakdown' : 'Balance Breakdown'),
+          title: Text(isVacationMode ? AppLocalizations.of(context)!.homeVacationBudgetBreakdown : AppLocalizations.of(context)!.homeBalanceBreakdown),
           content: SizedBox(
             width: double.maxFinite,
             child: _buildCurrencyBreakdownContent(
+              context,
               incomeByCurrency,
               expensesByCurrency,
               currencyProvider,
@@ -1614,7 +1616,7 @@ Future<void> _showCurrencyBreakdownDialog(
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(context)!.homeClose),
             ),
           ],
         );
@@ -1631,6 +1633,7 @@ Future<void> _showCurrencyBreakdownDialog(
 
 // Helper function to build currency breakdown content
 Widget _buildCurrencyBreakdownContent(
+  BuildContext context,
   Map<String, double> incomeByCurrency,
   Map<String, double> expensesByCurrency,
   CurrencyProvider currencyProvider,
@@ -1683,7 +1686,7 @@ Widget _buildCurrencyBreakdownContent(
                 Icon(Icons.account_balance_wallet, color: Colors.blue.shade600, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Total Budget: ${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
+                  '${AppLocalizations.of(context)!.homeTotalBudget}: ${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade700,
@@ -1750,7 +1753,7 @@ Widget _buildCurrencyBreakdownContent(
                     if (!isVacationMode) ...[
                       Expanded(
                         child: _buildCurrencyRow(
-                          'Income',
+                          AppLocalizations.of(context)!.analyticsIncome,
                           income,
                           currency,
                           Colors.green,
@@ -1761,7 +1764,7 @@ Widget _buildCurrencyBreakdownContent(
                     ],
                     Expanded(
                       child: _buildCurrencyRow(
-                        'Expense',
+                        AppLocalizations.of(context)!.analyticsExpenses,
                         expenses,
                         currency,
                         Colors.red,
@@ -1876,7 +1879,7 @@ Future<void> _showVacationCurrencyDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Vacation Mode'),
+          title: Text(AppLocalizations.of(context)!.vacationDialogTitle),
           content: Text(
             'You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was $previousCurrency.',
           ),
@@ -1900,7 +1903,7 @@ Future<void> _showVacationCurrencyDialog(
                   },
                 );
               },
-              child: const Text('Change Currency'),
+              child: Text(AppLocalizations.of(context)!.changeCurrency),
             ),
           ],
         );
@@ -2569,7 +2572,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       context: context,
                                       builder: (ctx) {
                                         return AlertDialog(
-                                          title: const Text('Normal Mode'),
+                                          title: Text(AppLocalizations.of(context)!.normalMode),
                                           content: Text(
                                               'You are now in Normal Mode with currency: $currentCode'),
                                           actions: [
@@ -2909,7 +2912,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         if (vacationProvider.isVacationMode) ...[
                           Expanded(
                             child: _buildInfoCard(
-                              'Total Budget',
+                              AppLocalizations.of(context)!.homeTotalBudget,
                               '${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
                               Colors.blue,
                               HugeIcons.strokeRoundedWallet01,
@@ -2922,7 +2925,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         if (!vacationProvider.isVacationMode) ...[
                           Expanded(
                             child: _buildBalanceCard(
-                              'Income',
+                              AppLocalizations.of(context)!.homeIncomeCard,
                               Colors.green,
                               HugeIcons.strokeRoundedChartUp,
                               AppColors.incomeBackground,
@@ -2935,7 +2938,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         // Expense card - shown in both modes
                         Expanded(
                           child: _buildBalanceCard(
-                            'Expense',
+                            AppLocalizations.of(context)!.homeExpenseCard,
                             Colors.red,
                             HugeIcons.strokeRoundedChartDown,
                             AppColors.expenseBackground,
@@ -3046,7 +3049,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 if (amountsByCurrency.isEmpty)
                   Text(
-                    title == 'Income' ? '+ 0.00' : '- 0.00',
+                    title == AppLocalizations.of(context)!.analyticsIncome ? '+ 0.00' : '- 0.00',
                     style: TextStyle(
                       color: color,
                       fontSize: 16,
@@ -3078,7 +3081,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text(
-                          '${title == 'Income' ? '+' : '-'} $currency ${amount.toStringAsFixed(2)}',
+                          '${title == AppLocalizations.of(context)!.analyticsIncome ? '+' : '-'} $currency ${amount.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: color,
                             fontSize: isSelectedCurrency ? 16 : 14,
