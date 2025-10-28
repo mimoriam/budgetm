@@ -131,11 +131,11 @@ class MyApp extends StatelessWidget {
       builder: (context, themeProvider, child) {
         return MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          // supportedLocales: AppLocalizations.supportedLocales,
-          supportedLocales: [
-            Locale('es'), // English
-            // Locale('es'), // Spanish
-          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          // supportedLocales: [
+          //   Locale('es'), // English
+          //   // Locale('es'), // Spanish
+          // ],
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme(),
           darkTheme: AppTheme.darkTheme(),
