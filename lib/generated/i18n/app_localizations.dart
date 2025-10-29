@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_ar.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_es.dart';
 
@@ -94,6 +95,7 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('ar'),
     Locale('en'),
     Locale('es'),
   ];
@@ -1297,12 +1299,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Subscriptions'**
   String get personalSubscriptions;
-
-  /// No description provided for @personalLent.
-  ///
-  /// In en, this message translates to:
-  /// **'Lent'**
-  String get personalLent;
 
   /// No description provided for @personalBorrowed.
   ///
@@ -3182,6 +3178,12 @@ abstract class AppLocalizations {
   /// **'Normal Mode'**
   String get normalMode;
 
+  /// No description provided for @normalModeWithCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'You are now in Normal Mode with currency: {currency}'**
+  String normalModeWithCurrency(String currency);
+
   /// No description provided for @changeCurrency.
   ///
   /// In en, this message translates to:
@@ -3469,6 +3471,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark as Paid'**
   String get expenseDetailMarkPaid;
+
+  /// No description provided for @expenseDetailMarkUnpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Unpaid'**
+  String get expenseDetailMarkUnpaid;
 
   /// No description provided for @goalsScreenPending.
   ///
@@ -3890,11 +3898,155 @@ abstract class AppLocalizations {
   /// **'Spanish'**
   String get languageSpanish;
 
+  /// No description provided for @languageArabic.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic'**
+  String get languageArabic;
+
   /// No description provided for @languageSelectLanguage.
   ///
   /// In en, this message translates to:
   /// **'Select Language'**
   String get languageSelectLanguage;
+
+  /// No description provided for @vacationCurrencyDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vacation Currency'**
+  String get vacationCurrencyDialogTitle;
+
+  /// No description provided for @vacationCurrencyDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was {previousCurrency}.'**
+  String vacationCurrencyDialogMessage(Object previousCurrency);
+
+  /// No description provided for @vacationCurrencyDialogKeepCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Current ({previousCurrency})'**
+  String vacationCurrencyDialogKeepCurrent(Object previousCurrency);
+
+  /// No description provided for @includeVacationTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Include Vacation Transactions'**
+  String get includeVacationTransaction;
+
+  /// No description provided for @showVacationTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show vacation transactions in normal mode'**
+  String get showVacationTransactions;
+
+  /// No description provided for @balanceDetailTransactionsWillAppear.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions for this account will appear here'**
+  String get balanceDetailTransactionsWillAppear;
+
+  /// No description provided for @personalNextBilling.
+  ///
+  /// In en, this message translates to:
+  /// **'Next billing'**
+  String get personalNextBilling;
+
+  /// No description provided for @personalActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get personalActive;
+
+  /// No description provided for @personalInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get personalInactive;
+
+  /// No description provided for @personalReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'Returned'**
+  String get personalReturned;
+
+  /// No description provided for @personalLent.
+  ///
+  /// In en, this message translates to:
+  /// **'Lent'**
+  String get personalLent;
+
+  /// No description provided for @personalDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get personalDue;
+
+  /// No description provided for @personalItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Item(s)'**
+  String get personalItems;
+
+  /// No description provided for @status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get status;
+
+  /// No description provided for @notReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Returned'**
+  String get notReturned;
+
+  /// No description provided for @borrowedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Borrowed On'**
+  String get borrowedOn;
+
+  /// No description provided for @lentOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Lent On'**
+  String get lentOn;
+
+  /// No description provided for @pause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get pause;
+
+  /// No description provided for @resume.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get resume;
+
+  /// No description provided for @upcomingBills.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Bills'**
+  String get upcomingBills;
+
+  /// No description provided for @upcomingCharge.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Charge'**
+  String get upcomingCharge;
+
+  /// No description provided for @pastHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Past History'**
+  String get pastHistory;
+
+  /// No description provided for @noHistoryYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No history yet'**
+  String get noHistoryYet;
 }
 
 class _AppLocalizationsDelegate
@@ -3908,7 +4060,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'es'].contains(locale.languageCode);
+      <String>['ar', 'en', 'es'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -3917,6 +4069,8 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'ar':
+      return AppLocalizationsAr();
     case 'en':
       return AppLocalizationsEn();
     case 'es':

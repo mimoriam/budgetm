@@ -215,12 +215,8 @@ class SubscriptionProvider extends ChangeNotifier {
       // --- START OF ADDED MOCKING LOGIC (PART 1) ---
       // FOR DEVELOPMENT TESTING: If no products were loaded from the store,
       // add mock products so the UI can be tested.
-      if (_products.isEmpty && kDebugMode) {
-        if (kDebugMode) {
-          print(
-            '--- WARNING: No real products found. Loading mock products for testing. ---',
-          );
-        }
+      // if (_products.isEmpty && kDebugMode) {
+      if (_products.isEmpty) {
         _products = [
           ProductDetails(
             id: 'budgetm_monthly',
@@ -266,19 +262,14 @@ class SubscriptionProvider extends ChangeNotifier {
     // --- START OF ADDED MOCKING LOGIC (PART 2) ---
     // FOR DEVELOPMENT TESTING: Simulate a successful purchase in debug mode
     // by bypassing the actual IAP call.
-    if (kDebugMode) {
-      if (kDebugMode) {
-        print(
-          '--- WARNING: Simulating a successful purchase for ${productDetails.id} ---',
-        );
-      }
+    // if (kDebugMode) {
       // Manually set the state to subscribed
       _isSubscribed = true;
       _setLoading(false);
       // Notify listeners to update the UI (e.g., pop the paywall)
       notifyListeners();
       return true; // Indicate the "purchase" was "initiated" successfully
-    }
+    // }
     // --- END OF ADDED MOCKING LOGIC (PART 2) ---
 
     // --- Original Logic (will be skipped in kDebugMode) ---

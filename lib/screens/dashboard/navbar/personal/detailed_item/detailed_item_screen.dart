@@ -86,13 +86,13 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                           children: [
                             _buildInfoCard(
                               context,
-                              'Amount',
+                              AppLocalizations.of(context)!.personalAmount,
                               '${_getCurrencyCode(_getCurrency(widget.item))} ${_getAmount(widget.item).toStringAsFixed(2)}',
                             ),
                             const SizedBox(width: 12),
                             _buildInfoCard(
                               context,
-                              'Status',
+                              AppLocalizations.of(context)!.status,
                               status,
                             ),
                           ],
@@ -104,7 +104,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        widget.itemType.toLowerCase() == 'subscription' ? 'DATE' : 'DUE DATE',
+                        widget.itemType.toLowerCase() == 'subscription' ? AppLocalizations.of(context)!.date : AppLocalizations.of(context)!.dueDate,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.secondaryTextColorLight,
                           fontWeight: FontWeight.bold,
@@ -127,7 +127,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                'NOTES',
+                                AppLocalizations.of(context)!.notes,
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: AppColors.secondaryTextColorLight,
                                   fontWeight: FontWeight.bold,
@@ -205,7 +205,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                       ),
                     )
                   : Text(
-                      'Mark Paid',
+                      AppLocalizations.of(context)!.markPaid,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,
@@ -234,7 +234,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                       ),
                     )
                   : Text(
-                      subscription.isPaused ? 'Continue' : 'Pause',
+                      subscription.isPaused ? AppLocalizations.of(context)!.resume : AppLocalizations.of(context)!.pause,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,
@@ -269,7 +269,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                       ),
                     )
                   : Text(
-                      'Mark as Returned',
+                      AppLocalizations.of(context)!.markAsReturned,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,
@@ -299,7 +299,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                     ),
                   )
                 : Text(
-                    'Delete',
+                    AppLocalizations.of(context)!.delete,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 14,
@@ -721,7 +721,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
           // Past History Section
           if (entries.isNotEmpty) ...[
             Text(
-              'PAST HISTORY',
+              AppLocalizations.of(context)!.pastHistory,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.secondaryTextColorLight,
                 fontWeight: FontWeight.bold,
@@ -735,7 +735,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
           // Upcoming Billing Dates Section
           if (upcomingDates.isNotEmpty) ...[
             Text(
-              'UPCOMING BILLS',
+              AppLocalizations.of(context)!.upcomingBills,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.secondaryTextColorLight,
                 fontWeight: FontWeight.bold,
@@ -749,7 +749,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
           if (entries.isEmpty && upcomingDates.isEmpty)
             Center(
               child: Text(
-                'No history yet',
+                AppLocalizations.of(context)!.noHistoryYet,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppColors.secondaryTextColorLight,
                 ),
@@ -788,7 +788,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Upcoming Charge',
+                  AppLocalizations.of(context)!.upcomingCharge,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -891,7 +891,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
 
   Widget _buildPersonalDetails(BuildContext context) {
     final DateTime start = _getStartDate(widget.item);
-    final String typeLabel = widget.itemType.toLowerCase() == 'lent' ? 'Lent On' : 'Borrowed On';
+    final String typeLabel = widget.itemType.toLowerCase() == 'lent' ? AppLocalizations.of(context)!.lentOn : AppLocalizations.of(context)!.borrowedOn;
     final bool returned = _isReturned(widget.item);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -919,7 +919,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'RETURNED',
+              AppLocalizations.of(context)!.personalReturned,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.secondaryTextColorLight,
                 fontWeight: FontWeight.bold,
@@ -935,7 +935,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                 ),
               ),
               child: Text(
-                returned ? 'YES' : 'NO',
+                returned ? AppLocalizations.of(context)!.homeYes : AppLocalizations.of(context)!.homeNo,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: returned ? Colors.green.shade700 : Colors.red.shade700,
@@ -994,9 +994,9 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
   }
 
   String _getStatus(Object item) {
-    if (item is Subscription) return item.isActive ? 'Active' : 'Inactive';
-    if (item is Borrowed) return item.returned ? 'Returned' : 'Not Returned';
-    if (item is Lent) return item.returned ? 'Returned' : 'Not Returned';
+    if (item is Subscription) return item.isActive ? AppLocalizations.of(context)!.personalActive : AppLocalizations.of(context)!.personalInactive;
+    if (item is Borrowed) return item.returned ? AppLocalizations.of(context)!.personalReturned : AppLocalizations.of(context)!.notReturned;
+    if (item is Lent) return item.returned ? AppLocalizations.of(context)!.personalReturned : AppLocalizations.of(context)!.notReturned;
     return 'Unknown';
   }
 

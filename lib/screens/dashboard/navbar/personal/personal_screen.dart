@@ -44,8 +44,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   _isSubscriptionsSelected
                       ? _buildSubscriptionsList()
                       : _isBorrowedSelected
-                          ? _buildBorrowedItemsList()
-                          : _buildLentItemsList(),
+                      ? _buildBorrowedItemsList()
+                      : _buildLentItemsList(),
                 ],
               ),
             ),
@@ -54,7 +54,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
       ),
     );
   }
-
 
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
@@ -81,9 +80,9 @@ class _PersonalScreenState extends State<PersonalScreen> {
               Text(
                 AppLocalizations.of(context)!.personalTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                ),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -97,7 +96,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
                 ),
                 child: TextButton(
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -106,11 +108,17 @@ class _PersonalScreenState extends State<PersonalScreen> {
                       const SizedBox(width: 6),
                       Text(
                         _isSubscriptionsSelected
-                            ? AppLocalizations.of(context)!.personalAddSubscription
+                            ? AppLocalizations.of(
+                                context,
+                              )!.personalAddSubscription
                             : _isBorrowedSelected
-                                ? AppLocalizations.of(context)!.personalAddBorrowed
-                                : AppLocalizations.of(context)!.personalAddLent,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 12),
+                            ? AppLocalizations.of(context)!.personalAddBorrowed
+                            : AppLocalizations.of(context)!.personalAddLent,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -120,21 +128,24 @@ class _PersonalScreenState extends State<PersonalScreen> {
                         context,
                         screen: const AddSubscriptionScreen(),
                         withNavBar: false,
-                        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
                       );
                     } else if (_isBorrowedSelected) {
                       await PersistentNavBarNavigator.pushNewScreen(
                         context,
                         screen: const AddBorrowedScreen(),
                         withNavBar: false,
-                        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
                       );
                     } else if (_isLentSelected) {
                       await PersistentNavBarNavigator.pushNewScreen(
                         context,
                         screen: const AddLentScreen(),
                         withNavBar: false,
-                        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                        pageTransitionAnimation:
+                            PageTransitionAnimation.cupertino,
                       );
                     }
                   },
@@ -157,90 +168,100 @@ class _PersonalScreenState extends State<PersonalScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24.0, 10.0, 24.0, 0),
           child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          return Container(
-            height: 55,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Stack(
-              children: [
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  left: _isSubscriptionsSelected
-                      ? 0
-                      : _isBorrowedSelected
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              return Container(
+                height: 55,
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Stack(
+                  children: [
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      left: _isSubscriptionsSelected
+                          ? 0
+                          : _isBorrowedSelected
                           ? width / 3 - 5
                           : width * 2 / 3 - 5,
-                  right: _isSubscriptionsSelected
-                      ? width * 2 / 3 - 5
-                      : _isBorrowedSelected
+                      right: _isSubscriptionsSelected
+                          ? width * 2 / 3 - 5
+                          : _isBorrowedSelected
                           ? width / 3 - 5
                           : 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.gradientEnd,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    height: 45,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildChip(
-                        AppLocalizations.of(context)!.personalScreenSubscriptions,
-                        _isSubscriptionsSelected,
-                        () {
-                          setState(() {
-                            _isSubscriptionsSelected = true;
-                            _isBorrowedSelected = false;
-                            _isLentSelected = false;
-                          });
-                        },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.gradientEnd,
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        height: 45,
                       ),
                     ),
-                    Expanded(
-                      child: _buildChip(
-                        AppLocalizations.of(context)!.personalScreenBorrowed,
-                        _isBorrowedSelected,
-                        () {
-                          setState(() {
-                            _isSubscriptionsSelected = false;
-                            _isBorrowedSelected = true;
-                            _isLentSelected = false;
-                          });
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildChip(
-                        AppLocalizations.of(context)!.personalScreenLent,
-                        _isLentSelected,
-                        () {
-                          setState(() {
-                            _isSubscriptionsSelected = false;
-                            _isBorrowedSelected = false;
-                            _isLentSelected = true;
-                          });
-                        },
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildChip(
+                            AppLocalizations.of(
+                              context,
+                            )!.personalScreenSubscriptions,
+                            _isSubscriptionsSelected,
+                            () {
+                              setState(() {
+                                _isSubscriptionsSelected = true;
+                                _isBorrowedSelected = false;
+                                _isLentSelected = false;
+                              });
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildChip(
+                            AppLocalizations.of(
+                              context,
+                            )!.personalScreenBorrowed,
+                            _isBorrowedSelected,
+                            () {
+                              setState(() {
+                                _isSubscriptionsSelected = false;
+                                _isBorrowedSelected = true;
+                                _isLentSelected = false;
+                              });
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildChip(
+                            AppLocalizations.of(context)!.personalScreenLent,
+                            _isLentSelected,
+                            () {
+                              setState(() {
+                                _isSubscriptionsSelected = false;
+                                _isBorrowedSelected = false;
+                                _isLentSelected = true;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            },
           ),
         ),
       ),
@@ -273,14 +294,14 @@ class _PersonalScreenState extends State<PersonalScreen> {
           _isSubscriptionsSelected
               ? _buildSubscriptionInfoCard()
               : _isBorrowedSelected
-                  ? _buildBorrowedInfoCard()
-                  : _buildLentInfoCard(),
+              ? _buildBorrowedInfoCard()
+              : _buildLentInfoCard(),
           const SizedBox(width: 16),
           _isSubscriptionsSelected
               ? _buildSubscriptionActiveCard()
               : _isBorrowedSelected
-                  ? _buildBorrowedActiveCard()
-                  : _buildLentActiveCard(),
+              ? _buildBorrowedActiveCard()
+              : _buildLentActiveCard(),
         ],
       ),
     );
@@ -291,7 +312,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
       stream: _firestoreService.streamSubscriptions(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final total = snapshot.data!.fold(0.0, (sum, item) => sum + item.price);
+          final total = snapshot.data!.fold(
+            0.0,
+            (sum, item) => sum + item.price,
+          );
           return Expanded(
             child: _buildInfoCard(
               context,
@@ -301,7 +325,11 @@ class _PersonalScreenState extends State<PersonalScreen> {
           );
         }
         return Expanded(
-          child: _buildInfoCard(context, AppLocalizations.of(context)!.personalScreenTotal, 'USD 0.00'),
+          child: _buildInfoCard(
+            context,
+            AppLocalizations.of(context)!.personalScreenTotal,
+            'USD 0.00',
+          ),
         );
       },
     );
@@ -316,10 +344,14 @@ class _PersonalScreenState extends State<PersonalScreen> {
             return _buildInfoCard(
               context,
               AppLocalizations.of(context)!.personalScreenTotal,
-              '${snapshot.data!.length} Item(s)',
+              '${snapshot.data!.length} ${AppLocalizations.of(context)!.personalItems}',
             );
           }
-          return _buildInfoCard(context, 'Total', '0 Item(s)');
+          return _buildInfoCard(
+            context,
+            AppLocalizations.of(context)!.personalScreenTotal,
+            '0 ${AppLocalizations.of(context)!.personalItems}',
+          );
         },
       ),
     );
@@ -334,10 +366,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
             return _buildInfoCard(
               context,
               AppLocalizations.of(context)!.personalScreenTotal,
-              '${snapshot.data!.length} Item(s)',
+              '${snapshot.data!.length} ${AppLocalizations.of(context)!.personalItems}',
             );
           }
-          return _buildInfoCard(context, 'Total', '0 Item(s)');
+          return _buildInfoCard(context, AppLocalizations.of(context)!.personalScreenTotal, '0 ${AppLocalizations.of(context)!.personalItems}');
         },
       ),
     );
@@ -358,7 +390,11 @@ class _PersonalScreenState extends State<PersonalScreen> {
           );
         }
         return Expanded(
-          child: _buildInfoCard(context, AppLocalizations.of(context)!.personalScreenActive, '0/0'),
+          child: _buildInfoCard(
+            context,
+            AppLocalizations.of(context)!.personalScreenActive,
+            '0/0',
+          ),
         );
       },
     );
@@ -373,11 +409,11 @@ class _PersonalScreenState extends State<PersonalScreen> {
             final activeCount = snapshot.data!.where((b) => !b.returned).length;
             return _buildInfoCard(
               context,
-              'Active',
+              AppLocalizations.of(context)!.personalActive,
               '$activeCount/${snapshot.data!.length}',
             );
           }
-          return _buildInfoCard(context, 'Active', '0/0');
+          return _buildInfoCard(context, AppLocalizations.of(context)!.personalActive, '0/0');
         },
       ),
     );
@@ -392,11 +428,11 @@ class _PersonalScreenState extends State<PersonalScreen> {
             final activeCount = snapshot.data!.where((l) => !l.returned).length;
             return _buildInfoCard(
               context,
-              'Active',
+              AppLocalizations.of(context)!.personalActive,
               '$activeCount/${snapshot.data!.length}',
             );
           }
-          return _buildInfoCard(context, 'Active', '0/0');
+          return _buildInfoCard(context, AppLocalizations.of(context)!.personalActive, '0/0');
         },
       ),
     );
@@ -423,17 +459,17 @@ class _PersonalScreenState extends State<PersonalScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.secondaryTextColorLight,
-                ),
+              color: AppColors.secondaryTextColorLight,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: AppColors.primaryTextColorLight,
-                ),
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: AppColors.primaryTextColorLight,
+            ),
           ),
         ],
       ),
@@ -461,7 +497,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
             stream: _firestoreService.streamSubscriptions(),
             builder: (context, snapshot) {
               // Only show loading if we have no data at all
-              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
@@ -476,7 +513,9 @@ class _PersonalScreenState extends State<PersonalScreen> {
                 );
               }
               return Column(
-                children: snapshot.data!.map((subscription) => _buildSubscriptionItem(subscription)).toList(),
+                children: snapshot.data!
+                    .map((subscription) => _buildSubscriptionItem(subscription))
+                    .toList(),
               );
             },
           ),
@@ -492,7 +531,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8.0,
+              vertical: 12.0,
+            ),
             child: Text(
               AppLocalizations.of(context)!.personalScreenBorrowedItems,
               style: TextStyle(
@@ -506,7 +548,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
             stream: _firestoreService.streamBorrowed(),
             builder: (context, snapshot) {
               // Only show loading if we have no data at all
-              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
@@ -521,7 +564,9 @@ class _PersonalScreenState extends State<PersonalScreen> {
                 );
               }
               return Column(
-                children: snapshot.data!.map((item) => _buildBorrowedItem(item)).toList(),
+                children: snapshot.data!
+                    .map((item) => _buildBorrowedItem(item))
+                    .toList(),
               );
             },
           ),
@@ -537,7 +582,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8.0,
+              vertical: 12.0,
+            ),
             child: Text(
               AppLocalizations.of(context)!.personalScreenLentItems,
               style: TextStyle(
@@ -551,7 +599,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
             stream: _firestoreService.streamLent(),
             builder: (context, snapshot) {
               // Only show loading if we have no data at all
-              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
@@ -566,7 +615,9 @@ class _PersonalScreenState extends State<PersonalScreen> {
                 );
               }
               return Column(
-                children: snapshot.data!.map((item) => _buildLentItem(item)).toList(),
+                children: snapshot.data!
+                    .map((item) => _buildLentItem(item))
+                    .toList(),
               );
             },
           ),
@@ -577,13 +628,18 @@ class _PersonalScreenState extends State<PersonalScreen> {
 
   Widget _buildSubscriptionItem(Subscription subscription) {
     final dateFormat = DateFormat('MMM dd, yyyy');
-    final progressColor = subscription.isActive ? AppColors.gradientEnd : Colors.grey;
+    final progressColor = subscription.isActive
+        ? AppColors.gradientEnd
+        : Colors.grey;
 
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
           context,
-          screen: DetailedItemScreen(itemType: 'subscription', item: subscription),
+          screen: DetailedItemScreen(
+            itemType: 'subscription',
+            item: subscription,
+          ),
           withNavBar: false,
           pageTransitionAnimation: PageTransitionAnimation.cupertino,
         );
@@ -648,19 +704,22 @@ class _PersonalScreenState extends State<PersonalScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Next billing: ${dateFormat.format(subscription.nextBillingDate)}',
+                  '${AppLocalizations.of(context)!.personalNextBilling}: ${dateFormat.format(subscription.nextBillingDate)}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 if (subscription.isActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.gradientEnd.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Active',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.personalActive,
+                      style: const TextStyle(
                         color: AppColors.gradientEnd,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -669,14 +728,17 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Inactive',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.personalInactive,
+                      style: const TextStyle(
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -692,7 +754,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildBorrowedItem(Borrowed item) {
-    final currencyFormat = NumberFormat.currency(symbol: item.currency, decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(
+      symbol: item.currency,
+      decimalDigits: 2,
+    );
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 
@@ -765,19 +830,22 @@ class _PersonalScreenState extends State<PersonalScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Due: ${dateFormat.format(item.dueDate)}',
+                  '${AppLocalizations.of(context)!.personalDue}: ${dateFormat.format(item.dueDate)}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 if (!item.returned)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.gradientEnd.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Borrowed',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.personalBorrowed,
+                      style: const TextStyle(
                         color: AppColors.gradientEnd,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -786,14 +854,17 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Returned',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.personalReturned,
+                      style: const TextStyle(
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -809,7 +880,10 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildLentItem(Lent item) {
-    final currencyFormat = NumberFormat.currency(symbol: item.currency, decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(
+      symbol: item.currency,
+      decimalDigits: 2,
+    );
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 
@@ -882,19 +956,22 @@ class _PersonalScreenState extends State<PersonalScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Due: ${dateFormat.format(item.dueDate)}',
+                  '${AppLocalizations.of(context)!.personalDue}: ${dateFormat.format(item.dueDate)}',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 if (!item.returned)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.gradientEnd.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Lent',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.personalLent,
+                      style: const TextStyle(
                         color: AppColors.gradientEnd,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -903,14 +980,17 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Returned',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.personalReturned,
+                      style: const TextStyle(
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -924,5 +1004,4 @@ class _PersonalScreenState extends State<PersonalScreen> {
       ),
     );
   }
-
 }

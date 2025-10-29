@@ -354,7 +354,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               width: MediaQuery.of(context).size.width * 0.6,
               child: _buildInfoCard(
                 context,
-                'Fulfilled Goals',
+                AppLocalizations.of(context)!.goalsScreenFulfilled,
                 fulfilledRatio,
               ),
             ),
@@ -432,10 +432,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
             child: Text(
-              'FULFILLED GOALS',
+              AppLocalizations.of(context)!.goalsScreenFulfilled,
               style: TextStyle(
                 color: Colors.black54,
                 fontWeight: FontWeight.bold,

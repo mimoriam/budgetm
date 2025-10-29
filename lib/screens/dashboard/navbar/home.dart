@@ -1879,14 +1879,14 @@ Future<void> _showVacationCurrencyDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(AppLocalizations.of(context)!.vacationDialogTitle),
+          title: Text(AppLocalizations.of(context)!.vacationCurrencyDialogTitle),
           content: Text(
-            'You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was $previousCurrency.',
+            AppLocalizations.of(context)!.vacationCurrencyDialogMessage(previousCurrency),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('Keep Current ($previousCurrency)'),
+              child: Text(AppLocalizations.of(context)!.vacationCurrencyDialogKeepCurrent(previousCurrency)),
             ),
             TextButton(
               onPressed: () async {
@@ -2574,7 +2574,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                         return AlertDialog(
                                           title: Text(AppLocalizations.of(context)!.normalMode),
                                           content: Text(
-                                              'You are now in Normal Mode with currency: $currentCode'),
+                                              AppLocalizations.of(context)!.normalModeWithCurrency(currentCode)),
                                           actions: [
                                             TextButton(
                                               onPressed: () =>
@@ -2760,12 +2760,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
                 return CheckboxListTile(
-                  title: const Text(
-                    'Include Vacation Transactions',
+                  title: Text(
+                    AppLocalizations.of(context)!.includeVacationTransaction,
                     style: TextStyle(fontSize: 14),
                   ),
-                  subtitle: const Text(
-                    'Show vacation transactions in normal mode',
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.showVacationTransactions,
                     style: TextStyle(fontSize: 11),
                   ),
                   value: homeScreenProvider.includeVacationTransactions,

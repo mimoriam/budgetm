@@ -415,13 +415,13 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No transactions found',
+                          AppLocalizations.of(context)!.homeNoTransactionsRecorded,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Transactions for this account will appear here',
+                          AppLocalizations.of(context)!.balanceDetailTransactionsWillAppear,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Colors.grey[500],
                               ),
@@ -856,7 +856,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Total Expenses',
+            AppLocalizations.of(context)!.analyticsTotalExpenses,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.black,
               fontWeight: FontWeight.w500,

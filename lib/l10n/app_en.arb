@@ -200,8 +200,7 @@
     "profileVersion": "Version",
     "personalTitle": "Personal",
     "personalSubscriptions": "Subscriptions",
-    "personalLent": "Lent",
-    "personalBorrowed": "Borrowed",
+  "personalBorrowed": "Borrowed",
     "personalAddSubscription": "Add Subscription",
     "personalAddLent": "Add Lent",
     "personalAddBorrowed": "Add Borrowed",
@@ -514,6 +513,14 @@
     "deleteAccount": "Delete Account",
     "deleteAllAssociatedTransactions": "Delete all associated transactions",
     "normalMode": "Normal Mode",
+  "normalModeWithCurrency": "You are now in Normal Mode with currency: {currency}",
+  "@normalModeWithCurrency": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
     "changeCurrency": "Change Currency",
     "vacationModeDialog": "Vacation Mode Dialog",
     "categoryAndTransactionsDeleted": "Category and associated transactions deleted successfully",
@@ -562,6 +569,7 @@
     "expenseDetailPaidStatus": "PAID/UNPAID",
     "expenseDetailVacation": "Vacation",
     "expenseDetailMarkPaid": "Mark as Paid",
+    "expenseDetailMarkUnpaid": "Mark as Unpaid",
     "goalsScreenPending": "Pending Goals",
     "goalsScreenFulfilled": "Fulfilled Goals",
     "createGoalTitle": "Create a pending goal",
@@ -632,5 +640,29 @@
   "profileLanguage": "Language",
   "languageEnglish": "English",
   "languageSpanish": "Spanish",
-  "languageSelectLanguage": "Select Language"
+  "languageArabic": "Arabic",
+  "languageSelectLanguage": "Select Language",
+  "vacationCurrencyDialogTitle": "Vacation Currency",
+  "vacationCurrencyDialogMessage": "You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was {previousCurrency}.",
+  "vacationCurrencyDialogKeepCurrent": "Keep Current ({previousCurrency})",
+  "includeVacationTransaction": "Include Vacation Transactions",
+  "showVacationTransactions": "Show vacation transactions in normal mode",
+  "balanceDetailTransactionsWillAppear": "Transactions for this account will appear here",
+  "personalNextBilling": "Next billing",
+  "personalActive": "Active",
+  "personalInactive": "Inactive",
+  "personalReturned": "Returned",
+  "personalLent": "Lent",
+  "personalDue": "Due",
+  "personalItems": "Item(s)",
+  "status": "Status",
+  "notReturned": "Not Returned",
+  "borrowedOn": "Borrowed On",
+  "lentOn": "Lent On",
+  "pause": "Pause",
+  "resume": "Continue",
+  "upcomingBills": "Upcoming Bills",
+  "upcomingCharge": "Upcoming Charge",
+  "pastHistory": "Past History",
+  "noHistoryYet": "No history yet"
   }

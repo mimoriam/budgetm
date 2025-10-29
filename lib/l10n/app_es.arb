@@ -200,7 +200,6 @@
   "profileVersion": "Versión",
   "personalTitle": "Personal",
   "personalSubscriptions": "Suscripciones",
-  "personalLent": "Prestado",
   "personalBorrowed": "Recibido",
   "personalAddSubscription": "Añadir Suscripción",
   "personalAddLent": "Añadir Préstamo",
@@ -514,6 +513,14 @@
   "deleteAccount": "Eliminar Cuenta",
   "deleteAllAssociatedTransactions": "Eliminar todas las transacciones asociadas",
   "normalMode": "Modo Normal",
+  "normalModeWithCurrency": "Ahora estás en Modo Normal con moneda: {currency}",
+  "@normalModeWithCurrency": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
   "changeCurrency": "Cambiar Moneda",
   "vacationModeDialog": "Diálogo de Modo Vacaciones",
   "categoryAndTransactionsDeleted": "Categoría y transacciones asociadas eliminadas exitosamente",
@@ -562,6 +569,7 @@
   "expenseDetailPaidStatus": "PAGADO/NO PAGADO",
   "expenseDetailVacation": "Vacaciones",
   "expenseDetailMarkPaid": "Marcar como Pagado",
+  "expenseDetailMarkUnpaid": "Marcar como No Pagado",
   "goalsScreenPending": "Metas Pendientes",
   "goalsScreenFulfilled": "Metas Cumplidas",
   "createGoalTitle": "Crear una meta pendiente",
@@ -632,5 +640,29 @@
   "profileLanguage": "Idioma",
   "languageEnglish": "Inglés",
   "languageSpanish": "Español",
-  "languageSelectLanguage": "Seleccionar Idioma"
+  "languageArabic": "Árabe",
+  "languageSelectLanguage": "Seleccionar Idioma",
+  "vacationCurrencyDialogTitle": "Moneda de Vacaciones",
+  "vacationCurrencyDialogMessage": "Puedes cambiar monedas para tus transacciones de vacaciones. ¿Te gustaría cambiar la moneda ahora?\n\nTu moneda anterior era {previousCurrency}.",
+  "vacationCurrencyDialogKeepCurrent": "Mantener Actual ({previousCurrency})",
+  "includeVacationTransaction": "Incluir transacciones de vacaciones",
+  "showVacationTransactions": "Mostrar transacciones de vacaciones en modo normal",
+  "balanceDetailTransactionsWillAppear": "Las transacciones para esta cuenta aparecerán aquí",
+  "personalNextBilling": "Próxima facturación",
+  "personalActive": "Activo",
+  "personalInactive": "Inactivo",
+  "personalReturned": "Devuelto",
+  "personalLent": "Prestado",
+  "personalDue": "Vence",
+  "personalItems": "Elemento(s)",
+  "status": "Estado",
+  "notReturned": "No Devuelto",
+  "borrowedOn": "Prestado El",
+  "lentOn": "Prestado El",
+  "pause": "Pausar",
+  "resume": "Continuar",
+  "upcomingBills": "Facturas Próximas",
+  "upcomingCharge": "Cargo Próximo",
+  "pastHistory": "Historial Anterior",
+  "noHistoryYet": "Aún no hay historial"
 }

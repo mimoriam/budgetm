@@ -411,17 +411,12 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
             Icon(Icons.receipt_long, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
-              'No transactions yet',
+              AppLocalizations.of(context)!.homeNoTransactionsRecorded,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(
-              'No transactions found for this category in ${widget.budget.currency} currency for the selected period',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-            ),
           ],
         ),
       ),

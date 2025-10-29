@@ -111,6 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     isSubscribed
                                         ? AppLocalizations.of(context)!.profilePremiumActive
                                         : AppLocalizations.of(context)!.profileFreePlan,
+                                    textAlign: TextAlign.start,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 18,
@@ -122,6 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     isSubscribed
                                         ? AppLocalizations.of(context)!.profilePremiumDescription
                                         : AppLocalizations.of(context)!.profileUpgradeDescription,
+                                    textAlign: TextAlign.start,
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
                                       fontSize: 14,
@@ -352,6 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // const SizedBox(width: 16),
                   Text(
                     AppLocalizations.of(context)!.profileTitle,
+                    textAlign: TextAlign.start,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
@@ -425,6 +428,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     child: TextField(
                                       controller: _controller,
                                       autofocus: true,
+                                      textAlign: TextAlign.start,
                                       decoration: InputDecoration(
                                         hintText: AppLocalizations.of(context)!.hintEnterDisplayName,
                                         border: OutlineInputBorder(
@@ -559,6 +563,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                       child: Text(
                         displayName,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -580,6 +585,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
                 return Text(
                   userProvider.email,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
                 );
               },
@@ -592,6 +598,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Text(
                       AppLocalizations.of(context)!.profileVacationMode,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -632,9 +639,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.only(left: 4.0, top: 8.0, bottom: 8.0),
+        padding: EdgeInsets.only(
+          left: 4.0, 
+          right: 4.0,
+          top: 8.0, 
+          bottom: 8.0,
+        ),
         child: Text(
           title.toUpperCase(),
+          textAlign: TextAlign.start,
           style: TextStyle(
             color: Colors.grey.shade600,
             fontWeight: FontWeight.bold,
@@ -656,6 +669,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       leading: Icon(icon, color: color ?? Colors.grey.shade700),
       title: Text(
         title,
+        textAlign: TextAlign.start,
         style: TextStyle(
           color: color ?? Colors.black,
           fontWeight: FontWeight.w500,
@@ -703,7 +717,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.manage_accounts),
-                    title: Text(AppLocalizations.of(context)!.profileManageSubscription),
+                    title: Text(
+                      AppLocalizations.of(context)!.profileManageSubscription,
+                      textAlign: TextAlign.start,
+                    ),
                     onTap: subscriptionProvider.isLoading
                         ? null
                         : () async {
@@ -713,7 +730,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.restore),
-                    title: Text(AppLocalizations.of(context)!.profileRestorePurchases),
+                    title: Text(
+                      AppLocalizations.of(context)!.profileRestorePurchases,
+                      textAlign: TextAlign.start,
+                    ),
                     onTap: subscriptionProvider.isLoading
                         ? null
                         : () async {
@@ -735,7 +755,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.refresh),
-                    title: Text(AppLocalizations.of(context)!.profileRefreshStatus),
+                    title: Text(
+                      AppLocalizations.of(context)!.profileRefreshStatus,
+                      textAlign: TextAlign.start,
+                    ),
                     onTap: subscriptionProvider.isLoading
                         ? null
                         : () async {
@@ -786,6 +809,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppLocalizations.of(context)!.languageSpanish,
                     '🇪🇸',
                   ),
+                  const SizedBox(height: 8),
+                  _buildLanguageOption(
+                    context,
+                    localeProvider,
+                    const Locale('ar'),
+                    AppLocalizations.of(context)!.languageArabic,
+                    '🇸🇦',
+                  ),
                 ],
               ),
               actions: [
@@ -817,6 +848,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       title: Text(
         languageName,
+        textAlign: TextAlign.start,
         style: TextStyle(
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           color: isSelected ? Theme.of(context).primaryColor : null,

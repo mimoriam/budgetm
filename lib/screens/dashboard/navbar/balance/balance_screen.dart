@@ -753,7 +753,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Account Balance',
+                AppLocalizations.of(context)!.balanceAccountBalance,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -1191,7 +1191,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Account Balance',
+                AppLocalizations.of(context)!.balanceAccountBalance,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -1431,7 +1431,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Account Balance',
+                AppLocalizations.of(context)!.balanceAccountBalance,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),

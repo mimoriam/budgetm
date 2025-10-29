@@ -881,7 +881,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                               _isPaid ? 'paid' : 'unpaid',
                                             ),
                                             _isPaid
-                                                ? 'Mark as Unpaid'
+                                                ? AppLocalizations.of(context)!.expenseDetailMarkUnpaid
                                                 : AppLocalizations.of(context)!.expenseDetailMarkPaid,
                                             style: Theme.of(context)
                                                 .textTheme

@@ -188,7 +188,8 @@ navbarVisibility.setNavBarVisibility(true);
           if (_controller.index == 0) // Only show FAB on home screen (index 0)
             Positioned(
               bottom: 100,
-              right: 20,
+              right: Directionality.of(context) == TextDirection.rtl ? null : 20,
+              left: Directionality.of(context) == TextDirection.rtl ? 20 : null,
               child: AnimatedSlide(
                 offset: navbarVisibility.isNavBarVisible
                     ? Offset.zero
@@ -379,9 +380,38 @@ navbarVisibility.setNavBarVisibility(true);
     required Color color,
     required VoidCallback onPressed,
   }) {
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
+      children: isRTL ? [
+        // RTL: Button first, then label
+        FloatingActionButton(
+          heroTag: null,
+          mini: true,
+          elevation: 1,
+          onPressed: onPressed,
+          backgroundColor: color,
+          shape: const CircleBorder(),
+          child: HugeIcon(icon: icon, color: Colors.white, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+        ),
+      ] : [
+        // LTR: Label first, then button
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(

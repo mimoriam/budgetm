@@ -657,9 +657,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personalSubscriptions => 'Subscriptions';
 
   @override
-  String get personalLent => 'Lent';
-
-  @override
   String get personalBorrowed => 'Borrowed';
 
   @override
@@ -1643,6 +1640,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get normalMode => 'Normal Mode';
 
   @override
+  String normalModeWithCurrency(String currency) {
+    return 'You are now in Normal Mode with currency: $currency';
+  }
+
+  @override
   String get changeCurrency => 'Change Currency';
 
   @override
@@ -1788,6 +1790,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expenseDetailMarkPaid => 'Mark as Paid';
+
+  @override
+  String get expenseDetailMarkUnpaid => 'Mark as Unpaid';
 
   @override
   String get goalsScreenPending => 'Pending Goals';
@@ -2000,5 +2005,83 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageSpanish => 'Spanish';
 
   @override
+  String get languageArabic => 'Arabic';
+
+  @override
   String get languageSelectLanguage => 'Select Language';
+
+  @override
+  String get vacationCurrencyDialogTitle => 'Vacation Currency';
+
+  @override
+  String vacationCurrencyDialogMessage(Object previousCurrency) {
+    return 'You can change currencies for your vacation transactions. Would you like to change the currency now?\n\nYour previous currency was $previousCurrency.';
+  }
+
+  @override
+  String vacationCurrencyDialogKeepCurrent(Object previousCurrency) {
+    return 'Keep Current ($previousCurrency)';
+  }
+
+  @override
+  String get includeVacationTransaction => 'Include Vacation Transactions';
+
+  @override
+  String get showVacationTransactions =>
+      'Show vacation transactions in normal mode';
+
+  @override
+  String get balanceDetailTransactionsWillAppear =>
+      'Transactions for this account will appear here';
+
+  @override
+  String get personalNextBilling => 'Next billing';
+
+  @override
+  String get personalActive => 'Active';
+
+  @override
+  String get personalInactive => 'Inactive';
+
+  @override
+  String get personalReturned => 'Returned';
+
+  @override
+  String get personalLent => 'Lent';
+
+  @override
+  String get personalDue => 'Due';
+
+  @override
+  String get personalItems => 'Item(s)';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get notReturned => 'Not Returned';
+
+  @override
+  String get borrowedOn => 'Borrowed On';
+
+  @override
+  String get lentOn => 'Lent On';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get resume => 'Continue';
+
+  @override
+  String get upcomingBills => 'Upcoming Bills';
+
+  @override
+  String get upcomingCharge => 'Upcoming Charge';
+
+  @override
+  String get pastHistory => 'Past History';
+
+  @override
+  String get noHistoryYet => 'No history yet';
 }
