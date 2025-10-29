@@ -127,23 +127,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       fontSize: 14,
                                     ),
                                   ),
-                                  if (isSubscribed)
-                                    Builder(
-                                      builder: (context) {
-                                        final renewalText = context.read<SubscriptionProvider>().renewalCopy;
-                                        if (renewalText == null) return const SizedBox.shrink();
-                                        return Padding(
-                                          padding: const EdgeInsets.only(top: 4.0),
-                                          child: Text(
-                                            renewalText,
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.9),
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                  // if (isSubscribed)
+                                  //   Builder(
+                                  //     builder: (context) {
+                                  //       final renewalText = context.read<SubscriptionProvider>().renewalCopy;
+                                  //       if (renewalText == null) return const SizedBox.shrink();
+                                  //       return Padding(
+                                  //         padding: const EdgeInsets.only(top: 4.0),
+                                  //         child: Text(
+                                  //           renewalText,
+                                  //           style: TextStyle(
+                                  //             color: Colors.white.withOpacity(0.9),
+                                  //             fontSize: 12,
+                                  //           ),
+                                  //         ),
+                                  //       );
+                                  //     },
+                                  //   ),
                                 ],
                               ),
                             ),

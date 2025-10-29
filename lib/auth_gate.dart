@@ -9,7 +9,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -26,12 +25,12 @@ class _AuthGateState extends State<AuthGate> {
   bool? _cachedOnboardingStatus;
   bool _preferencesLoaded = false;
   Future<bool>? _isInitializedFuture;
-  
+
   @override
   void initState() {
     super.initState();
     _initPreferences();
-    
+
     // final currentUser = FirebaseAuth.instance.currentUser;
     // if (currentUser != null) {
     //   _isInitializedFuture = FirestoreService.instance.isUserInitialized(currentUser.uid);
@@ -41,9 +40,7 @@ class _AuthGateState extends State<AuthGate> {
   Future<void> _initPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     _cachedOnboardingStatus = prefs.getBool(_ONBOARDING_DONE_KEY) ?? false;
-    
-    // Note: Category initialization moved to SelectCurrencyScreen to ensure user is authenticated
-    
+
     setState(() {
       _preferencesLoaded = true;
     });
@@ -53,23 +50,18 @@ class _AuthGateState extends State<AuthGate> {
     return _cachedOnboardingStatus ?? false;
   }
 
-
   @override
   Widget build(BuildContext context) {
     // If preferences haven't been loaded yet, show a loading indicator
     if (!_preferencesLoaded) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     // If onboarding is not completed, show OnboardingScreen
     if (!_isOnboardingCompleted()) {
       return const OnboardingScreen();
     }
-    
+
     // Use StreamBuilder for real-time authentication updates
     return StreamBuilder<User?>(
       stream: _authService.userChanges(),
@@ -77,57 +69,37 @@ class _AuthGateState extends State<AuthGate> {
         // Update UserProvider with current user after the frame is built
         if (authSnapshot.hasData || authSnapshot.data == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            final userProvider = Provider.of<UserProvider>(context, listen: false);
+            final userProvider = Provider.of<UserProvider>(
+              context,
+              listen: false,
+            );
             userProvider.setUser(authSnapshot.data);
           });
         }
-        
+
         // Show loading indicator only during initial connection
-        if (authSnapshot.connectionState == ConnectionState.waiting && authSnapshot.data == null) {
+        if (authSnapshot.connectionState == ConnectionState.waiting &&
+            authSnapshot.data == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         // If user is not logged in, navigate to LoginScreen
         if (!authSnapshot.hasData) {
-          () async {
-            try {
-              await Purchases.logOut();
-            } catch (e) {
-              // Ignore logout errors when user is anonymous
-              // (e.g., LogOutWithAnonymousUserError)
-              // but log for debugging.
-              // Using debugPrint to avoid type issues with catchError.
-              // ignore: avoid_print
-              print('RevenueCat logout error: $e');
-            }
-          }();
           // User logged out, reset the future
           _isInitializedFuture = null;
           return const LoginScreen();
         }
-        
+
         // If user is logged in, check Firestore initialization status via FutureBuilder
         final user = authSnapshot.data!;
 
-        // --- Log in to RevenueCat ---
-        // Do this *every time* the user is present in the stream.
-        // RevenueCat's SDK handles caching, so this is safe and efficient.
-        () async {
-          try {
-            await Purchases.logIn(user.uid);
-          } catch (e) {
-            // ignore: avoid_print
-            print('RevenueCat login error: $e');
-          }
-        }();
-        
         // If future is not set or belongs to a different user, create a new one
-        if (_isInitializedFuture == null) {
-          _isInitializedFuture = FirestoreService.instance.isUserInitialized(user.uid);
-        }
-        
+        _isInitializedFuture ??= FirestoreService.instance.isUserInitialized(
+            user.uid,
+          );
+
         return FutureBuilder<bool>(
           future: _isInitializedFuture,
           builder: (context, initSnapshot) {
@@ -147,5 +119,4 @@ class _AuthGateState extends State<AuthGate> {
       },
     );
   }
-  
 }

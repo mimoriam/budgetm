@@ -1,89 +1,195 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
+// ADD these imports
+import 'package:in_app_purchase/in_app_purchase.dart';
+// If you are not on the Play Store, you might need this
+// import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:url_launcher/url_launcher.dart';
+// REMOVE RevenueCat import
+// import 'package:purchases_flutter/purchases_flutter.dart';
+
+// REMOVE deprecated service import
 // import 'package:budgetm/services/subscription_service.dart'; // DELETE THIS
 
 class SubscriptionProvider extends ChangeNotifier {
-  // final SubscriptionService _subscriptionService = SubscriptionService(); // DELETE THIS
 
+  // --- NEW VARIABLES ---
+  final InAppPurchase _iap = InAppPurchase.instance;
+  StreamSubscription<List<PurchaseDetails>>? _subscription;
+
+  // TODO: IMPORTANT!
+  // Define your product IDs from App Store Connect & Google Play Console
+  final Set<String> _productIds = {
+    'budgetm_monthly',
+    'budgetm_yearly', 
+  };
+
+  List<ProductDetails> _products = [];
+  final List<PurchaseDetails> _purchases = [];
+  bool _isStoreAvailable = false;
+
+  // --- STATE VARIABLES ---
   bool _isSubscribed = false;
   bool _isLoading = false;
   String? _error;
 
-  // --- ADD THIS ---
-  Offerings? _offerings;
-  DateTime? _expirationDate;
-  bool? _willRenew;
-
+  // --- PUBLIC GETTERS ---
   bool get isSubscribed => _isSubscribed;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // --- ADD THIS ---
-  Offerings? get offerings => _offerings;
-  DateTime? get expirationDate => _expirationDate;
-  bool? get willRenew => _willRenew;
+  /// This replaces the RevenueCat 'offerings' getter
+  List<ProductDetails> get products => _products;
 
-  /// Returns a short copy suitable for UI showing renew/expiry status
-  String? get renewalCopy {
-    if (_expirationDate == null) return null;
-    final date = _expirationDate!;
-    final renewing = _willRenew ?? true;
-    final dateStr = date.toLocal().toIso8601String().split('T').first;
-    return renewing ? 'Renews on $dateStr' : 'Expires on $dateStr (not renewing)';
-  }
+  // You can re-implement this if you parse the expiration date
+  // during purchase verification
+  // String? get renewalCopy { ... }
 
   SubscriptionProvider() {
-    // _initializeSubscriptionStatus(); // DELETE THIS
+    // Listen to the purchase stream
+    final Stream<List<PurchaseDetails>> purchaseStream = _iap.purchaseStream;
+    _subscription = purchaseStream.listen(
+      _onPurchaseStreamUpdated, // Main listener
+      onDone: () {
+        _subscription?.cancel();
+      },
+      onError: (e) {
+        _error = 'Purchase stream error: $e';
+        notifyListeners();
+      },
+    );
 
-    // --- ADD THESE ---
-    // Listen for subscription changes
-    Purchases.addCustomerInfoUpdateListener(_onCustomerInfoUpdated);
-    // Check initial subscription status
-    _checkSubscriptionStatus();
-    // Load products
-    loadOfferings();
+    // Initialize the store
+    _initializeIAP();
   }
 
   // --- ADD THIS ---
   @override
   void dispose() {
-    Purchases.removeCustomerInfoUpdateListener(_onCustomerInfoUpdated);
+    _subscription?.cancel();
     super.dispose();
   }
 
   // --- ADD THIS ---
-  /// Handle real-time updates from RevenueCat
-  void _onCustomerInfoUpdated(CustomerInfo customerInfo) {
-    _updateSubscriptionStatus(customerInfo);
+  /// Main initialization method
+  Future<void> _initializeIAP() async {
+    _setLoading(true);
+    _isStoreAvailable = await _iap.isAvailable();
+
+    if (_isStoreAvailable) {
+      await _loadProducts();
+      // Restore purchases on init to check for existing subscriptions
+      await restorePurchases(notifyLoading: false);
+    } else {
+      _error = 'In-app purchases are not available.';
+    }
+    _setLoading(false);
   }
 
-  // --- ADD THIS ---
-  /// Helper to check entitlement status
-  void _updateSubscriptionStatus(CustomerInfo customerInfo) {
-    // Get the active entitlement for "pro"
-    final proEntitlement = customerInfo.entitlements.active['pro'];
+  // --- REPLACES _onCustomerInfoUpdated ---
+  /// Handle updates from the purchase stream
+  Future<void> _onPurchaseStreamUpdated(
+    List<PurchaseDetails> purchaseDetailsList,
+  ) async {
+    for (var purchase in purchaseDetailsList) {
+      switch (purchase.status) {
+        case PurchaseStatus.pending:
+          _setLoading(true);
+          break;
+        case PurchaseStatus.error:
+          _error = 'Purchase failed: ${purchase.error?.message}';
+          _setLoading(false);
+          if (purchase.pendingCompletePurchase) {
+            await _iap.completePurchase(purchase);
+          }
+          break;
+        case PurchaseStatus.purchased:
+        case PurchaseStatus.restored:
+          // 1. Verify the purchase
+          bool valid = await _verifyPurchase(purchase);
 
-    // Set status based on whether the "pro" entitlement is active
-    _isSubscribed = proEntitlement != null;
+          if (valid) {
+            // 2. Grant entitlement
+            _isSubscribed = true;
+            if (!_purchases.any((p) => p.purchaseID == purchase.purchaseID)) {
+              _purchases.add(purchase);
+            }
+          }
 
-    // Capture entitlement details for UI
-    final String? expirationIsoString = proEntitlement?.expirationDate;
-    _expirationDate =
-        expirationIsoString != null ? DateTime.tryParse(expirationIsoString) : null;
-    _willRenew = proEntitlement?.willRenew;
+          // 3. Complete the purchase
+          if (purchase.pendingCompletePurchase) {
+            await _iap.completePurchase(purchase);
+          }
+          _setLoading(false);
+          break;
+        case PurchaseStatus.canceled:
+          _setLoading(false);
+          break;
+      }
+    }
+
+    // Update the final subscription status
+    _updateSubscriptionStatus();
+    notifyListeners();
+  }
+
+  // --- REPLACES _updateSubscriptionStatus ---
+  /// Simple helper to update _isSubscribed based on the _purchases list
+  void _updateSubscriptionStatus() {
+    // This is a basic check. For real subscriptions, you need
+    // to check the expiration date from your server.
+    //
+    // For now, we assume if a valid purchase is in the list, they are subscribed.
+    _isSubscribed = _purchases.isNotEmpty;
+
+    // TODO: A more robust check:
+    // This requires parsing the receipt on your server and storing an
+    // expiration date in your database (e.g., Firestore).
+    // You would then check that date here.
+    // _isSubscribed = _purchases.any((purchase) {
+    //   // return purchase.expirationDate.isAfter(DateTime.now());
+    //   return true;
+    // });
 
     notifyListeners();
   }
 
-  /// Load subscription status from RevenueCat
+  // --- ADD THIS ---
+  /// This is where you MUST verify the purchase with your server.
+  /// DO NOT rely on client-side validation for a real app.
+  Future<bool> _verifyPurchase(PurchaseDetails purchaseDetails) async {
+    // ---
+    // !! CRITICAL SECURITY WARNING !!
+    // ---
+    // Send `purchaseDetails.verificationData` to your backend server.
+    //
+    // Your server must then validate this token/receipt with the
+    // Apple or Google store APIs.
+    //
+    // - Apple: `purchaseDetails.verificationData.serverVerificationData`
+    // - Google: `purchaseDetails.verificationData.localVerificationData`
+    //
+    // Only return `true` if your server confirms the purchase is valid
+    // and grants the user entitlement (e.g., sets an "isPro" flag in Firestore).
+    //
+    // For this example, we'll just assume it's valid.
+    // **THIS IS NOT SECURE FOR PRODUCTION.**
+    if (kDebugMode) {
+      print("Verifying purchase: ${purchaseDetails.productID}");
+    }
+    // In a real app, this `true` must come from YOUR server.
+    return true;
+  }
+
+  /// REPLACES _checkSubscriptionStatus
+  /// Load subscription status (called during init and refresh)
   Future<void> _checkSubscriptionStatus() async {
-    // Renamed from _loadSubscriptionStatus
     _setLoading(true);
     try {
-      CustomerInfo customerInfo = await Purchases.getCustomerInfo();
-      _updateSubscriptionStatus(customerInfo); // Use the helper
+      // With in_app_purchase, "checking status" is best done by
+      // restoring purchases, which triggers the stream listener.
+      await _iap.restorePurchases();
       _error = null;
     } catch (e) {
       _error = 'Failed to load subscription status: $e';
@@ -93,38 +199,72 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  // --- ADD THIS ---
-  /// Load available products (Offerings) from RevenueCat
-  Future<void> loadOfferings() async {
+  // --- REPLACES loadOfferings ---
+  /// Load available products (ProductDetails) from the store
+  Future<void> _loadProducts() async {
     _setLoading(true);
     try {
-      _offerings = await Purchases.getOfferings();
-      _error = null;
+      final ProductDetailsResponse response = await _iap.queryProductDetails(
+        _productIds,
+      );
+
+      if (response.error != null) {
+        _error = 'Failed to load products: ${response.error!.message}';
+        _products = [];
+      } else {
+        _products = response.productDetails;
+        // Sort products if needed (e.g., yearly first)
+        _products.sort((a, b) => a.price.compareTo(b.price));
+        _error = null;
+      }
     } catch (e) {
-      _error = 'Failed to load offerings: $e';
-      _offerings = null;
+      _error = 'Failed to load products: $e';
+      _products = [];
     } finally {
       _setLoading(false);
     }
   }
 
-  // --- DELETE THESE METHODS ---
+  // --- DELETE RevenueCat-specific methods ---
   // Future<bool> subscribeUser() async { ... }
   // Future<bool> unsubscribeUser() async { ... }
+
+  // --- ADD THIS ---
+  /// Initiates a purchase for a given product
+  Future<bool> purchaseProduct(ProductDetails productDetails) async {
+    _setLoading(true);
+    final PurchaseParam purchaseParam = PurchaseParam(
+      productDetails: productDetails,
+    );
+
+    try {
+      // For subscriptions, use `buyNonConsumable` (per `in_app_purchase` docs)
+      // For consumables, use `buyConsumable`
+      await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      // The result is handled by the _onPurchaseStreamUpdated stream listener
+      return true;
+    } catch (e) {
+      _error = 'Purchase failed: $e';
+      _setLoading(false);
+      return false;
+    }
+    // Note: _setLoading(false) will be called by the listener
+    // when the purchase is finalized (purchased, error, or cancelled).
+  }
 
   /// Open the native subscription management page
   Future<void> openManagementPage() async {
     try {
-      final info = await Purchases.getCustomerInfo();
-      // managementURL may be a Uri or String depending on SDK version
-      final Object? mgmt = info.managementURL;
-      final Uri? rcUri = mgmt is Uri
-          ? mgmt
-          : (mgmt is String ? Uri.tryParse(mgmt) : null);
-      final Uri uri = rcUri ??
-          (Platform.isIOS
-              ? Uri.parse('https://apps.apple.com/account/subscriptions')
-              : Uri.parse('https://play.google.com/store/account/subscriptions'));
+      // REMOVED RevenueCat-specific URL lookup
+      // final info = await Purchases.getCustomerInfo();
+      // final Object? mgmt = info.managementURL;
+      // ...
+
+      // Use static URLs
+      final Uri uri = Platform.isIOS
+          ? Uri.parse('https://apps.apple.com/account/subscriptions')
+          : Uri.parse('https://play.google.com/store/account/subscriptions');
+
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok) {
         throw 'Could not open subscription management';
@@ -137,9 +277,16 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// Refresh subscription status
   Future<void> refreshSubscriptionStatus() async {
-    await _checkSubscriptionStatus(); // This method is now correct
-    // notifyListeners(); // _checkSubscriptionStatus already notifies
+    // This now just calls _checkSubscriptionStatus
+    await _checkSubscriptionStatus();
   }
+
+  // ---
+  // ALL THE METHODS BELOW ARE KEPT AS-IS
+  // They provide the public interface for your UI,
+  // and they all rely on the `_isSubscribed` boolean,
+  // which we are now setting ourselves.
+  // ---
 
   /// Check if user can access premium features
   bool canAccessPremiumFeature() {
@@ -172,30 +319,21 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Restore purchases
-  Future<bool> restorePurchases() async {
-    _setLoading(true);
+  /// REPLACES RevenueCat's restorePurchases
+  Future<bool> restorePurchases({bool notifyLoading = true}) async {
+    if (notifyLoading) _setLoading(true);
     try {
-      // First restore purchases
-      CustomerInfo customerInfo = await Purchases.restorePurchases();
-      
-      // Force a fresh check of customer info to get the latest status
-      customerInfo = await Purchases.getCustomerInfo();
-      
-      // Update subscription status based on the fresh data
-      _updateSubscriptionStatus(customerInfo);
-      
-      // Check if user actually has an active subscription
-      final proEntitlement = customerInfo.entitlements.active['pro'];
-      final hasActiveSubscription = proEntitlement != null;
-      
+      await _iap.restorePurchases();
+      // Results are handled by the _onPurchaseStreamUpdated stream listener
       _error = null;
-      return hasActiveSubscription;
+      // We return true for the *attempt* to restore.
+      // The listener will update `_isSubscribed` if anything is found.
+      return true;
     } catch (e) {
       _error = 'Failed to restore purchases: $e';
       return false;
     } finally {
-      _setLoading(false);
+      if (notifyLoading) _setLoading(false);
     }
   }
 }

@@ -1,10 +1,12 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
-import 'package:flutter/services.dart'; // Import for PlatformException
-import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'package:purchases_flutter/purchases_flutter.dart'; // Import RevenueCat
+import 'package:provider/provider.dart';
+// REMOVE RevenueCat import
+// import 'package:purchases_flutter/purchases_flutter.dart';
+// ADD in_app_purchase import
+import 'package:in_app_purchase/in_app_purchase.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -14,26 +16,52 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
-  // Store the selected RevenueCat Package
-  Package? _selectedPackage;
+  // Store the selected in_app_purchase ProductDetails
+  // Package? _selectedPackage; // REMOVED
+  ProductDetails? _selectedProduct; // ADDED
   bool _isPurchasing = false;
+
+  // TODO: IMPORTANT! Replace these with your actual Product IDs
+  // from the App Store and Google Play Console.
+  final String _monthlyProductID = 'budgetm_monthly';
+  final String _yearlyProductID = 'budgetm_yearly';
 
   @override
   Widget build(BuildContext context) {
-    // Get offerings from the provider
+    // Get products from the provider
     final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
-    final offerings = subscriptionProvider.offerings;
+    // final offerings = subscriptionProvider.offerings; // REMOVED
+    final products = subscriptionProvider.products; // ADDED
 
-    // Get the current offering (e.g., 'default')
-    final currentOffering = offerings?.current;
+    // REMOVED RevenueCat-specific package logic
+    // final currentOffering = offerings?.current;
+    // final monthlyPackage = currentOffering?.monthly;
+    // final yearlyPackage = currentOffering?.annual;
 
-    // Get the monthly and yearly packages from the offering
-    final monthlyPackage = currentOffering?.monthly;
-    final yearlyPackage = currentOffering?.annual; // RevenueCat uses 'annual'
+    // ADDED logic to find products by their ID
+    ProductDetails? monthlyProduct;
+    ProductDetails? yearlyProduct;
 
-    // Set default selected package if not already set
-    if (_selectedPackage == null && yearlyPackage != null) {
-      _selectedPackage = yearlyPackage;
+    if (products.isNotEmpty) {
+      try {
+        monthlyProduct = products.firstWhere(
+          (prod) => prod.id == _monthlyProductID,
+        );
+      } catch (e) {
+        // print('Monthly product not found');
+      }
+      try {
+        yearlyProduct = products.firstWhere(
+          (prod) => prod.id == _yearlyProductID,
+        );
+      } catch (e) {
+        // print('Yearly product not found');
+      }
+    }
+
+    // Set default selected product if not already set
+    if (_selectedProduct == null && yearlyProduct != null) {
+      _selectedProduct = yearlyProduct;
     }
 
     return Scaffold(
@@ -49,186 +77,219 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 horizontal: 24.0,
                 vertical: 12.0,
               ),
-              child: (subscriptionProvider.isLoading && offerings == null)
-                  // Show loading spinner while offerings are being fetched
+              child:
+                  (subscriptionProvider.isLoading &&
+                      products.isEmpty) // MODIFIED
+                  // Show loading spinner while products are being fetched
                   ? const Center(
                       heightFactor: 15,
                       child: CircularProgressIndicator(),
                     )
-                  // Show error if no offerings are found
-                  : (currentOffering == null)
-                      ? Center(
-                          heightFactor: 15,
-                          child: Text(
-                            AppLocalizations.of(context)!.paywallCouldNotLoadPlans,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: AppColors.secondaryTextColorLight,
-                                ),
-                          ),
-                        )
-                      // Show paywall content
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const SizedBox(
-                              height: kToolbarHeight - 20,
-                            ),
-                            // Crown Icon
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.orangeAccent.shade100,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.sim_card_download_rounded,
-                                color: Colors.orange,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            // Title
-                            Text(
-                              AppLocalizations.of(context)!.paywallChooseYourPlan,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displayLarge
-                                  ?.copyWith(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryTextColorLight,
-                                  ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 6),
-                            // Subtitle
-                            Text(
-                              AppLocalizations.of(context)!.paywallInvestInFinancialFreedom,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: AppColors.secondaryTextColorLight,
-                                    fontSize: 14,
-                                  ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 24),
-
-                            // --- Refactored Dynamic Plan Cards ---
-                            if (monthlyPackage != null)
-                              _buildPlanCard(
-                                context: context,
-                                package: monthlyPackage,
-                                // These are examples, you can calculate this
-                                pricePerDay: AppLocalizations.of(context)!.paywallPricePerDay('\$0.43'),
-                                isPopular: true,
-                                isSelected: _selectedPackage == monthlyPackage,
-                                onTap: () =>
-                                    setState(() => _selectedPackage = monthlyPackage),
-                              ),
-
-                            const SizedBox(height: 16),
-
-                            if (yearlyPackage != null)
-                              _buildPlanCard(
-                                context: context,
-                                package: yearlyPackage,
-                                // These are examples, you can calculate this
-                                pricePerDay: AppLocalizations.of(context)!.paywallPricePerDay('\$0.14'),
-                                saveAmount: AppLocalizations.of(context)!.paywallSaveAmount('\$209'), // Example
-                                isBestValue: true,
-                                isSelected: _selectedPackage == yearlyPackage,
-                                onTap: () =>
-                                    setState(() => _selectedPackage = yearlyPackage),
-                              ),
-                            // ------------------------------------
-
-                            const SizedBox(height: 24),
-                            // Features Section
-                            Text(
-                              AppLocalizations.of(context)!.paywallEverythingIncluded,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryTextColorLight,
-                                  ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallPersonalizedBudgetInsights,
-                                Icons.insights),
-                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallDailyProgressTracking,
-                                Icons.trending_up),
-                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallExpenseManagementTools,
-                                Icons.account_balance_wallet),
-                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallFinancialHealthTimeline,
-                                Icons.timeline),
-                            _buildFeatureItem(
-                                context, AppLocalizations.of(context)!.paywallExpertGuidanceTips, Icons.lightbulb),
-                            _buildFeatureItem(context, AppLocalizations.of(context)!.paywallCommunitySupportAccess,
-                                Icons.people),
-                            const SizedBox(height: 24),
-                            // Savings Box
-                            Container(
-                              padding: const EdgeInsets.all(20.0),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(20.0),
-                                border: Border.all(color: Colors.green.shade100),
-                              ),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.green.shade200,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: const Icon(
-                                      Icons.check_rounded,
-                                      color: Colors.green,
-                                      size: 32,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    AppLocalizations.of(context)!.paywallSaveYourFinances,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green.shade800,
-                                        ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    AppLocalizations.of(context)!.paywallAverageUserSaves,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(color: Colors.green.shade600),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                          ],
+                  // Show error if no products are found
+                  : (products.isEmpty) // MODIFIED
+                  ? Center(
+                      heightFactor: 15,
+                      child: Text(
+                        AppLocalizations.of(context)!.paywallCouldNotLoadPlans,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.secondaryTextColorLight,
                         ),
+                      ),
+                    )
+                  // Show paywall content
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: kToolbarHeight - 20),
+                        // Crown Icon
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orangeAccent.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.sim_card_download_rounded,
+                            color: Colors.orange,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Title
+                        Text(
+                          AppLocalizations.of(context)!.paywallChooseYourPlan,
+                          style: Theme.of(context).textTheme.displayLarge
+                              ?.copyWith(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryTextColorLight,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 6),
+                        // Subtitle
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallInvestInFinancialFreedom,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppColors.secondaryTextColorLight,
+                                fontSize: 14,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- Refactored Dynamic Plan Cards ---
+                        if (monthlyProduct != null)
+                          _buildPlanCard(
+                            context: context,
+                            product: monthlyProduct, // MODIFIED
+                            // These are examples, you can calculate this
+                            pricePerDay: AppLocalizations.of(
+                              context,
+                            )!.paywallPricePerDay('\$0.43'),
+                            isPopular: true,
+                            isSelected:
+                                _selectedProduct == monthlyProduct, // MODIFIED
+                            onTap: () => setState(
+                              () => _selectedProduct = monthlyProduct,
+                            ), // MODIFIED
+                          ),
+
+                        const SizedBox(height: 16),
+
+                        if (yearlyProduct != null)
+                          _buildPlanCard(
+                            context: context,
+                            product: yearlyProduct, // MODIFIED
+                            // These are examples, you can calculate this
+                            pricePerDay: AppLocalizations.of(
+                              context,
+                            )!.paywallPricePerDay('\$0.14'),
+                            saveAmount: AppLocalizations.of(
+                              context,
+                            )!.paywallSaveAmount('\$209'), // Example
+                            isBestValue: true,
+                            isSelected:
+                                _selectedProduct == yearlyProduct, // MODIFIED
+                            onTap: () => setState(
+                              () => _selectedProduct = yearlyProduct,
+                            ), // MODIFIED
+                          ),
+
+                        // ------------------------------------
+                        const SizedBox(height: 24),
+                        // Features Section
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallEverythingIncluded,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryTextColorLight,
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFeatureItem(
+                          context,
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallPersonalizedBudgetInsights,
+                          Icons.insights,
+                        ),
+                        _buildFeatureItem(
+                          context,
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallDailyProgressTracking,
+                          Icons.trending_up,
+                        ),
+                        _buildFeatureItem(
+                          context,
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallExpenseManagementTools,
+                          Icons.account_balance_wallet,
+                        ),
+                        _buildFeatureItem(
+                          context,
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallFinancialHealthTimeline,
+                          Icons.timeline,
+                        ),
+                        _buildFeatureItem(
+                          context,
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallExpertGuidanceTips,
+                          Icons.lightbulb,
+                        ),
+                        _buildFeatureItem(
+                          context,
+                          AppLocalizations.of(
+                            context,
+                          )!.paywallCommunitySupportAccess,
+                          Icons.people,
+                        ),
+                        const SizedBox(height: 24),
+                        // Savings Box
+                        Container(
+                          padding: const EdgeInsets.all(20.0),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(20.0),
+                            border: Border.all(color: Colors.green.shade100),
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.green.shade200,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.green,
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.paywallSaveYourFinances,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green.shade800,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.paywallAverageUserSaves,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.green.shade600),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
             ),
           ),
           // Sticky Bottom Button Container
@@ -253,14 +314,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                // --- Refactored onPressed with RevenueCat Purchase Logic ---
+                // --- Refactored onPressed with in_app_purchase Logic ---
                 onPressed: _isPurchasing
                     ? null // Disable button while purchase is in progress
                     : () async {
-                        if (_selectedPackage == null) {
+                        if (_selectedProduct == null) {
+                          // MODIFIED
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(AppLocalizations.of(context)!.paywallPleaseSelectPlan),
+                              content: Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.paywallPleaseSelectPlan,
+                              ),
                               backgroundColor: Colors.orange,
                             ),
                           );
@@ -272,46 +338,44 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         });
 
                         try {
-                          // Make the purchase
-                          // *** FIX 1: 'purchasePackage' returns 'PurchaseResult' ***
-                          PurchaseResult purchaseResult =
-                              await Purchases.purchasePackage(_selectedPackage!);
+                          // Call the provider's purchase method
+                          bool success = await subscriptionProvider
+                              .purchaseProduct(_selectedProduct!); // MODIFIED
 
-                          // Check if the "pro" entitlement is now active
-                          // *** FIX 1 (continued): Access 'customerInfo' from 'purchaseResult' ***
-                          if (purchaseResult.customerInfo.entitlements.active['pro'] != null) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      AppLocalizations.of(context)!.paywallSubscriptionActivated),
-                                  backgroundColor: Colors.green,
+                          // The purchase result (success, error, or cancel)
+                          // is now handled by the provider's central stream listener.
+                          //
+                          // If the purchaseProduct call itself fails (e.g.,
+                          // network error before purchase sheet shows),
+                          // the 'success' bool will be false.
+                          if (!success && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  subscriptionProvider.error ??
+                                      'Purchase initiation failed',
                                 ),
-                              );
-                              // Pop the paywall screen on success
-                              Navigator.of(context).pop();
-                            }
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           }
-                        } on PlatformException catch (e) {
-                          var errorCode = PurchasesErrorHelper.getErrorCode(e);
-                          if (errorCode !=
-                              PurchasesErrorCode.purchaseCancelledError) {
-                            // Show error if it wasn't a user cancellation
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(AppLocalizations.of(context)!.paywallFailedToPurchase(e.message ?? 'Unknown error')),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
+
+                          // NOTE: You should listen to `subscriptionProvider.isSubscribed`
+                          // (e.g., with a Consumer or Selector) to pop the
+                          // screen on successful subscription, as the result
+                          // now comes from an async stream.
+
+                          // REMOVED all inline purchase handling logic
                         } catch (e) {
-                          // Handle other errors
+                          // Handle other unexpected errors
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(AppLocalizations.of(context)!.paywallUnexpectedError(e.toString())),
+                                content: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.paywallUnexpectedError(e.toString()),
+                                ),
                                 backgroundColor: Colors.red,
                               ),
                             );
@@ -337,14 +401,20 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     : Text(
                         AppLocalizations.of(context)!.paywallSubscribeYourPlan,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.white, // Ensure text is visible
-                              fontSize: 16,
-                            ),
+                          color: Colors.white, // Ensure text is visible
+                          fontSize: 16,
+                        ),
                       ),
               ),
             ),
           ),
-          // Restore/Manage links section above the sticky button
+
+          // ---
+          // NOTE: The "Restore/Manage" links were commented out
+          // in the original file.
+          // The new provider methods `restorePurchases()` and `openManagementPage()`
+          // will work correctly if you uncomment this UI.
+          // ---
           // Positioned(
           //   left: 0,
           //   right: 0,
@@ -364,12 +434,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
           //                   content: Text(
           //                     ok
           //                         ? AppLocalizations.of(context)!.paywallPurchasesRestoredSuccessfully
-          //                         : AppLocalizations.of(context)!.paywallNoActiveSubscriptionFound,
+          //                         : provider.error ?? 'Restore failed',
           //                   ),
           //                   backgroundColor: ok ? Colors.green : Colors.orange,
           //                 ),
           //               );
-          //               if (ok) Navigator.of(context).pop();
+          //               // You should not pop here; wait for the
+          //               // stream to update isSubscribed
+          //               // if (ok) Navigator.of(context).pop();
           //             }
           //           },
           //           child: Text(AppLocalizations.of(context)!.paywallRestorePurchases),
@@ -390,10 +462,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
-  // --- Refactored _buildPlanCard to use RevenueCat's 'Package' ---
+  // --- Refactored _buildPlanCard to use 'ProductDetails' ---
   Widget _buildPlanCard({
     required BuildContext context,
-    required Package package, // Use RevenueCat Package
+    required ProductDetails product, // MODIFIED
     required String pricePerDay,
     String? saveAmount,
     required bool isSelected,
@@ -401,8 +473,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
     bool isBestValue = false,
     required VoidCallback onTap,
   }) {
-    // *** FIX 2: Access 'storeProduct' instead of 'product' ***
-    final product = package.storeProduct; // Get product details
+    // REMOVED: final product = package.storeProduct;
+    // The product is now passed directly.
 
     return GestureDetector(
       onTap: onTap,
@@ -443,7 +515,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product.title, // Dynamic title from RevenueCat
+                        product.title, // Dynamic title
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.bold,
@@ -456,7 +528,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            product.priceString, // Dynamic price from RevenueCat
+                            product.price, // Dynamic price (was priceString)
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -465,12 +537,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            // Dynamic period
-                            package.packageType == PackageType.monthly
+                            // MODIFIED: We must check the ID to determine the period
+                            product.id == _monthlyProductID
                                 ? AppLocalizations.of(context)!.paywallPerMonth
-                                : package.packageType == PackageType.annual
-                                    ? AppLocalizations.of(context)!.paywallPerYear
-                                    : '', // Handle other cases if needed
+                                : product.id == _yearlyProductID
+                                ? AppLocalizations.of(context)!.paywallPerYear
+                                : '', // Handle other cases if needed
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppColors.secondaryTextColorLight,
@@ -482,7 +554,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       Row(
                         children: [
                           Text(
-                            pricePerDay, // This is still hardcoded, you can calculate it
+                            pricePerDay, // This is still hardcoded
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppColors.secondaryTextColorLight,
@@ -567,7 +639,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ],
                 ),
                 child: Text(
-                  isBestValue ? AppLocalizations.of(context)!.paywallBestValue : AppLocalizations.of(context)!.paywallMostPopular,
+                  isBestValue
+                      ? AppLocalizations.of(context)!.paywallBestValue
+                      : AppLocalizations.of(context)!.paywallMostPopular,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
@@ -610,4 +684,3 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 }
-
