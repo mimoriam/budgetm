@@ -12,6 +12,7 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
+import 'package:budgetm/viewmodels/locale_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -224,6 +225,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         pageTransitionAnimation:
                             PageTransitionAnimation.cupertino,
                       );
+                    },
+                  ),
+                  _buildProfileMenuItem(
+                    Icons.language_outlined,
+                    AppLocalizations.of(context)!.profileLanguage,
+                    onTap: () {
+                      _showLanguageSelectorDialog(context);
                     },
                   ),
                   // _buildProfileMenuItem(
@@ -747,6 +755,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
         );
+      },
+    );
+  }
+
+  // Language selector dialog
+  void _showLanguageSelectorDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Consumer<LocaleProvider>(
+          builder: (context, localeProvider, child) {
+            return AlertDialog(
+              title: Text(AppLocalizations.of(context)!.languageSelectLanguage),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildLanguageOption(
+                    context,
+                    localeProvider,
+                    const Locale('en'),
+                    AppLocalizations.of(context)!.languageEnglish,
+                    '🇺🇸',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildLanguageOption(
+                    context,
+                    localeProvider,
+                    const Locale('es'),
+                    AppLocalizations.of(context)!.languageSpanish,
+                    '🇪🇸',
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(AppLocalizations.of(context)!.profileCancel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption(
+    BuildContext context,
+    LocaleProvider localeProvider,
+    Locale locale,
+    String languageName,
+    String flag,
+  ) {
+    final isSelected = localeProvider.currentLocale.languageCode == locale.languageCode;
+    
+    return ListTile(
+      leading: Text(
+        flag,
+        style: const TextStyle(fontSize: 24),
+      ),
+      title: Text(
+        languageName,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Theme.of(context).primaryColor : null,
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(
+              Icons.check_circle,
+              color: Theme.of(context).primaryColor,
+            )
+          : null,
+      onTap: () async {
+        await localeProvider.setLocale(locale);
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
       },
     );
   }

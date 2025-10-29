@@ -12,6 +12,7 @@ import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
+import 'package:budgetm/viewmodels/locale_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -23,17 +24,20 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
 
   // Enable Firestore offline persistence
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
   );
 
-  await _configureRevenueCat();
-
+  // await _configureRevenueCat();
   final bool onboardingDone = prefs.getBool('onboardingDone') ?? false;
+
+  // Initialize locale provider
+  final localeProvider = LocaleProvider();
+  await localeProvider.initialize();
 
   runApp(
     MultiProvider(
@@ -45,6 +49,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
         ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        ChangeNotifierProvider.value(value: localeProvider),
         ChangeNotifierProxyProvider3<
           CurrencyProvider,
           VacationProvider,
@@ -92,7 +97,10 @@ Future<void> main() async {
               GoalsProvider(currencyProvider: currencyProvider),
         ),
       ],
-      child: MyApp(onboardingDone: onboardingDone),
+      child: MyApp(
+        onboardingDone: onboardingDone,
+        localeProvider: localeProvider,
+      ),
     ),
   );
 }
@@ -109,6 +117,9 @@ Future<void> _configureRevenueCat() async {
   const String appleApiKey = "test_vqgFeMgiflyEiUsqXKaCGhdBcEf";
   const String googleApiKey = "test_vqgFeMgiflyEiUsqXKaCGhdBcEf";
 
+  // const String appleApiKey = "";
+  // const String googleApiKey = "";
+
   if (Platform.isIOS) {
     configuration = PurchasesConfiguration(appleApiKey);
   } else if (Platform.isAndroid) {
@@ -122,21 +133,23 @@ Future<void> _configureRevenueCat() async {
 
 class MyApp extends StatelessWidget {
   final bool onboardingDone;
+  final LocaleProvider localeProvider;
 
-  const MyApp({super.key, required this.onboardingDone});
+  const MyApp({
+    super.key,
+    required this.onboardingDone,
+    required this.localeProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
+    return Consumer2<ThemeProvider, LocaleProvider>(
+      builder: (context, themeProvider, localeProvider, child) {
         return MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          // supportedLocales: [
-          //   Locale('es'), // English
-          //   // Locale('es'), // Spanish
-          // ],
-          debugShowCheckedModeBanner: false,
+          locale: localeProvider.currentLocale,
+          // debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme(),
           darkTheme: AppTheme.darkTheme(),
           // themeMode: themeProvider.themeMode,

@@ -1989,4 +1989,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get monthly => 'Monthly';
+
+  @override
+  String get profileLanguage => 'Language';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageSpanish => 'Spanish';
+
+  @override
+  String get languageSelectLanguage => 'Select Language';
 }

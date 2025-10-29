@@ -2008,4 +2008,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get monthly => 'Mensual';
+
+  @override
+  String get profileLanguage => 'Idioma';
+
+  @override
+  String get languageEnglish => 'Inglés';
+
+  @override
+  String get languageSpanish => 'Español';
+
+  @override
+  String get languageSelectLanguage => 'Seleccionar Idioma';
 }

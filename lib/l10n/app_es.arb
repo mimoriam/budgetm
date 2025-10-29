@@ -628,5 +628,9 @@
   "month": "Mes",
   "daily": "Diario",
   "weekly": "Semanal",
-  "monthly": "Mensual"
+  "monthly": "Mensual",
+  "profileLanguage": "Idioma",
+  "languageEnglish": "Inglés",
+  "languageSpanish": "Español",
+  "languageSelectLanguage": "Seleccionar Idioma"
 }
