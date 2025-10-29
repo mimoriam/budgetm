@@ -83,6 +83,39 @@ class FirestoreService {
         );
   }
 
+  // Find the earliest transaction date across normal and vacation transactions
+  Future<DateTime?> fetchEarliestTransactionDate() async {
+    try {
+      // Earliest normal transaction
+      final earliestNormalSnap = await _transactionsCollection
+          .where('isVacation', isEqualTo: false)
+          .orderBy('date', descending: false)
+          .limit(1)
+          .get();
+
+      // Earliest vacation transaction
+      final earliestVacationSnap = await _transactionsCollection
+          .where('isVacation', isEqualTo: true)
+          .orderBy('date', descending: false)
+          .limit(1)
+          .get();
+
+      DateTime? a = earliestNormalSnap.docs.isNotEmpty
+          ? earliestNormalSnap.docs.first.data().date
+          : null;
+      DateTime? b = earliestVacationSnap.docs.isNotEmpty
+          ? earliestVacationSnap.docs.first.data().date
+          : null;
+
+      if (a == null) return b;
+      if (b == null) return a;
+      return a.isBefore(b) ? a : b;
+    } catch (e) {
+      print('Error fetching earliest transaction date: $e');
+      return null;
+    }
+  }
+
   CollectionReference<Category> get _categoriesCollection {
     if (_userId == null) throw Exception('User not authenticated');
     return _firestore

@@ -1933,6 +1933,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<DateTime> _months = [];
   int _selectedMonthIndex = 0;
 
+  // Future month handling configuration
+  static const int _baselineHorizonMonths = 6; // initial future months beyond current
+  static const int _extensionStepMonths = 6; // extend in this many months when near end
+  static const int _maxFutureMonths = 36; // cap to avoid infinite future
+
   // Removed unused field: _isTogglingVacationMode
 
   // Removed unused field: _lastContentOffset
@@ -2053,47 +2058,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _loadMonths() async {
     final prefs = await SharedPreferences.getInstance();
-    final firstLoginDateString = prefs.getString('firstLoginDate');
-    final firstLoginDate = firstLoginDateString != null
-        ? DateTime.parse(firstLoginDateString)
-        : DateTime.now();
-
     final now = DateTime.now();
-    List<DateTime> generatedMonths = [];
-    DateTime currentDate = DateTime(firstLoginDate.year, firstLoginDate.month);
+    final nowMonth = DateTime(now.year, now.month);
 
-    while (currentDate.isBefore(
-      DateTime(now.year, now.month).add(const Duration(days: 365)),
-    )) {
-      generatedMonths.add(currentDate);
-      currentDate = DateTime(currentDate.year, currentDate.month + 1);
+    // Provisional start: cached start or last 12 months
+    DateTime provisionalStart;
+    final cachedStartStr = prefs.getString('dataStartDate');
+    if (cachedStartStr != null) {
+      try {
+        final parsed = DateTime.parse(cachedStartStr);
+        provisionalStart = DateTime(parsed.year, parsed.month);
+      } catch (_) {
+        provisionalStart = DateTime(now.year, now.month - 12, 1);
+      }
+    } else {
+      provisionalStart = DateTime(now.year, now.month - 12, 1);
     }
+
+    // Provisional end: current + baseline horizon, capped
+    DateTime provisionalEnd = DateTime(nowMonth.year, nowMonth.month + _baselineHorizonMonths, 1);
+    final capEnd = DateTime(nowMonth.year, nowMonth.month + _maxFutureMonths, 1);
+    if (provisionalEnd.isAfter(capEnd)) {
+      provisionalEnd = capEnd;
+    }
+
+    // Build initial months for immediate rendering
+    final initialMonths = _buildMonthRange(provisionalStart, provisionalEnd);
+
     if (mounted) {
       setState(() {
-        _months = generatedMonths;
+        _months = initialMonths;
         _selectedMonthIndex = _months.indexWhere(
-          (month) => month.year == now.year && month.month == now.month,
+          (m) => m.year == nowMonth.year && m.month == nowMonth.month,
         );
-        if (_selectedMonthIndex == -1) {
-          _selectedMonthIndex = _months.length - 13;
+        if (_selectedMonthIndex < 0) {
+          // If current month not in range (unlikely), default to last item
+          _selectedMonthIndex = _months.length - 1;
         }
 
-        // Update the selected date in HomeScreenProvider
-        if (_selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length) {
-          final homeScreenProvider = Provider.of<HomeScreenProvider>(
-            context,
-            listen: false,
-          );
-          homeScreenProvider.setSelectedDate(_months[_selectedMonthIndex]);
-        }
+        final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+        homeScreenProvider.setSelectedDate(_months[_selectedMonthIndex]);
       });
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (_monthScrollController.hasClients) {
         _scrollToSelectedMonth();
       }
-      // Align PageView to the determined initial month once months are ready
       if (_pageController.hasClients &&
           _selectedMonthIndex >= 0 &&
           _selectedMonthIndex < _months.length) {
@@ -2101,17 +2112,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _pageController.jumpToPage(_selectedMonthIndex);
 
           // Initialize provider for the initial month
-          final isVacation = Provider.of<VacationProvider>(
-            context,
-            listen: false,
-          ).isVacationMode;
-          final homeScreenProvider = Provider.of<HomeScreenProvider>(
-            context,
-            listen: false,
-          );
+          final isVacation = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
+          final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
           final provider = _getOrCreateProvider(_selectedMonthIndex);
 
-          // Only initialize if the provider hasn't been initialized yet
           if (provider.allTransactions.isEmpty) {
             final stream = _pageDataManager.getStreamForMonth(
               _selectedMonthIndex,
@@ -2125,11 +2129,112 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               }
             });
           }
-        } catch (_) {
-          // no-op: safe guard against rare cases before attachment
+        } catch (_) {}
+      }
+
+      // Background refinement: pull earliest transaction and latest task due date, then update months if needed
+      try {
+        final earliest = await _firestoreService.fetchEarliestTransactionDate();
+
+        DateTime refinedStart = provisionalStart;
+        if (earliest != null) {
+          refinedStart = DateTime(earliest.year, earliest.month, 1);
+          await prefs.setString('dataStartDate', refinedStart.toIso8601String());
         }
+
+        // Determine refined end based on tasks and cap
+        DateTime refinedEnd = DateTime(nowMonth.year, nowMonth.month + _baselineHorizonMonths, 1);
+        try {
+          final allTasks = await _firestoreService.getAllTasks();
+          final latestDue = allTasks
+              .where((t) => (t.isCompleted != true))
+              .map((t) => t.dueDate)
+              .fold<DateTime?>(null, (acc, d) => acc == null || d.isAfter(acc) ? d : acc);
+          if (latestDue != null) {
+            final latestTaskMonth = DateTime(latestDue.year, latestDue.month, 1);
+            if (latestTaskMonth.isAfter(refinedEnd)) {
+              refinedEnd = latestTaskMonth;
+            }
+          }
+        } catch (e) {
+          // Non-fatal: keep baseline horizon if tasks fetch fails
+        }
+
+        final capEnd2 = DateTime(nowMonth.year, nowMonth.month + _maxFutureMonths, 1);
+        if (refinedEnd.isAfter(capEnd2)) {
+          refinedEnd = capEnd2;
+        }
+
+        // If range changed, update months
+        final newMonths = _buildMonthRange(refinedStart, refinedEnd);
+        final needUpdate = _months.isEmpty ||
+            _months.first.year != newMonths.first.year ||
+            _months.first.month != newMonths.first.month ||
+            _months.last.year != newMonths.last.year ||
+            _months.last.month != newMonths.last.month;
+        if (needUpdate && mounted) {
+          setState(() {
+            _months = newMonths;
+            // Re-select current month (or closest)
+            final idx = _months.indexWhere((m) => m.year == nowMonth.year && m.month == nowMonth.month);
+            _selectedMonthIndex = idx >= 0 ? idx : (_months.length - 1);
+          });
+          if (_pageController.hasClients) {
+            try {
+              _pageController.jumpToPage(_selectedMonthIndex);
+            } catch (_) {}
+          }
+          if (_monthScrollController.hasClients) {
+            _scrollToSelectedMonth();
+          }
+        }
+      } catch (e) {
+        // ignore
       }
     });
+  }
+
+  // Build list of months inclusive of start and end (month precision)
+  List<DateTime> _buildMonthRange(DateTime startInclusive, DateTime endInclusive) {
+    final start = DateTime(startInclusive.year, startInclusive.month, 1);
+    final end = DateTime(endInclusive.year, endInclusive.month, 1);
+    final result = <DateTime>[];
+    DateTime cursor = start;
+    while (!DateTime(cursor.year, cursor.month, 1).isAfter(end)) {
+      result.add(cursor);
+      cursor = DateTime(cursor.year, cursor.month + 1, 1);
+    }
+    return result;
+  }
+
+  void _maybeExtendFutureMonths(int currentIndex) {
+    if (_months.isEmpty) return;
+    // If within 2 pages of the end, extend by step months up to cap
+    if (currentIndex >= _months.length - 2) {
+      final last = _months.last;
+      final now = DateTime.now();
+      final nowMonth = DateTime(now.year, now.month, 1);
+      final capEnd = DateTime(nowMonth.year, nowMonth.month + _maxFutureMonths, 1);
+      if (last.isBefore(capEnd)) {
+        final newEnd = _minMonth(
+          DateTime(last.year, last.month + _extensionStepMonths, 1),
+          capEnd,
+        );
+        final append = _buildMonthRange(
+          DateTime(last.year, last.month + 1, 1),
+          newEnd,
+        );
+        if (append.isNotEmpty && mounted) {
+          setState(() {
+            _months = [..._months, ...append];
+          });
+        }
+      }
+    }
+  }
+
+  DateTime _minMonth(DateTime a, DateTime b) {
+    return a.isBefore(b) ? a : b;
   }
 
   // Removed unused method: _toggleVacationModeWithDebounce
@@ -2182,6 +2287,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         // Mark refresh as complete and rebuild
         homeScreenProvider.completeRefresh();
+        // Recompute month range in case data start/end changed
+        await _loadMonths();
         if (mounted) setState(() {});
       });
     }
@@ -2198,6 +2305,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _monthProviders[monthIndex]!.forceReset();
         }
         homeScreenProvider.completeRefresh();
+        // Recompute month range in case data start/end changed
+        await _loadMonths();
         if (mounted) setState(() {});
       });
     }
@@ -2229,6 +2338,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // Mark refresh as complete
         homeScreenProvider.completeRefresh();
         // Trigger a rebuild
+        // Recompute month range in case data start/end changed
+        await _loadMonths();
         if (mounted) setState(() {});
       });
     }
@@ -2288,6 +2399,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 homeScreenProvider.setSelectedDate(_months[index]);
 
                                 _scrollToSelectedMonth();
+
+                                // Extend future months lazily when approaching the end
+                                _maybeExtendFutureMonths(index);
 
                                 // Pre-load adjacent months after the page change is complete
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
