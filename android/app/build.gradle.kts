@@ -57,8 +57,10 @@ android {
     buildTypes {
         // Use getByName() to configure existing build types
         getByName("release") {
-            // Use assignment (=) and getByName()
             signingConfig = signingConfigs.getByName("release")
+            //isMinifyEnabled = false  // Use 'isMinifyEnabled' instead of 'minifyEnabled'
+            //isShrinkResources = false  // Use 'isShrinkResources' instead of 'shrinkResources'
+            //proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
