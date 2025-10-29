@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 // ADD these imports
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
 // If you are not on the Play Store, you might need this
 // import 'package:in_app_purchase_android/in_app_purchase_android.dart';
-import 'package:url_launcher/url_launcher.dart';
 // REMOVE RevenueCat import
 // import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -13,17 +13,13 @@ import 'package:url_launcher/url_launcher.dart';
 // import 'package:budgetm/services/subscription_service.dart'; // DELETE THIS
 
 class SubscriptionProvider extends ChangeNotifier {
-
   // --- NEW VARIABLES ---
   final InAppPurchase _iap = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
   // TODO: IMPORTANT!
   // Define your product IDs from App Store Connect & Google Play Console
-  final Set<String> _productIds = {
-    'budgetm_monthly',
-    'budgetm_yearly', 
-  };
+  final Set<String> _productIds = {'budgetm_monthly', 'budgetm_yearly'};
 
   List<ProductDetails> _products = [];
   final List<PurchaseDetails> _purchases = [];
@@ -213,14 +209,47 @@ class SubscriptionProvider extends ChangeNotifier {
         _products = [];
       } else {
         _products = response.productDetails;
-        // Sort products if needed (e.g., yearly first)
-        _products.sort((a, b) => a.price.compareTo(b.price));
         _error = null;
       }
+
+      // --- START OF ADDED MOCKING LOGIC (PART 1) ---
+      // FOR DEVELOPMENT TESTING: If no products were loaded from the store,
+      // add mock products so the UI can be tested.
+      if (_products.isEmpty && kDebugMode) {
+        if (kDebugMode) {
+          print(
+            '--- WARNING: No real products found. Loading mock products for testing. ---',
+          );
+        }
+        _products = [
+          ProductDetails(
+            id: 'budgetm_monthly',
+            title: 'Monthly Plan (Mock)',
+            description: 'A mock monthly subscription for testing.',
+            price: '\$4.99',
+            rawPrice: 4.99,
+            currencyCode: 'USD',
+          ),
+          ProductDetails(
+            id: 'budgetm_yearly',
+            title: 'Yearly Plan (Mock)',
+            description: 'A mock yearly subscription for testing.',
+            price: '\$29.99',
+            rawPrice: 29.99,
+            currencyCode: 'USD',
+          ),
+        ];
+        _error = null; // Clear the "Failed to load products" error
+      }
+      // --- END OF ADDED MOCKING LOGIC (PART 1) ---
     } catch (e) {
       _error = 'Failed to load products: $e';
       _products = [];
     } finally {
+      // Sort products if they exist (mock or real)
+      if (_products.isNotEmpty) {
+        _products.sort((a, b) => a.price.compareTo(b.price));
+      }
       _setLoading(false);
     }
   }
@@ -233,6 +262,26 @@ class SubscriptionProvider extends ChangeNotifier {
   /// Initiates a purchase for a given product
   Future<bool> purchaseProduct(ProductDetails productDetails) async {
     _setLoading(true);
+
+    // --- START OF ADDED MOCKING LOGIC (PART 2) ---
+    // FOR DEVELOPMENT TESTING: Simulate a successful purchase in debug mode
+    // by bypassing the actual IAP call.
+    if (kDebugMode) {
+      if (kDebugMode) {
+        print(
+          '--- WARNING: Simulating a successful purchase for ${productDetails.id} ---',
+        );
+      }
+      // Manually set the state to subscribed
+      _isSubscribed = true;
+      _setLoading(false);
+      // Notify listeners to update the UI (e.g., pop the paywall)
+      notifyListeners();
+      return true; // Indicate the "purchase" was "initiated" successfully
+    }
+    // --- END OF ADDED MOCKING LOGIC (PART 2) ---
+
+    // --- Original Logic (will be skipped in kDebugMode) ---
     final PurchaseParam purchaseParam = PurchaseParam(
       productDetails: productDetails,
     );
