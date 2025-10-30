@@ -532,6 +532,12 @@ abstract class AppLocalizations {
   /// **'Add Account'**
   String get balanceAddAccount;
 
+  /// No description provided for @addAVacation.
+  ///
+  /// In en, this message translates to:
+  /// **'Add A Vacation'**
+  String get addAVacation;
+
   /// No description provided for @balanceMyAccounts.
   ///
   /// In en, this message translates to:
@@ -585,6 +591,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create your first vacation account to start planning your trips'**
   String get balanceCreateFirstVacation;
+
+  /// No description provided for @balanceCreateVacationAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Vacation Account'**
+  String get balanceCreateVacationAccount;
 
   /// No description provided for @balanceSingleAccountView.
   ///
@@ -2535,6 +2547,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to add category: {error}'**
   String failedToAddCategory(Object error);
+
+  /// No description provided for @addCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Category'**
+  String get addCategory;
 
   /// No description provided for @errorCreatingGoal.
   ///

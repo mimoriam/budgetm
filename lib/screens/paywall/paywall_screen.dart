@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 // import 'package:purchases_flutter/purchases_flutter.dart';
 // ADD in_app_purchase import
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:intl/intl.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -23,8 +24,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   // TODO: IMPORTANT! Replace these with your actual Product IDs
   // from the App Store and Google Play Console.
-  final String _monthlyProductID = 'budgetm_monthly';
-  final String _yearlyProductID = 'budgetm_yearly';
+  final String _monthlyProductID = 'android_monthly_subs';
+  final String _yearlyProductID = 'android_yearly_subs';
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +33,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
     final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
     // final offerings = subscriptionProvider.offerings; // REMOVED
     final products = subscriptionProvider.products; // ADDED
+
+    // Auto-close when subscription is active
+    if (subscriptionProvider.isSubscribed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).maybePop();
+      });
+    }
 
     // REMOVED RevenueCat-specific package logic
     // final currentOffering = offerings?.current;
@@ -89,12 +97,31 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   : (products.isEmpty) // MODIFIED
                   ? Center(
                       heightFactor: 15,
-                      child: Text(
-                        AppLocalizations.of(context)!.paywallCouldNotLoadPlans,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            AppLocalizations.of(
+                              context,
+                            )!.paywallCouldNotLoadPlans,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.secondaryTextColorLight,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () async {
+                              await context
+                                  .read<SubscriptionProvider>()
+                                  .reloadProducts();
+                            },
+                            child: Text(
+                              AppLocalizations.of(context)!.homeRetry,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   // Show paywall content
@@ -147,10 +174,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           _buildPlanCard(
                             context: context,
                             product: monthlyProduct, // MODIFIED
-                            // These are examples, you can calculate this
-                            pricePerDay: AppLocalizations.of(
+                            pricePerDay: _pricePerDayText(
                               context,
-                            )!.paywallPricePerDay('\$0.43'),
+                              monthlyProduct,
+                              30,
+                            ),
                             isPopular: true,
                             isSelected:
                                 _selectedProduct == monthlyProduct, // MODIFIED
@@ -165,10 +193,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           _buildPlanCard(
                             context: context,
                             product: yearlyProduct, // MODIFIED
-                            // These are examples, you can calculate this
-                            pricePerDay: AppLocalizations.of(
+                            pricePerDay: _pricePerDayText(
                               context,
-                            )!.paywallPricePerDay('\$0.14'),
+                              yearlyProduct,
+                              365,
+                            ),
                             saveAmount: AppLocalizations.of(
                               context,
                             )!.paywallSaveAmount('\$209'), // Example
@@ -408,58 +437,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
               ),
             ),
           ),
-
-          // ---
-          // NOTE: The "Restore/Manage" links were commented out
-          // in the original file.
-          // The new provider methods `restorePurchases()` and `openManagementPage()`
-          // will work correctly if you uncomment this UI.
-          // ---
-          // Positioned(
-          //   left: 0,
-          //   right: 0,
-          //   bottom: 90,
-          //   child: Padding(
-          //     padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          //     child: Row(
-          //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //       children: [
-          //         TextButton(
-          //           onPressed: () async {
-          //             final provider = context.read<SubscriptionProvider>();
-          //             final ok = await provider.restorePurchases();
-          //             if (context.mounted) {
-          //               ScaffoldMessenger.of(context).showSnackBar(
-          //                 SnackBar(
-          //                   content: Text(
-          //                     ok
-          //                         ? AppLocalizations.of(context)!.paywallPurchasesRestoredSuccessfully
-          //                         : provider.error ?? 'Restore failed',
-          //                   ),
-          //                   backgroundColor: ok ? Colors.green : Colors.orange,
-          //                 ),
-          //               );
-          //               // You should not pop here; wait for the
-          //               // stream to update isSubscribed
-          //               // if (ok) Navigator.of(context).pop();
-          //             }
-          //           },
-          //           child: Text(AppLocalizations.of(context)!.paywallRestorePurchases),
-          //         ),
-          //         TextButton(
-          //           onPressed: () async {
-          //             final provider = context.read<SubscriptionProvider>();
-          //             await provider.openManagementPage();
-          //           },
-          //           child: Text(AppLocalizations.of(context)!.paywallManageSubscription),
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ),
         ],
       ),
     );
+  }
+
+  String _pricePerDayText(BuildContext context, ProductDetails p, int days) {
+    final perDay = p.rawPrice / days;
+    final f = NumberFormat.simpleCurrency(name: p.currencyCode);
+    return AppLocalizations.of(context)!.paywallPricePerDay(f.format(perDay));
   }
 
   // --- Refactored _buildPlanCard to use 'ProductDetails' ---
@@ -473,8 +459,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
     bool isBestValue = false,
     required VoidCallback onTap,
   }) {
-    // REMOVED: final product = package.storeProduct;
-    // The product is now passed directly.
 
     return GestureDetector(
       onTap: onTap,
@@ -554,7 +538,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       Row(
                         children: [
                           Text(
-                            pricePerDay, // This is still hardcoded
+                            pricePerDay,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppColors.secondaryTextColorLight,

@@ -124,7 +124,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                     children: [
                       _buildFormSection(
                         context,
-                        'Name',
+                        AppLocalizations.of(context)!.hintName,
                         FormBuilderTextField(
                           name: 'name',
                           decoration: _inputDecoration(hintText: AppLocalizations.of(context)!.hintEnterCategoryName),
@@ -134,7 +134,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                       const SizedBox(height: 16),
                       _buildFormSection(
                         context,
-                        'Type',
+                        AppLocalizations.of(context)!.hintSelectType,
                         FormBuilderField<String>(
                           name: 'type',
                           initialValue: _selectedType,
@@ -260,7 +260,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Edit / Add Category',
+                  AppLocalizations.of(context)!.addCategory,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -336,7 +336,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                 side: const BorderSide(color: Colors.black, width: 1.5),
               ),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context)!.buttonCancel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.black,
                   fontSize: 16,
@@ -365,7 +365,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                       ),
                     )
                   : Text(
-                      'Add',
+                      AppLocalizations.of(context)!.add,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 16,

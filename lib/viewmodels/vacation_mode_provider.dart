@@ -1,3 +1,4 @@
+import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,20 +7,20 @@ import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account
 import 'package:budgetm/screens/dashboard/navbar/home/vacation_dialog.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
- 
+
 class VacationProvider with ChangeNotifier {
   bool _isVacationMode = false;
   bool _isAiMode = false;
   String? _activeVacationAccountId;
- 
+
   bool get isVacationMode => _isVacationMode;
   bool get isAiMode => _isAiMode;
   String? get activeVacationAccountId => _activeVacationAccountId;
- 
+
   VacationProvider() {
     _loadVacationMode();
   }
- 
+
   Future<void> _loadVacationMode() async {
     final prefs = await SharedPreferences.getInstance();
     _isVacationMode = prefs.getBool('vacationMode') ?? false;
@@ -27,7 +28,7 @@ class VacationProvider with ChangeNotifier {
     _activeVacationAccountId = prefs.getString('activeVacationAccountId');
     notifyListeners();
   }
- 
+
   Future<void> setVacationMode(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     _isVacationMode = value;
@@ -35,17 +36,19 @@ class VacationProvider with ChangeNotifier {
     await prefs.setBool('vacationMode', _isVacationMode);
     notifyListeners();
   }
- 
+
   Future<void> toggleVacationMode() async {
     final prefs = await SharedPreferences.getInstance();
     _isVacationMode = !_isVacationMode;
     _isAiMode = _isVacationMode; // Keep AI mode in sync with vacation mode
     await prefs.setBool('vacationMode', _isVacationMode);
     // Diagnostic log to observe when vacation mode toggles
-    print('DEBUG: Vacation toggled -> $_isVacationMode (isAiMode=$_isAiMode), activeAccountId=$_activeVacationAccountId');
+    print(
+      'DEBUG: Vacation toggled -> $_isVacationMode (isAiMode=$_isAiMode), activeAccountId=$_activeVacationAccountId',
+    );
     notifyListeners();
   }
- 
+
   Future<void> setActiveVacationAccountId(String? accountId) async {
     final prefs = await SharedPreferences.getInstance();
     final previousAccountId = _activeVacationAccountId;
@@ -55,29 +58,36 @@ class VacationProvider with ChangeNotifier {
     } else {
       await prefs.setString('activeVacationAccountId', accountId);
     }
-    print('DEBUG: Vacation account changed from $previousAccountId to $accountId (vacationMode=$_isVacationMode)');
+    print(
+      'DEBUG: Vacation account changed from $previousAccountId to $accountId (vacationMode=$_isVacationMode)',
+    );
     notifyListeners();
   }
- 
+
   void toggleAiMode() {
     // This function now correctly serves as an alias for the main toggle
     toggleVacationMode();
   }
- 
+
   /// Checks for vacation accounts and shows the appropriate dialog.
   /// This is the single entry point for the vacation mode flow.
   /// Does not enable vacation mode directly.
   Future<void> checkAndShowVacationDialog(BuildContext context) async {
     final firestoreService = FirestoreService.instance;
-    final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
-    
+    final navbarProvider = Provider.of<NavbarVisibilityProvider>(
+      context,
+      listen: false,
+    );
+
     try {
       // Enable dialog mode to allow navbar hiding on home screen
       navbarProvider.setDialogMode(true);
       navbarProvider.setNavBarVisibility(false);
-      
+
       final allAccounts = await firestoreService.getAllAccounts();
-      final vacationAccounts = allAccounts.where((a) => a.isVacationAccount == true).toList();
+      final vacationAccounts = allAccounts
+          .where((a) => a.isVacationAccount == true)
+          .toList();
 
       if (!context.mounted) return;
 
@@ -109,7 +119,9 @@ class VacationProvider with ChangeNotifier {
           // After returning from AddAccountScreen, re-fetch accounts
           if (context.mounted) {
             final allAccounts = await firestoreService.getAllAccounts();
-            final newVacationAccounts = allAccounts.where((a) => a.isVacationAccount == true).toList();
+            final newVacationAccounts = allAccounts
+                .where((a) => a.isVacationAccount == true)
+                .toList();
 
             // If a new vacation account was created, show the non-dismissible VacationDialog
             if (newVacationAccounts.isNotEmpty) {
@@ -164,21 +176,18 @@ class _NoVacationAccountSheet extends StatelessWidget {
             ),
           ),
           // Title
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
-              'Vacation Mode',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              AppLocalizations.of(context)!.vacationDialogTitle,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ),
           // Content
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
-              'No vacation accounts created yet. Create one to start tracking your vacation spending.',
+              AppLocalizations.of(context)!.balanceCreateFirstVacation,
               style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
@@ -192,10 +201,12 @@ class _NoVacationAccountSheet extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
               ),
-              child: const Text('Create Vacation Account'),
+              child: Text(
+                AppLocalizations.of(context)!.balanceCreateVacationAccount,
+              ),
             ),
           ),
-          SizedBox(height: 32,),
+          SizedBox(height: 32),
           // Secondary Action
           // Padding(
           //   padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 24.0),

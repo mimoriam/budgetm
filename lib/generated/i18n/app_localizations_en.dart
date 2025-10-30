@@ -247,6 +247,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balanceAddAccount => 'Add Account';
 
   @override
+  String get addAVacation => 'Add A Vacation';
+
+  @override
   String get balanceMyAccounts => 'MY ACCOUNTS';
 
   @override
@@ -275,6 +278,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get balanceCreateFirstVacation =>
       'Create your first vacation account to start planning your trips';
+
+  @override
+  String get balanceCreateVacationAccount => 'Create Vacation Account';
 
   @override
   String get balanceSingleAccountView => 'Single Account View';
@@ -1310,6 +1316,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String failedToAddCategory(Object error) {
     return 'Failed to add category: $error';
   }
+
+  @override
+  String get addCategory => 'Add Category';
 
   @override
   String errorCreatingGoal(Object error) {

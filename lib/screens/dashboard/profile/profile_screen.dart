@@ -636,25 +636,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 4.0, 
-          right: 4.0,
-          top: 8.0, 
-          bottom: 8.0,
-        ),
-        child: Text(
-          title.toUpperCase(),
-          textAlign: TextAlign.start,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
+    return Builder(
+      builder: (context) {
+        final textDirection = Directionality.of(context);
+        return Align(
+          alignment: textDirection == TextDirection.rtl
+              ? Alignment.centerRight
+              : Alignment.centerLeft,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 4.0,
+              right: 4.0,
+              top: 8.0,
+              bottom: 8.0,
+            ),
+            child: Text(
+              title.toUpperCase(),
+              textAlign: TextAlign.start,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

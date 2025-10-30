@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 // If you are not on the Play Store, you might need this
-// import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 // REMOVE RevenueCat import
 // import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -19,7 +19,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
   // TODO: IMPORTANT!
   // Define your product IDs from App Store Connect & Google Play Console
-  final Set<String> _productIds = {'budgetm_monthly', 'budgetm_yearly'};
+  final Set<String> _productIds = {'android_monthly_subs', 'android_yearly_subs'};
 
   List<ProductDetails> _products = [];
   final List<PurchaseDetails> _purchases = [];
@@ -212,14 +212,13 @@ class SubscriptionProvider extends ChangeNotifier {
         _error = null;
       }
 
-      // --- START OF ADDED MOCKING LOGIC (PART 1) ---
-      // FOR DEVELOPMENT TESTING: If no products were loaded from the store,
-      // add mock products so the UI can be tested.
-      // if (_products.isEmpty && kDebugMode) {
-      if (_products.isEmpty) {
+      // --- START OF DEBUG-ONLY MOCKING LOGIC ---
+      // FOR DEVELOPMENT TESTING ONLY: If no products were loaded from the store,
+      // add mock products so the UI can be tested in debug builds.
+      if (_products.isEmpty && kDebugMode) {
         _products = [
           ProductDetails(
-            id: 'budgetm_monthly',
+            id: 'android_monthly_subs',
             title: 'Monthly Plan (Mock)',
             description: 'A mock monthly subscription for testing.',
             price: '\$4.99',
@@ -227,7 +226,7 @@ class SubscriptionProvider extends ChangeNotifier {
             currencyCode: 'USD',
           ),
           ProductDetails(
-            id: 'budgetm_yearly',
+            id: 'android_yearly_subs',
             title: 'Yearly Plan (Mock)',
             description: 'A mock yearly subscription for testing.',
             price: '\$29.99',
@@ -237,14 +236,14 @@ class SubscriptionProvider extends ChangeNotifier {
         ];
         _error = null; // Clear the "Failed to load products" error
       }
-      // --- END OF ADDED MOCKING LOGIC (PART 1) ---
+      // --- END OF DEBUG-ONLY MOCKING LOGIC ---
     } catch (e) {
       _error = 'Failed to load products: $e';
       _products = [];
     } finally {
       // Sort products if they exist (mock or real)
       if (_products.isNotEmpty) {
-        _products.sort((a, b) => a.price.compareTo(b.price));
+        _products.sort((a, b) => a.rawPrice.compareTo(b.rawPrice));
       }
       _setLoading(false);
     }
@@ -258,29 +257,19 @@ class SubscriptionProvider extends ChangeNotifier {
   /// Initiates a purchase for a given product
   Future<bool> purchaseProduct(ProductDetails productDetails) async {
     _setLoading(true);
-
-    // --- START OF ADDED MOCKING LOGIC (PART 2) ---
-    // FOR DEVELOPMENT TESTING: Simulate a successful purchase in debug mode
-    // by bypassing the actual IAP call.
-    // if (kDebugMode) {
-      // Manually set the state to subscribed
-      _isSubscribed = true;
-      _setLoading(false);
-      // Notify listeners to update the UI (e.g., pop the paywall)
-      notifyListeners();
-      return true; // Indicate the "purchase" was "initiated" successfully
-    // }
-    // --- END OF ADDED MOCKING LOGIC (PART 2) ---
-
-    // --- Original Logic (will be skipped in kDebugMode) ---
-    final PurchaseParam purchaseParam = PurchaseParam(
-      productDetails: productDetails,
-    );
-
     try {
-      // For subscriptions, use `buyNonConsumable` (per `in_app_purchase` docs)
-      // For consumables, use `buyConsumable`
-      await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      if (defaultTargetPlatform == TargetPlatform.android &&
+          productDetails is GooglePlayProductDetails) {
+        final GooglePlayPurchaseParam purchaseParam = GooglePlayPurchaseParam(
+          productDetails: productDetails,
+        );
+        await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      } else {
+        final PurchaseParam purchaseParam = PurchaseParam(
+          productDetails: productDetails,
+        );
+        await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      }
       // The result is handled by the _onPurchaseStreamUpdated stream listener
       return true;
     } catch (e) {
@@ -319,6 +308,11 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> refreshSubscriptionStatus() async {
     // This now just calls _checkSubscriptionStatus
     await _checkSubscriptionStatus();
+  }
+
+  /// Public helper to reload products
+  Future<void> reloadProducts() async {
+    await _loadProducts();
   }
 
   // ---

@@ -246,6 +246,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get balanceAddAccount => 'إضافة حساب';
 
   @override
+  String get addAVacation => 'إضافة إجازة';
+
+  @override
   String get balanceMyAccounts => 'حساباتي';
 
   @override
@@ -273,6 +276,9 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get balanceCreateFirstVacation =>
       'أنشئ حساب الإجازة الأول لبدء التخطيط لرحلاتك';
+
+  @override
+  String get balanceCreateVacationAccount => 'إنشاء حساب الإجازة';
 
   @override
   String get balanceSingleAccountView => 'عرض حساب واحد';
@@ -1303,6 +1309,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String failedToAddCategory(Object error) {
     return 'فشل إضافة الفئة: $error';
   }
+
+  @override
+  String get addCategory => 'إضافة فئة';
 
   @override
   String errorCreatingGoal(Object error) {

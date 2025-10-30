@@ -76,7 +76,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                             Expanded(
                               child: _buildFormSection(
                                 context,
-                                'Name',
+                                AppLocalizations.of(context)!.hintName,
                                 TextFormField(
                                   controller: _nameController,
                                   style: const TextStyle(fontSize: 13),
@@ -125,7 +125,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       children: [
         Center(
           child: Text(
-            'Amount',
+            AppLocalizations.of(context)!.hintAmount,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.secondaryTextColorLight,
               fontSize: 12,
@@ -174,7 +174,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
       children: [
         _buildFormSection(
           context,
-          'Notes',
+          AppLocalizations.of(context)!.hintNotes,
           TextFormField(
             controller: _descriptionController,
             style: const TextStyle(fontSize: 13),
@@ -185,7 +185,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Date',
+          AppLocalizations.of(context)!.hintSelectDate,
           GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
@@ -231,7 +231,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Due Date',
+          AppLocalizations.of(context)!.hintSelectDueDate,
           GestureDetector(
             onTap: () async {
               final initial = _dueDate ?? _date ?? DateTime.now();
@@ -276,7 +276,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
         const SizedBox(height: 8),
         _buildFormSection(
           context,
-          'Returned',
+          AppLocalizations.of(context)!.markAsReturned,
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -286,8 +286,8 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
             padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
             child: Row(
               children: [
-                const Text(
-                  'Mark as returned',
+                Text(
+                AppLocalizations.of(context)!.markAsReturned,
                   style: TextStyle(fontSize: 13),
                 ),
                 const Spacer(),
@@ -350,7 +350,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
-    const String title = 'Add Borrowed Item';
+    final String title = AppLocalizations.of(context)!.addBorrowedTitle;
 
     return Container(
       padding: const EdgeInsets.only(bottom: 14),
@@ -490,7 +490,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                 side: const BorderSide(color: Colors.black, width: 1.5),
               ),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context)!.buttonCancel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.black,
                   fontSize: 14,
@@ -519,7 +519,7 @@ class _AddBorrowedScreenState extends State<AddBorrowedScreen> {
                       ),
                     )
                   : Text(
-                      'Add',
+                      AppLocalizations.of(context)!.add,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,

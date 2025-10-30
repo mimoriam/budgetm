@@ -501,7 +501,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 side: const BorderSide(color: Colors.black, width: 1.5),
               ),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context)!.buttonCancel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.black,
                   fontSize: 14,
@@ -605,7 +605,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                       ),
                     )
                   : Text(
-                      'Add',
+                      AppLocalizations.of(context)!.add,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,

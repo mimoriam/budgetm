@@ -181,6 +181,83 @@ class _PersonalScreenState extends State<PersonalScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
+              final isRTL = Directionality.of(context) == TextDirection.RTL;
+              // Build pills in the correct visual order for LTR/RTL
+              final pills = isRTL
+                  ? [
+                      (
+                        label: AppLocalizations.of(context)!.personalScreenLent,
+                        selected: _isLentSelected,
+                        onTap: () {
+                          setState(() {
+                            _isSubscriptionsSelected = false;
+                            _isBorrowedSelected = false;
+                            _isLentSelected = true;
+                          });
+                        },
+                      ),
+                      (
+                        label: AppLocalizations.of(context)!.personalScreenBorrowed,
+                        selected: _isBorrowedSelected,
+                        onTap: () {
+                          setState(() {
+                            _isSubscriptionsSelected = false;
+                            _isBorrowedSelected = true;
+                            _isLentSelected = false;
+                          });
+                        },
+                      ),
+                      (
+                        label: AppLocalizations.of(context)!.personalScreenSubscriptions,
+                        selected: _isSubscriptionsSelected,
+                        onTap: () {
+                          setState(() {
+                            _isSubscriptionsSelected = true;
+                            _isBorrowedSelected = false;
+                            _isLentSelected = false;
+                          });
+                        },
+                      ),
+                    ]
+                  : [
+                      (
+                        label: AppLocalizations.of(context)!.personalScreenSubscriptions,
+                        selected: _isSubscriptionsSelected,
+                        onTap: () {
+                          setState(() {
+                            _isSubscriptionsSelected = true;
+                            _isBorrowedSelected = false;
+                            _isLentSelected = false;
+                          });
+                        },
+                      ),
+                      (
+                        label: AppLocalizations.of(context)!.personalScreenBorrowed,
+                        selected: _isBorrowedSelected,
+                        onTap: () {
+                          setState(() {
+                            _isSubscriptionsSelected = false;
+                            _isBorrowedSelected = true;
+                            _isLentSelected = false;
+                          });
+                        },
+                      ),
+                      (
+                        label: AppLocalizations.of(context)!.personalScreenLent,
+                        selected: _isLentSelected,
+                        onTap: () {
+                          setState(() {
+                            _isSubscriptionsSelected = false;
+                            _isBorrowedSelected = false;
+                            _isLentSelected = true;
+                          });
+                        },
+                      ),
+                    ];
+
+              // Compute index for selected pill from this dynamic array
+              int selectedIndex = pills.indexWhere((pill) => pill.selected);
+
               return Container(
                 height: 55,
                 padding: const EdgeInsets.all(5),
@@ -193,16 +270,8 @@ class _PersonalScreenState extends State<PersonalScreen> {
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
-                      left: _isSubscriptionsSelected
-                          ? 0
-                          : _isBorrowedSelected
-                          ? width / 3 - 5
-                          : width * 2 / 3 - 5,
-                      right: _isSubscriptionsSelected
-                          ? width * 2 / 3 - 5
-                          : _isBorrowedSelected
-                          ? width / 3 - 5
-                          : 0,
+                      left: (width / 3) * selectedIndex,
+                      right: width - (width / 3) * (selectedIndex + 1),
                       child: Container(
                         decoration: BoxDecoration(
                           color: AppColors.gradientEnd,
@@ -212,51 +281,12 @@ class _PersonalScreenState extends State<PersonalScreen> {
                       ),
                     ),
                     Row(
-                      children: [
-                        Expanded(
-                          child: _buildChip(
-                            AppLocalizations.of(
-                              context,
-                            )!.personalScreenSubscriptions,
-                            _isSubscriptionsSelected,
-                            () {
-                              setState(() {
-                                _isSubscriptionsSelected = true;
-                                _isBorrowedSelected = false;
-                                _isLentSelected = false;
-                              });
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildChip(
-                            AppLocalizations.of(
-                              context,
-                            )!.personalScreenBorrowed,
-                            _isBorrowedSelected,
-                            () {
-                              setState(() {
-                                _isSubscriptionsSelected = false;
-                                _isBorrowedSelected = true;
-                                _isLentSelected = false;
-                              });
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildChip(
-                            AppLocalizations.of(context)!.personalScreenLent,
-                            _isLentSelected,
-                            () {
-                              setState(() {
-                                _isSubscriptionsSelected = false;
-                                _isBorrowedSelected = false;
-                                _isLentSelected = true;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
+                      children: List.generate(3, (i) {
+                        final pill = pills[i];
+                        return Expanded(
+                          child: _buildChip(pill.label, pill.selected, pill.onTap),
+                        );
+                      }),
                     ),
                   ],
                 ),

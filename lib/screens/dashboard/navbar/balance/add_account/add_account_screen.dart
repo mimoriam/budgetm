@@ -479,8 +479,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    widget.isCreatingVacationAccount ? "Add A Vacation" :
-                    'Add New Account',
+                    widget.isCreatingVacationAccount ? AppLocalizations.of(context)!.addAVacation :
+                    AppLocalizations.of(context)!.balanceAddAccount,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -575,7 +575,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         Center(
           child: Text(
             widget.isCreatingVacationAccount
-                ? 'Total Budget'
+                ? AppLocalizations.of(context)!.homeTotalBudget
                 : AppLocalizations.of(context)!.addAccountInitialBalance,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.secondaryTextColorLight,

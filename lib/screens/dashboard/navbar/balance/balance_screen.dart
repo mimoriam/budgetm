@@ -1099,7 +1099,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           
           // MY ACCOUNTS section
           _buildSectionHeaderWithButton(
-            'MY ACCOUNTS',
+            AppLocalizations.of(context)!.balanceMyAccounts,
             () async {
               final vacationProvider =
                   Provider.of<VacationProvider>(
@@ -1129,7 +1129,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           // VACATION section
           const SizedBox(height: 24),
           _buildSectionHeaderWithButton(
-            'VACATION',
+            AppLocalizations.of(context)!.balanceVacation,
             () async {
               // Check subscription status before allowing vacation account creation
               final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
@@ -1246,6 +1246,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
   Widget _buildMyAccountsEmptyCard() {
     return Container(
+      width: double.infinity, // Ensures full width in both LTR and RTL
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,

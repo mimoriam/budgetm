@@ -35,15 +35,15 @@ class _CategoryScreenState extends State<CategoryScreen> {
       setState(() {
         _isLoading = true;
       });
-      
+
       final categories = await _firestoreService.getAllCategories();
-      
+
       // Filter out duplicate categories based on ID to prevent GlobalKey errors
       final uniqueCategories = <String, Category>{};
       for (final category in categories) {
         uniqueCategories[category.id] = category;
       }
-      
+
       setState(() {
         _categories = uniqueCategories.values.toList();
         _isLoading = false;
@@ -85,24 +85,25 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     category: category,
                   );
                 },
-                proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                  return Material(
-                    color: Colors.transparent,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
+                proxyDecorator:
+                    (Widget child, int index, Animation<double> animation) {
+                      return Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: child,
-                    ),
-                  );
-                },
+                          child: child,
+                        ),
+                      );
+                    },
                 onReorder: (int oldIndex, int newIndex) {
                   _reorderCategories(oldIndex, newIndex, currentCategories);
                 },
@@ -121,11 +122,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
               withNavBar: false,
               pageTransitionAnimation: PageTransitionAnimation.cupertino,
             );
-            
+
             // If a category was added successfully, refresh the list
             if (result == true) {
               _loadCategories();
-              Provider.of<BudgetProvider>(context, listen: false).refreshCategories();
+              Provider.of<BudgetProvider>(
+                context,
+                listen: false,
+              ).refreshCategories();
             }
           },
           backgroundColor: AppColors.gradientEnd,
@@ -184,7 +188,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Categories',
+                  AppLocalizations.of(context)!.profileCategories,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -233,14 +237,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   children: [
                     Expanded(
                       child: _buildChip(
-                        'Expense',
+                        AppLocalizations.of(context)!.analyticsExpenses,
                         _isExpenseSelected,
                         () => setState(() => _isExpenseSelected = true),
                       ),
                     ),
                     Expanded(
                       child: _buildChip(
-                        'Income',
+                        AppLocalizations.of(context)!.analyticsIncome,
                         !_isExpenseSelected,
                         () => setState(() => _isExpenseSelected = false),
                       ),
@@ -366,7 +370,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
       for (int i = 0; i < updatedVisible.length; i++) {
         final category = updatedVisible[i];
         final updatedCategory = category.copyWith(displayOrder: i);
-        await _firestoreService.updateCategory(updatedCategory.id, updatedCategory);
+        await _firestoreService.updateCategory(
+          updatedCategory.id,
+          updatedCategory,
+        );
       }
       Provider.of<BudgetProvider>(context, listen: false).refreshCategories();
       // Success - nothing further to do since UI already updated optimistically
@@ -378,7 +385,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
           _categories = originalCategories;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.failedToReorderCategories)),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.failedToReorderCategories,
+            ),
+          ),
         );
       }
     }
@@ -451,15 +462,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
       }
 
       await _firestoreService.deleteCategoryWithTransactions(category.id);
-      
+
       // Reload categories and refresh provider
       await _loadCategories();
       Provider.of<BudgetProvider>(context, listen: false).refreshCategories();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.categoryAndTransactionsDeleted),
+            content: Text(
+              AppLocalizations.of(context)!.categoryAndTransactionsDeleted,
+            ),
             backgroundColor: Colors.green,
           ),
         );

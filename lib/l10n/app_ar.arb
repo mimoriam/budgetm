@@ -512,7 +512,10 @@
     "deleteItem": "حذف العنصر",
     "deleteAccount": "حذف الحساب",
     "deleteAllAssociatedTransactions": "حذف جميع المعاملات المرتبطة",
+    "addCategory": "إضافة فئة",
+    "addAVacation": "إضافة إجازة",
     "normalMode": "الوضع العادي",
+    "balanceCreateVacationAccount": "إنشاء حساب الإجازة",
   "normalModeWithCurrency": "أنت الآن في الوضع العادي بالعملة: {currency}",
   "@normalModeWithCurrency": {
     "placeholders": {
