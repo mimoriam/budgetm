@@ -5,6 +5,7 @@ import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -25,16 +26,12 @@ class _AuthGateState extends State<AuthGate> {
   bool? _cachedOnboardingStatus;
   bool _preferencesLoaded = false;
   Future<bool>? _isInitializedFuture;
+  bool _hasTriggeredSubRefresh = false;
 
   @override
   void initState() {
     super.initState();
     _initPreferences();
-
-    // final currentUser = FirebaseAuth.instance.currentUser;
-    // if (currentUser != null) {
-    //   _isInitializedFuture = FirestoreService.instance.isUserInitialized(currentUser.uid);
-    // }
   }
 
   Future<void> _initPreferences() async {
@@ -69,12 +66,34 @@ class _AuthGateState extends State<AuthGate> {
         // Update UserProvider with current user after the frame is built
         if (authSnapshot.hasData || authSnapshot.data == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
             final userProvider = Provider.of<UserProvider>(
               context,
               listen: false,
             );
             userProvider.setUser(authSnapshot.data);
           });
+        }
+
+        // Force a fresh subscription status check on login once per session
+        if (authSnapshot.hasData && !_hasTriggeredSubRefresh) {
+          _hasTriggeredSubRefresh = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            // Use ensureFreshStatus with force=true to guarantee a fresh check
+            context
+                .read<SubscriptionProvider>()
+                .ensureFreshStatus(force: true)
+                .catchError((error) {
+                  // Silently handle errors - subscription provider will manage error state
+                  debugPrint('Error refreshing subscription on login: $error');
+                });
+          });
+        }
+
+        // Reset subscription refresh flag when user logs out
+        if (!authSnapshot.hasData && _hasTriggeredSubRefresh) {
+          _hasTriggeredSubRefresh = false;
         }
 
         // Show loading indicator only during initial connection
@@ -97,8 +116,8 @@ class _AuthGateState extends State<AuthGate> {
 
         // If future is not set or belongs to a different user, create a new one
         _isInitializedFuture ??= FirestoreService.instance.isUserInitialized(
-            user.uid,
-          );
+          user.uid,
+        );
 
         return FutureBuilder<bool>(
           future: _isInitializedFuture,

@@ -29,7 +29,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService();
 
-
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -109,8 +108,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 children: [
                                   Text(
                                     isSubscribed
-                                        ? AppLocalizations.of(context)!.profilePremiumActive
-                                        : AppLocalizations.of(context)!.profileFreePlan,
+                                        ? AppLocalizations.of(
+                                            context,
+                                          )!.profilePremiumActive
+                                        : AppLocalizations.of(
+                                            context,
+                                          )!.profileFreePlan,
                                     textAlign: TextAlign.start,
                                     style: const TextStyle(
                                       color: Colors.white,
@@ -121,37 +124,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     isSubscribed
-                                        ? AppLocalizations.of(context)!.profilePremiumDescription
-                                        : AppLocalizations.of(context)!.profileUpgradeDescription,
+                                        ? AppLocalizations.of(
+                                            context,
+                                          )!.profilePremiumDescription
+                                        : AppLocalizations.of(
+                                            context,
+                                          )!.profileUpgradeDescription,
                                     textAlign: TextAlign.start,
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
                                       fontSize: 14,
                                     ),
                                   ),
-                                  // if (isSubscribed)
-                                  //   Builder(
-                                  //     builder: (context) {
-                                  //       final renewalText = context.read<SubscriptionProvider>().renewalCopy;
-                                  //       if (renewalText == null) return const SizedBox.shrink();
-                                  //       return Padding(
-                                  //         padding: const EdgeInsets.only(top: 4.0),
-                                  //         child: Text(
-                                  //           renewalText,
-                                  //           style: TextStyle(
-                                  //             color: Colors.white.withOpacity(0.9),
-                                  //             fontSize: 12,
-                                  //           ),
-                                  //         ),
-                                  //       );
-                                  //     },
-                                  //   ),
                                 ],
                               ),
                             ),
-                            if (isLoading) // <-- Check loading flag
+                            if (isLoading)
                               Container(
-                                padding: const EdgeInsets.all(8), // Match size
+                                padding: const EdgeInsets.all(8),
                                 child: const SizedBox(
                                   width: 20,
                                   height: 20,
@@ -173,7 +163,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       context,
                                       screen: const PaywallScreen(),
                                       withNavBar: false,
-                                      pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                                      pageTransitionAnimation:
+                                          PageTransitionAnimation.cupertino,
                                     );
                                   }
                                 },
@@ -184,7 +175,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    isSubscribed ? Icons.settings : Icons.arrow_forward_ios,
+                                    isSubscribed
+                                        ? Icons.settings
+                                        : Icons.arrow_forward_ios,
                                     color: Colors.white,
                                     size: 16,
                                   ),
@@ -196,8 +189,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  _buildSectionHeader(AppLocalizations.of(context)!.profileAccount),
-                  // _buildProfileMenuItem(Icons.person_outline, 'Edit profile'),
+                  _buildSectionHeader(
+                    AppLocalizations.of(context)!.profileAccount,
+                  ),
                   if (showChangePassword)
                     _buildProfileMenuItem(
                       Icons.lock_outline,
@@ -236,21 +230,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _showLanguageSelectorDialog(context);
                     },
                   ),
-                  // _buildProfileMenuItem(
-                  //   Icons.cloud_upload_outlined,
-                  //   'Import & Export Data',
-                  //   onTap: () {
-                  //     PersistentNavBarNavigator.pushNewScreen(
-                  //       context,
-                  //       screen: const ExportDataScreen(),
-                  //       withNavBar: false,
-                  //       pageTransitionAnimation:
-                  //           PageTransitionAnimation.cupertino,
-                  //     );
-                  //   },
-                  // ),
                   const SizedBox(height: 12),
-                  _buildSectionHeader(AppLocalizations.of(context)!.profileLegal),
+                  _buildSectionHeader(
+                    AppLocalizations.of(context)!.profileLegal,
+                  ),
                   _buildProfileMenuItem(
                     Icons.description_outlined,
                     AppLocalizations.of(context)!.profileTermsConditions,
@@ -260,8 +243,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppLocalizations.of(context)!.profilePrivacyPolicy,
                   ),
                   const SizedBox(height: 12),
-                  _buildSectionHeader(AppLocalizations.of(context)!.profileSupport),
-                  _buildProfileMenuItem(Icons.help_outline, AppLocalizations.of(context)!.profileHelpSupport),
+                  _buildSectionHeader(
+                    AppLocalizations.of(context)!.profileSupport,
+                  ),
+                  _buildProfileMenuItem(
+                    Icons.help_outline,
+                    AppLocalizations.of(context)!.profileHelpSupport,
+                  ),
                   _buildProfileMenuItem(
                     Icons.star_outline,
                     AppLocalizations.of(context)!.profileFeedback,
@@ -276,12 +264,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  _buildSectionHeader(AppLocalizations.of(context)!.profileDangerZone),
-                  // _buildProfileMenuItem(
-                  //   Icons.delete_outline,
-                  //   'Delete Account',
-                  //   color: Colors.red,
-                  // ),
+                  _buildSectionHeader(
+                    AppLocalizations.of(context)!.profileDangerZone,
+                  ),
                   _buildProfileMenuItem(
                     Icons.logout,
                     AppLocalizations.of(context)!.profileLogout,
@@ -302,7 +287,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(AppLocalizations.of(context)!.profileErrorSigningOut(e.toString())),
+                              content: Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.profileErrorSigningOut(e.toString()),
+                              ),
                               backgroundColor: Colors.red,
                             ),
                           );
@@ -345,13 +334,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Row(
                 children: [
-                  // IconButton(
-                  //   icon: const Icon(Icons.sync_outlined, color: Colors.black),
-                  //   onPressed: () {
-                  //     // TODO: Implement sync functionality
-                  //   },
-                  // ),
-                  // const SizedBox(width: 16),
                   Text(
                     AppLocalizations.of(context)!.profileTitle,
                     textAlign: TextAlign.start,
@@ -400,7 +382,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Consumer<UserProvider>(
               builder: (context, userProvider, child) {
                 if (userProvider.currentUser == null) {
-                  return Text(AppLocalizations.of(context)!.profileUserNotFound);
+                  return Text(
+                    AppLocalizations.of(context)!.profileUserNotFound,
+                  );
                 }
                 final displayName = userProvider.displayName;
                 return Row(
@@ -419,7 +403,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               builder: (context, setState) {
                                 return AlertDialog(
                                   title: Center(
-                                    child: Text(AppLocalizations.of(context)!.profileEditDisplayName),
+                                    child: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.profileEditDisplayName,
+                                    ),
                                   ),
                                   content: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -430,7 +418,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       autofocus: true,
                                       textAlign: TextAlign.start,
                                       decoration: InputDecoration(
-                                        hintText: AppLocalizations.of(context)!.hintEnterDisplayName,
+                                        hintText: AppLocalizations.of(
+                                          context,
+                                        )!.hintEnterDisplayName,
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(
                                             8.0,
@@ -449,7 +439,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       onPressed: () {
                                         Navigator.of(context).pop();
                                       },
-                                      child: Text(AppLocalizations.of(context)!.profileCancel),
+                                      child: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.profileCancel,
+                                      ),
                                     ),
                                     ElevatedButton(
                                       onPressed: isSaving
@@ -482,9 +476,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                     newName,
                                                   );
                                                   await user.reload();
-                                                  // Also update the user's Firestore profile document so the
-                                                  // display name is persisted in Firestore and works with
-                                                  // offline persistence.
                                                   try {
                                                     await FirestoreService
                                                         .instance
@@ -496,8 +487,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                           },
                                                         );
                                                   } catch (e) {
-                                                    // Non-fatal: log and continue; UI already updated from auth.
-                                                    print(
+                                                    debugPrint(
                                                       'Failed to update Firestore user document: $e',
                                                     );
                                                   }
@@ -552,7 +542,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : Text(AppLocalizations.of(context)!.profileSave),
+                                          : Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.profileSave,
+                                            ),
                                     ),
                                   ],
                                 );
@@ -610,13 +604,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       value: vacationProvider.isVacationMode,
                       onChanged: (value) async {
                         if (value) {
-                          // Trigger the check and dialog flow from the provider.
                           await Provider.of<VacationProvider>(
                             context,
                             listen: false,
                           ).checkAndShowVacationDialog(context);
                         } else {
-                          // Deactivate vacation mode immediately.
                           await Provider.of<VacationProvider>(
                             context,
                             listen: false,
@@ -644,7 +636,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? Alignment.centerRight
               : Alignment.centerLeft,
           child: Padding(
-            padding: EdgeInsets.only(
+            padding: const EdgeInsets.only(
               left: 4.0,
               right: 4.0,
               top: 8.0,
@@ -692,95 +684,169 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Helper method to get the appropriate profile image
   ImageProvider _getProfileImage(UserProvider userProvider) {
     final user = userProvider.currentUser;
 
-    // Check if user is logged in via Google and has a photo URL
     if (user != null &&
         userProvider.hasGoogleProvider &&
         userProvider.photoURL != null) {
       return NetworkImage(userProvider.photoURL!);
     }
 
-    // Fall back to the default asset image
     return const AssetImage('images/backgrounds/onboarding1.png');
   }
 
-
-
-  // (Removed legacy restore dialog in favor of bottom sheet actions)
-
-  // Bottom sheet with Manage / Restore / Refresh actions
+  /// Bottom sheet with Manage / Restore / Refresh actions
   void _showSubscriptionActionsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Consumer<SubscriptionProvider>(
             builder: (context, subscriptionProvider, child) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.manage_accounts),
-                    title: Text(
-                      AppLocalizations.of(context)!.profileManageSubscription,
-                      textAlign: TextAlign.start,
+              final isLoading = subscriptionProvider.isLoading;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Handle at top
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                    onTap: subscriptionProvider.isLoading
-                        ? null
-                        : () async {
-                            Navigator.of(ctx).pop();
-                            await subscriptionProvider.openManagementPage();
-                          },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.restore),
-                    title: Text(
-                      AppLocalizations.of(context)!.profileRestorePurchases,
-                      textAlign: TextAlign.start,
+                    // Title
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        "Subscription Options",
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    onTap: subscriptionProvider.isLoading
-                        ? null
-                        : () async {
-                            final ok = await subscriptionProvider.restorePurchases();
-                            if (mounted) {
+                    const SizedBox(height: 20),
+                    // Refresh Status
+                    // ListTile(
+                    //   enabled: !isLoading,
+                    //   leading: Icon(
+                    //     Icons.refresh,
+                    //     color: isLoading ? Colors.grey : null,
+                    //   ),
+                    //   title: Text(
+                    //     AppLocalizations.of(context)!.profileRefreshStatus,
+                    //     textAlign: TextAlign.start,
+                    //     style: TextStyle(color: isLoading ? Colors.grey : null),
+                    //   ),
+                    //   trailing: isLoading
+                    //       ? const SizedBox(
+                    //           width: 20,
+                    //           height: 20,
+                    //           child: CircularProgressIndicator(strokeWidth: 2),
+                    //         )
+                    //       : null,
+                    //   onTap: isLoading
+                    //       ? null
+                    //       : () async {
+                    //           Navigator.of(ctx).pop();
+                    //           try {
+                    //             await subscriptionProvider.ensureFreshStatus(
+                    //               force: true,
+                    //             );
+                    //             if (context.mounted) {
+                    //               ScaffoldMessenger.of(context).showSnackBar(
+                    //                 const SnackBar(
+                    //                   content: Text(
+                    //                     'Subscription status refreshed',
+                    //                   ),
+                    //                   backgroundColor: Colors.green,
+                    //                   duration: Duration(seconds: 2),
+                    //                 ),
+                    //               );
+                    //             }
+                    //           } catch (e) {
+                    //             if (context.mounted) {
+                    //               ScaffoldMessenger.of(context).showSnackBar(
+                    //                 SnackBar(
+                    //                   content: Text(
+                    //                     subscriptionProvider.error ??
+                    //                         'Failed to refresh status',
+                    //                   ),
+                    //                   backgroundColor: Colors.red,
+                    //                 ),
+                    //               );
+                    //             }
+                    //           }
+                    //         },
+                    // ),
+                    // Restore Purchases
+                    // TODO: Restore purchases only if it's a new app install and user is subscribed
+                    // TODO: and wants the subscription again without paying
+                    // ListTile(
+                    //   enabled: !isLoading,
+                    //   leading: Icon(
+                    //     Icons.restore,
+                    //     color: isLoading ? Colors.grey : null,
+                    //   ),
+                    //   title: Text(
+                    //     AppLocalizations.of(context)!.profileRestorePurchases,
+                    //     textAlign: TextAlign.start,
+                    //     style: TextStyle(color: isLoading ? Colors.grey : null),
+                    //   ),
+                    //   onTap: isLoading
+                    //       ? null
+                    //       : () async {
+                    //           Navigator.of(ctx).pop();
+                    //           final success = await subscriptionProvider
+                    //               .restorePurchases();
+                    //           if (context.mounted) {
+                    //             ScaffoldMessenger.of(context).showSnackBar(
+                    //               SnackBar(
+                    //                 content: Text(
+                    //                   success
+                    //                       ? 'Checking for purchases...'
+                    //                       : subscriptionProvider.error ??
+                    //                             'Failed to restore purchases',
+                    //                 ),
+                    //                 backgroundColor: success
+                    //                     ? Colors.blue
+                    //                     : Colors.red,
+                    //               ),
+                    //             );
+                    //           }
+                    //         },
+                    // ),
+                    // Manage Subscription
+                    ListTile(
+                      enabled: !isLoading,
+                      leading: Icon(
+                        Icons.manage_accounts,
+                        color: isLoading ? Colors.grey : null,
+                      ),
+                      title: Text(
+                        AppLocalizations.of(context)!.profileManageSubscription,
+                        textAlign: TextAlign.start,
+                        style: TextStyle(color: isLoading ? Colors.grey : null),
+                      ),
+                      onTap: isLoading
+                          ? null
+                          : () async {
                               Navigator.of(ctx).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    ok
-                                        ? 'Purchases restored successfully!'
-                                        : 'No active subscription found. You are now on the free plan.',
-                                  ),
-                                  backgroundColor: ok ? Colors.green : Colors.orange,
-                                ),
-                              );
-                            }
-                          },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.refresh),
-                    title: Text(
-                      AppLocalizations.of(context)!.profileRefreshStatus,
-                      textAlign: TextAlign.start,
+                              await subscriptionProvider.openManagementPage();
+                            },
                     ),
-                    onTap: subscriptionProvider.isLoading
-                        ? null
-                        : () async {
-                            Navigator.of(ctx).pop();
-                            await subscriptionProvider.refreshSubscriptionStatus();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(AppLocalizations.of(context)!.profileSubscriptionRefreshed),
-                                ),
-                              );
-                            }
-                          },
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                  ],
+                ),
               );
             },
           ),
@@ -789,7 +855,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Language selector dialog
+  /// Language selector dialog
   void _showLanguageSelectorDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -846,13 +912,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String languageName,
     String flag,
   ) {
-    final isSelected = localeProvider.currentLocale.languageCode == locale.languageCode;
-    
+    final isSelected =
+        localeProvider.currentLocale.languageCode == locale.languageCode;
+
     return ListTile(
-      leading: Text(
-        flag,
-        style: const TextStyle(fontSize: 24),
-      ),
+      leading: Text(flag, style: const TextStyle(fontSize: 24)),
       title: Text(
         languageName,
         textAlign: TextAlign.start,
@@ -862,10 +926,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       trailing: isSelected
-          ? Icon(
-              Icons.check_circle,
-              color: Theme.of(context).primaryColor,
-            )
+          ? Icon(Icons.check_circle, color: Theme.of(context).primaryColor)
           : null,
       onTap: () async {
         await localeProvider.setLocale(locale);

@@ -12,6 +12,7 @@ import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
 import 'package:budgetm/viewmodels/locale_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+    appleProvider: AppleProvider.debug,
+  );
   final SharedPreferences prefs = await SharedPreferences.getInstance();
 
   // Enable Firestore offline persistence
@@ -35,6 +40,10 @@ Future<void> main() async {
   final localeProvider = LocaleProvider();
   await localeProvider.initialize();
 
+  // Initialize subscription provider
+  final subscriptionProvider = SubscriptionProvider();
+  await subscriptionProvider.init();
+
   runApp(
     MultiProvider(
       providers: [
@@ -44,7 +53,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
         ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
-        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        ChangeNotifierProvider.value(value: subscriptionProvider),
         ChangeNotifierProvider.value(value: localeProvider),
         ChangeNotifierProxyProvider3<
           CurrencyProvider,
