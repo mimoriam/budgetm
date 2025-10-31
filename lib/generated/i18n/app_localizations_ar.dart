@@ -1825,6 +1825,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createGoalColor => 'اللون';
 
   @override
+  String get createGoalLimitReached =>
+      'لقد وصلت إلى حد الأهداف. قم بالترقية إلى المميز لإنشاء أهداف غير محدودة.';
+
+  @override
   String get personalScreenSubscriptions => 'الاشتراكات';
 
   @override
@@ -1946,6 +1950,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profileLogout => 'تسجيل الخروج';
+
+  @override
+  String get profileDeleteAccount => 'حذف الحساب';
+
+  @override
+  String get profileDeleteAccountTitle => 'حذف الحساب';
+
+  @override
+  String get profileDeleteAccountMessage =>
+      'هل أنت متأكد من أنك تريد حذف حسابك؟ لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع بياناتك بشكل دائم، بما في ذلك الحسابات والمعاملات والميزانيات والأهداف.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'حذف';
+
+  @override
+  String get profileDeleteAccountSuccess => 'تم حذف الحساب بنجاح';
+
+  @override
+  String profileDeleteAccountError(String error) {
+    return 'خطأ في حذف الحساب: $error';
+  }
 
   @override
   String get homeIncome => 'الدخل';

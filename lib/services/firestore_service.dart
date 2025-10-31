@@ -2169,6 +2169,158 @@ class FirestoreService {
     }
   }
 
+  // Delete all user data including budgets, goals, and user document
+  Future<void> deleteUserAccount(String uid) async {
+    try {
+      // Use multiple batches if needed (Firestore batch limit is 500 operations)
+      // First batch: delete subcollections
+      WriteBatch batch = _firestore.batch();
+      int batchCount = 0;
+      const int batchLimit = 500;
+
+      // Delete all transactions
+      final transactionsSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('transactions')
+          .get();
+      for (final doc in transactionsSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Delete all categories
+      final categoriesSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('categories')
+          .get();
+      for (final doc in categoriesSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Delete all accounts
+      final accountsSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('accounts')
+          .get();
+      for (final doc in accountsSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Delete all budgets
+      final budgetsSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('budgets')
+          .get();
+      for (final doc in budgetsSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Delete all goals
+      final goalsSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('goals')
+          .get();
+      for (final doc in goalsSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Delete all tasks
+      final tasksSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('tasks')
+          .get();
+      for (final doc in tasksSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Delete borrowed items
+      final borrowedSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('borrowed')
+          .get();
+      for (final doc in borrowedSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Delete lent items
+      final lentSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('lent')
+          .get();
+      for (final doc in lentSnapshot.docs) {
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
+        batch.delete(doc.reference);
+        batchCount++;
+      }
+
+      // Commit remaining batch operations
+      if (batchCount > 0) {
+        await batch.commit();
+      }
+
+      // Finally, delete the user document itself
+      await _firestore.collection('users').doc(uid).delete();
+      
+      print('User account and all data deleted successfully');
+    } catch (e) {
+      print('Error deleting user account: $e');
+      rethrow;
+    }
+  }
+
   // ================ ACCOUNT PROFILE INITIALIZATION ================
   // Slug utility for deterministic category document IDs
   static String createSlug(String name) {

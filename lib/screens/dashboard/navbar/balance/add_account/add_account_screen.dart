@@ -5,7 +5,9 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -731,6 +733,39 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   : () async {
                       if (_formKey.currentState?.saveAndValidate() ?? false) {
                         try {
+                          // Check subscription limits before creating account
+                          final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                          final firestoreService = FirestoreService.instance;
+                          
+                          if (widget.isCreatingVacationAccount) {
+                            // Prevent ANY vacation account creation if unsubscribed
+                            if (!subscriptionProvider.isSubscribed) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const PaywallScreen(),
+                                ),
+                              );
+                              return;
+                            }
+                          } else {
+                            // Check normal account limit: only 1 normal account for unsubscribed users
+                            if (!subscriptionProvider.isSubscribed) {
+                              final allAccounts = await firestoreService.getAllAccounts();
+                              final normalAccounts = allAccounts.where((a) => 
+                                a.isVacationAccount != true && (a.isDefault != true)
+                              ).toList();
+                              
+                              if (normalAccounts.length >= 1) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const PaywallScreen(),
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                          }
+                          
                           setState(() {
                             _isSaving = true;
                           });

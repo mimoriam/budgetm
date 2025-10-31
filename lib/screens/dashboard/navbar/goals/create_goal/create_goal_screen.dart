@@ -516,6 +516,21 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 final isValid = _formKey.currentState?.saveAndValidate() ?? false;
                 if (!isValid) return;
 
+                // Check subscription status and goal count
+                final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                if (!subscriptionProvider.isSubscribed) {
+                  final goalCount = await context.read<GoalsProvider>().getGoalCount();
+                  if (goalCount >= 1) {
+                    // Show paywall screen directly
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const PaywallScreen(),
+                      ),
+                    );
+                    return;
+                  }
+                }
+
                 setState(() {
                   _isLoading = true;
                 });

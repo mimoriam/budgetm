@@ -583,6 +583,7 @@
     "createGoalNotes": "ملاحظات",
     "createGoalDate": "التاريخ",
     "createGoalColor": "اللون",
+    "createGoalLimitReached": "لقد وصلت إلى حد الأهداف. قم بالترقية إلى المميز لإنشاء أهداف غير محدودة.",
     "personalScreenSubscriptions": "الاشتراكات",
     "personalScreenBorrowed": "مقترض",
     "personalScreenLent": "مُقرض",
@@ -624,6 +625,19 @@
     "profileSupport": "الدعم",
     "profileDangerZone": "منطقة الخطر",
     "profileLogout": "تسجيل الخروج",
+    "profileDeleteAccount": "حذف الحساب",
+    "profileDeleteAccountTitle": "حذف الحساب",
+    "profileDeleteAccountMessage": "هل أنت متأكد من أنك تريد حذف حسابك؟ لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع بياناتك بشكل دائم، بما في ذلك الحسابات والمعاملات والميزانيات والأهداف.",
+    "profileDeleteAccountConfirm": "حذف",
+    "profileDeleteAccountSuccess": "تم حذف الحساب بنجاح",
+    "profileDeleteAccountError": "خطأ في حذف الحساب: {error}",
+    "@profileDeleteAccountError": {
+      "placeholders": {
+        "error": {
+          "type": "String"
+        }
+      }
+    },
     "homeIncome": "الدخل",
     "homeExpense": "المصروف",
     "expenseDetailPaidUnpaid": "مدفوع/غير مدفوع",

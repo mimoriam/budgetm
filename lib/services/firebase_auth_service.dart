@@ -143,4 +143,40 @@ class FirebaseAuthService {
       return false;
     }
   }
+
+  /// Deletes the user account and all associated data
+  /// This includes:
+  /// - All Firestore data (transactions, accounts, budgets, goals, etc.)
+  /// - Firebase Auth account
+  /// - Signs out the user
+  Future<void> deleteAccount() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in');
+      }
+
+      final uid = user.uid;
+
+      // First, delete all Firestore data
+      await _firestoreService.deleteUserAccount(uid);
+
+      // Then delete the Firebase Auth account
+      await user.delete();
+
+      // Sign out (in case deletion doesn't automatically sign out)
+      await _auth.signOut();
+      await _googleSignIn.signOut();
+    } on FirebaseAuthException catch (e) {
+      // Handle specific FirebaseAuthException errors
+      if (e.code == 'requires-recent-login') {
+        throw Exception('Please log in again to delete your account');
+      } else {
+        throw Exception('Failed to delete account: ${e.message}');
+      }
+    } catch (e) {
+      // Handle any other errors
+      throw Exception('An error occurred while deleting account: $e');
+    }
+  }
 }

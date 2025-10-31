@@ -105,6 +105,26 @@ class GoalsProvider extends ChangeNotifier {
     }
     return false;
   }
+
+  // Count total number of goals for the current user
+  Future<int> getGoalCount() async {
+    final firestore = FirebaseFirestore.instance;
+    final auth = FirebaseAuth.instance;
+    final userId = auth.currentUser?.uid;
+
+    if (userId == null) {
+      return 0;
+    }
+
+    final querySnapshot = await firestore
+        .collection('users')
+        .doc(userId)
+        .collection('goals')
+        .count()
+        .get();
+
+    return querySnapshot.count ?? 0;
+  }
   
   // Listener for currency changes
   void _onCurrencyChanged() {

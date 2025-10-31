@@ -14,6 +14,8 @@ import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -2709,6 +2711,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 }
                               }
                             } else {
+                              // Turning ON vacation mode: check subscription and existing accounts
+                              final subscriptionProvider =
+                                  Provider.of<SubscriptionProvider>(
+                                context,
+                                listen: false,
+                              );
+                              
+                              // Only prevent vacation mode switching if unsubscribed AND no existing vacation accounts
+                              // This allows users who created vacation accounts while subscribed
+                              // to continue using them even after subscription expires
+                              if (!subscriptionProvider.isSubscribed) {
+                                final firestoreService = FirestoreService.instance;
+                                final allAccounts = await firestoreService.getAllAccounts();
+                                final vacationAccounts = allAccounts
+                                    .where((a) => a.isVacationAccount == true)
+                                    .toList();
+                                
+                                // If no existing vacation accounts, show paywall to prevent creation
+                                if (vacationAccounts.isEmpty) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const PaywallScreen(),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                // If they have existing vacation accounts, allow switching to use them
+                              }
+                              
                               // Turning ON vacation mode: go through selection flow
                               await vacationProvider
                                   .checkAndShowVacationDialog(

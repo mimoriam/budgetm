@@ -437,6 +437,28 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           _buildSectionHeaderWithButton(
                             AppLocalizations.of(context)!.balanceMyAccounts,
                             () async {
+                              // Check subscription status before allowing normal account creation
+                              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                              final firestoreService = FirestoreService.instance;
+                              
+                              // Check normal account limit: only 1 normal account for unsubscribed users
+                              if (!subscriptionProvider.isSubscribed) {
+                                final allAccounts = await firestoreService.getAllAccounts();
+                                final normalAccounts = allAccounts.where((a) => 
+                                  a.isVacationAccount != true && (a.isDefault != true)
+                                ).toList();
+                                
+                                if (normalAccounts.length >= 1) {
+                                  // Show paywall if user is not subscribed and already has a normal account
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const PaywallScreen(),
+                                    ),
+                                  );
+                                  return;
+                                }
+                              }
+                              
                               final vacationProvider =
                                   Provider.of<VacationProvider>(
                                 context,
@@ -516,15 +538,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             () async {
                               // Check subscription status before allowing vacation account creation
                               final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-                              final firestoreService = FirestoreService.instance;
                               
-                              // Load existing vacation accounts to check limit
-                              final allAccounts = await firestoreService.getAllAccounts();
-                              final existingVacationAccounts = allAccounts.where((a) => a.isVacationAccount == true).toList();
-                              
-                              // Only check subscription if user already has vacation accounts
-                              if (!subscriptionProvider.canCreateMultipleVacationAccounts() && existingVacationAccounts.isNotEmpty) {
-                                // Show paywall if user is not subscribed and already has a vacation account
+                              // Prevent ANY vacation account creation if unsubscribed
+                              if (!subscriptionProvider.isSubscribed) {
+                                // Show paywall if user is not subscribed
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) => const PaywallScreen(),
@@ -677,6 +694,28 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           ],
                         ),
                         onPressed: () async {
+                          // Check subscription status before allowing normal account creation
+                          final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                          final firestoreService = FirestoreService.instance;
+                          
+                          // Check normal account limit: only 1 normal account for unsubscribed users
+                          if (!subscriptionProvider.isSubscribed) {
+                            final allAccounts = await firestoreService.getAllAccounts();
+                            final normalAccounts = allAccounts.where((a) => 
+                              a.isVacationAccount != true && (a.isDefault != true)
+                            ).toList();
+                            
+                            if (normalAccounts.length >= 1) {
+                              // Show paywall if user is not subscribed and already has a normal account
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const PaywallScreen(),
+                                ),
+                              );
+                              return;
+                            }
+                          }
+                          
                           final result =
                               await PersistentNavBarNavigator.pushNewScreen(
                             context,
@@ -1101,6 +1140,28 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           _buildSectionHeaderWithButton(
             AppLocalizations.of(context)!.balanceMyAccounts,
             () async {
+              // Check subscription status before allowing normal account creation
+              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+              final firestoreService = FirestoreService.instance;
+              
+              // Check normal account limit: only 1 normal account for unsubscribed users
+              if (!subscriptionProvider.isSubscribed) {
+                final allAccounts = await firestoreService.getAllAccounts();
+                final normalAccounts = allAccounts.where((a) => 
+                  a.isVacationAccount != true && (a.isDefault != true)
+                ).toList();
+                
+                if (normalAccounts.length >= 1) {
+                  // Show paywall if user is not subscribed and already has a normal account
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PaywallScreen(),
+                    ),
+                  );
+                  return;
+                }
+              }
+              
               final vacationProvider =
                   Provider.of<VacationProvider>(
                 context,
@@ -1133,15 +1194,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             () async {
               // Check subscription status before allowing vacation account creation
               final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-              final firestoreService = FirestoreService.instance;
               
-              // Load existing vacation accounts to check limit
-              final allAccounts = await firestoreService.getAllAccounts();
-              final existingVacationAccounts = allAccounts.where((a) => a.isVacationAccount == true).toList();
-              
-              // Only check subscription if user already has vacation accounts
-              if (!subscriptionProvider.canCreateMultipleVacationAccounts() && existingVacationAccounts.isNotEmpty) {
-                // Show paywall if user is not subscribed and already has a vacation account
+              // Prevent ANY vacation account creation if unsubscribed
+              if (!subscriptionProvider.isSubscribed) {
+                // Show paywall if user is not subscribed
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const PaywallScreen(),

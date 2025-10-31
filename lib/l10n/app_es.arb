@@ -580,6 +580,7 @@
   "createGoalNotes": "Notas",
   "createGoalDate": "Fecha",
   "createGoalColor": "Color",
+  "createGoalLimitReached": "Has alcanzado el límite de metas. Actualiza a premium para crear metas ilimitadas.",
   "personalScreenSubscriptions": "Suscripciones",
   "personalScreenBorrowed": "Recibido",
   "personalScreenLent": "Prestado",
@@ -621,6 +622,19 @@
   "profileSupport": "SOPORTE",
   "profileDangerZone": "ZONA DE PELIGRO",
   "profileLogout": "Cerrar Sesión",
+  "profileDeleteAccount": "Eliminar Cuenta",
+  "profileDeleteAccountTitle": "Eliminar Cuenta",
+  "profileDeleteAccountMessage": "¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer. Todos tus datos, incluyendo cuentas, transacciones, presupuestos y metas, serán eliminados permanentemente.",
+  "profileDeleteAccountConfirm": "Eliminar",
+  "profileDeleteAccountSuccess": "Cuenta eliminada exitosamente",
+  "profileDeleteAccountError": "Error al eliminar cuenta: {error}",
+  "@profileDeleteAccountError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "homeIncome": "Ingresos",
   "homeExpense": "Gastos",
   "expenseDetailPaidUnpaid": "PAGADO/NO PAGADO",

@@ -1853,6 +1853,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get createGoalColor => 'Color';
 
   @override
+  String get createGoalLimitReached =>
+      'Has alcanzado el límite de metas. Actualiza a premium para crear metas ilimitadas.';
+
+  @override
   String get personalScreenSubscriptions => 'Suscripciones';
 
   @override
@@ -1974,6 +1978,27 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get profileLogout => 'Cerrar Sesión';
+
+  @override
+  String get profileDeleteAccount => 'Eliminar Cuenta';
+
+  @override
+  String get profileDeleteAccountTitle => 'Eliminar Cuenta';
+
+  @override
+  String get profileDeleteAccountMessage =>
+      '¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer. Todos tus datos, incluyendo cuentas, transacciones, presupuestos y metas, serán eliminados permanentemente.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'Eliminar';
+
+  @override
+  String get profileDeleteAccountSuccess => 'Cuenta eliminada exitosamente';
+
+  @override
+  String profileDeleteAccountError(String error) {
+    return 'Error al eliminar cuenta: $error';
+  }
 
   @override
   String get homeIncome => 'Ingresos';

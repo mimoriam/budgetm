@@ -3556,6 +3556,12 @@ abstract class AppLocalizations {
   /// **'Color'**
   String get createGoalColor;
 
+  /// No description provided for @createGoalLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve reached the goal limit. Upgrade to premium to create unlimited goals.'**
+  String get createGoalLimitReached;
+
   /// No description provided for @personalScreenSubscriptions.
   ///
   /// In en, this message translates to:
@@ -3801,6 +3807,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logout'**
   String get profileLogout;
+
+  /// No description provided for @profileDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get profileDeleteAccount;
+
+  /// No description provided for @profileDeleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get profileDeleteAccountTitle;
+
+  /// No description provided for @profileDeleteAccountMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete your account? This action cannot be undone. All your data including accounts, transactions, budgets, and goals will be permanently deleted.'**
+  String get profileDeleteAccountMessage;
+
+  /// No description provided for @profileDeleteAccountConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get profileDeleteAccountConfirm;
+
+  /// No description provided for @profileDeleteAccountSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted successfully'**
+  String get profileDeleteAccountSuccess;
+
+  /// No description provided for @profileDeleteAccountError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error deleting account: {error}'**
+  String profileDeleteAccountError(String error);
 
   /// No description provided for @homeIncome.
   ///

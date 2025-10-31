@@ -1834,6 +1834,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createGoalColor => 'Color';
 
   @override
+  String get createGoalLimitReached =>
+      'You\'ve reached the goal limit. Upgrade to premium to create unlimited goals.';
+
+  @override
   String get personalScreenSubscriptions => 'Subscriptions';
 
   @override
@@ -1955,6 +1959,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileLogout => 'Logout';
+
+  @override
+  String get profileDeleteAccount => 'Delete Account';
+
+  @override
+  String get profileDeleteAccountTitle => 'Delete Account';
+
+  @override
+  String get profileDeleteAccountMessage =>
+      'Are you sure you want to delete your account? This action cannot be undone. All your data including accounts, transactions, budgets, and goals will be permanently deleted.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'Delete';
+
+  @override
+  String get profileDeleteAccountSuccess => 'Account deleted successfully';
+
+  @override
+  String profileDeleteAccountError(String error) {
+    return 'Error deleting account: $error';
+  }
 
   @override
   String get homeIncome => 'Income';

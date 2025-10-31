@@ -101,9 +101,9 @@ Future<void> showVacationDialog(BuildContext context, {bool isMandatory = false}
                                     // Check subscription status before allowing vacation account creation
                                     final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
                                     
-                                    // Only check subscription if user already has vacation accounts
-                                    if (!subscriptionProvider.canCreateMultipleVacationAccounts() && vacationAccounts.isNotEmpty) {
-                                      // Show paywall if user is not subscribed and already has a vacation account
+                                    // Prevent ANY vacation account creation if unsubscribed
+                                    if (!subscriptionProvider.isSubscribed) {
+                                      // Show paywall if user is not subscribed
                                       Navigator.of(context).pop(); // Close the current dialog
                                       Navigator.of(context).push(
                                         MaterialPageRoute(

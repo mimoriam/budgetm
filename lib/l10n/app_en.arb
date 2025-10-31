@@ -583,6 +583,7 @@
     "createGoalNotes": "Notes",
     "createGoalDate": "Date",
     "createGoalColor": "Color",
+    "createGoalLimitReached": "You've reached the goal limit. Upgrade to premium to create unlimited goals.",
     "personalScreenSubscriptions": "Subscriptions",
     "personalScreenBorrowed": "Borrowed",
     "personalScreenLent": "Lent",
@@ -624,6 +625,19 @@
     "profileSupport": "SUPPORT",
     "profileDangerZone": "DANGER ZONE",
   "profileLogout": "Logout",
+    "profileDeleteAccount": "Delete Account",
+    "profileDeleteAccountTitle": "Delete Account",
+    "profileDeleteAccountMessage": "Are you sure you want to delete your account? This action cannot be undone. All your data including accounts, transactions, budgets, and goals will be permanently deleted.",
+    "profileDeleteAccountConfirm": "Delete",
+    "profileDeleteAccountSuccess": "Account deleted successfully",
+    "profileDeleteAccountError": "Error deleting account: {error}",
+    "@profileDeleteAccountError": {
+      "placeholders": {
+        "error": {
+          "type": "String"
+        }
+      }
+    },
   "homeIncome": "Income",
   "homeExpense": "Expense",
   "expenseDetailPaidUnpaid": "PAID/UNPAID",

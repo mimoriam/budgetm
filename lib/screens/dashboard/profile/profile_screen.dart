@@ -268,6 +268,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppLocalizations.of(context)!.profileDangerZone,
                   ),
                   _buildProfileMenuItem(
+                    Icons.delete_forever,
+                    AppLocalizations.of(context)!.profileDeleteAccount,
+                    color: Colors.red,
+                    onTap: () {
+                      _showDeleteAccountConfirmationDialog(context);
+                    },
+                  ),
+                  _buildProfileMenuItem(
                     Icons.logout,
                     AppLocalizations.of(context)!.profileLogout,
                     color: Colors.red,
@@ -933,6 +941,105 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (context.mounted) {
           Navigator.of(context).pop();
         }
+      },
+    );
+  }
+
+  /// Shows a confirmation dialog before deleting the account
+  void _showDeleteAccountConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(
+                AppLocalizations.of(context)!.profileDeleteAccountTitle,
+              ),
+              content: Text(
+                AppLocalizations.of(context)!.profileDeleteAccountMessage,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isDeleting
+                      ? null
+                      : () {
+                          Navigator.of(context).pop();
+                        },
+                  child: Text(
+                    AppLocalizations.of(context)!.profileCancel,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                          setState(() {
+                            isDeleting = true;
+                          });
+                          try {
+                            await _authService.deleteAccount();
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AuthGate(),
+                                ),
+                                (route) => false,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppLocalizations.of(context)!
+                                        .profileDeleteAccountSuccess,
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() {
+                                isDeleting = false;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppLocalizations.of(context)!
+                                        .profileDeleteAccountError(e.toString()),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isDeleting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          AppLocalizations.of(context)!
+                              .profileDeleteAccountConfirm,
+                        ),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
