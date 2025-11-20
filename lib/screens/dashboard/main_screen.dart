@@ -7,10 +7,12 @@ import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/personal/personal_screen.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -18,7 +20,9 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final bool showIntroPaywall;
+  
+  const MainScreen({super.key, this.showIntroPaywall = false});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -27,6 +31,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   late PersistentTabController _controller;
   bool _isFabMenuOpen = false;
+  bool _hasPresentedIntroPaywall = false;
 
   @override
   void initState() {
@@ -39,6 +44,55 @@ class _MainScreenState extends State<MainScreen> {
         final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
         if (_controller.index == 0 && !navbarProvider.isDialogMode) {
           navbarProvider.setNavBarVisibility(true);
+        }
+      });
+    });
+    
+    // Show intro paywall after first frame if requested
+    if (widget.showIntroPaywall) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _maybeShowIntroPaywall();
+      });
+    }
+  }
+  
+  /// Shows the paywall screen once after first-time setup, if user is not already subscribed.
+  /// This is only called when showIntroPaywall is true and only runs once per screen instance.
+  void _maybeShowIntroPaywall() {
+    // Skip if already presented or widget is unmounted
+    if (_hasPresentedIntroPaywall || !mounted) {
+      return;
+    }
+    
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+    
+    // Skip if user is already subscribed
+    if (subscriptionProvider.isSubscribed) {
+      return;
+    }
+    
+    // Mark as presented to prevent duplicate shows
+    _hasPresentedIntroPaywall = true;
+    
+    // Hide navbar while showing paywall
+    final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
+    navbarProvider.setDialogMode(true);
+    navbarProvider.setNavBarVisibility(false);
+    
+    // Show paywall after a brief delay to ensure UI is ready
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      
+      PersistentNavBarNavigator.pushNewScreen(
+        context,
+        screen: const PaywallScreen(),
+        withNavBar: false,
+        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+      ).then((_) {
+        // Restore navbar visibility when paywall is dismissed
+        if (mounted) {
+          navbarProvider.setNavBarVisibility(true);
+          navbarProvider.setDialogMode(false);
         }
       });
     });

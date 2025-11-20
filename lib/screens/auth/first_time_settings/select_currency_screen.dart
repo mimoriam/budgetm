@@ -190,7 +190,7 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const MainScreen(),
+                                                const MainScreen(showIntroPaywall: true),
                                           ),
                                           (route) => false,
                                         );

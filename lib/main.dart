@@ -23,7 +23,18 @@ import 'package:budgetm/firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on FirebaseException catch (e) {
+    // If the error is 'duplicate-app', we can safely ignore it as it means
+    // Firebase is already initialized from a previous run/hot-restart.
+    if (e.code != 'duplicate-app') {
+      rethrow;
+    }
+  }
   await FirebaseAppCheck.instance.activate(
     androidProvider: AndroidProvider.debug,
     appleProvider: AppleProvider.debug,
@@ -31,9 +42,9 @@ Future<void> main() async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
 
   // Enable Firestore offline persistence
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-  );
+  // FirebaseFirestore.instance.settings = const Settings(
+  //   persistenceEnabled: true,
+  // );
 
   final bool onboardingDone = prefs.getBool('onboardingDone') ?? false;
 
