@@ -3053,18 +3053,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: IntrinsicHeight(
                     child: Row(
                       children: [
-                        // Total Budget card - only shown in vacation mode
+                        // Vacation mode: show horizontal expense cards per currency
                         if (vacationProvider.isVacationMode) ...[
                           Expanded(
-                            child: _buildInfoCard(
-                              AppLocalizations.of(context)!.homeTotalBudget,
-                              '${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
-                              Colors.blue,
-                              HugeIcons.strokeRoundedWallet01,
-                              Colors.blue.shade50,
+                            child: _buildVacationExpenseCards(
+                              monthSnapshot.data?.expensesByCurrency ?? {},
+                              currencyProvider,
+                              monthSnapshot.data,
+                              totalBudget,
+                              vacationAccountCurrency,
                             ),
                           ),
-                          const SizedBox(width: 12),
                         ],
                         // Income card - only shown in normal mode
                         if (!vacationProvider.isVacationMode) ...[
@@ -3080,17 +3079,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           const SizedBox(width: 12),
                         ],
-                        // Expense card - shown in both modes
-                        Expanded(
-                          child: _buildBalanceCard(
-                            AppLocalizations.of(context)!.homeExpenseCard,
-                            Colors.red,
-                            HugeIcons.strokeRoundedChartDown,
-                            AppColors.expenseBackground,
-                            monthSnapshot.data?.expensesByCurrency ?? {},
-                            currencyProvider,
+                        // Expense card - only shown in normal mode
+                        if (!vacationProvider.isVacationMode) ...[
+                          Expanded(
+                            child: _buildBalanceCard(
+                              AppLocalizations.of(context)!.homeExpenseCard,
+                              Colors.red,
+                              HugeIcons.strokeRoundedChartDown,
+                              AppColors.expenseBackground,
+                              monthSnapshot.data?.expensesByCurrency ?? {},
+                              currencyProvider,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -3245,7 +3246,136 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
-
+ 
+  Widget _buildVacationExpenseCards(
+    Map<String, double> expensesByCurrency,
+    CurrencyProvider currencyProvider,
+    MonthPageData? monthData,
+    double totalBudget,
+    String? vacationAccountCurrency,
+  ) {
+    // Sort currencies: selected currency first, then alphabetically
+    final entries = expensesByCurrency.entries.toList()
+      ..sort((a, b) {
+        final selected = currencyProvider.selectedCurrencyCode;
+        final aIsSelected = a.key == selected;
+        final bIsSelected = b.key == selected;
+        if (aIsSelected && !bIsSelected) return -1;
+        if (!aIsSelected && bIsSelected) return 1;
+        return a.key.compareTo(b.key);
+      });
+ 
+    if (entries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+ 
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      child: Row(
+        children: entries.map((entry) {
+          final currency = entry.key;
+          final expenses = entry.value;
+          final isSelected = currency == currencyProvider.selectedCurrencyCode;
+ 
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: InkWell(
+              onTap: () {
+                // Build single-currency maps for dialog
+                final incomeMap = <String, double>{
+                  currency: monthData?.incomeByCurrency[currency] ?? 0.0
+                };
+                final expensesMap = <String, double>{
+                  currency: monthData?.expensesByCurrency[currency] ?? 0.0
+                };
+                _showCurrencyBreakdownDialog(
+                  context,
+                  incomeMap,
+                  expensesMap,
+                  currencyProvider,
+                  true,
+                  totalBudget,
+                  vacationAccountCurrency,
+                );
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                width: 160,
+                height: 120,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.vacationColor,
+                      AppColors.vacationColor.withOpacity(0.85)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.vacationColor.withOpacity(0.18),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            currency,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.95),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedChartDown,
+                          color: Colors.white.withOpacity(0.95),
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      AppLocalizations.of(context)!.analyticsExpenses,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        Text(
+                          '- $currency ${expenses.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: isSelected ? 16 : 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+ 
   // Helper method to get the appropriate profile image
   ImageProvider _getProfileImage() {
     final user = FirebaseAuth.instance.currentUser;

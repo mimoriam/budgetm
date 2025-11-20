@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+platform :ios, '18.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -29,6 +29,11 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   use_frameworks!
+  use_modular_headers!
+
+#   pod 'FirebaseAuth'
+  pod 'FirebaseFirestore', :git => 'https://github.com/invertase/firestore-ios-sdk-frameworks.git', :tag => '12.4.0'
+#   pod 'FirebaseStorage'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
@@ -39,5 +44,29 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    
+    target.build_configurations.each do |config|
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
+      
+      # --- FIX STARTS HERE ---
+      # Safely get existing definitions or start with inherited
+      current_defs = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS']
+      current_defs = ['$(inherited)'] if current_defs.nil?
+      
+      # Ensure it is an array (sometimes it comes as a string)
+      current_defs = [current_defs] if current_defs.is_a? String
+      
+      # Add your permissions
+      current_defs += [
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_MEDIA_LIBRARY=1',
+      ]
+      
+      # Remove duplicates to prevent definition errors
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = current_defs.uniq
+
+      config.build_settings["EXCLUDED_ARCHS[sdk=iphonesimulator*]"] = "arm64"
+    end
   end
 end

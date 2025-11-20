@@ -178,21 +178,24 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     final currencyFormat = NumberFormat.currency(symbol: currencyCode);
 
     // Calculate current balance (only from paid transactions)
-    double currentBalance = widget.account.initialBalance;
+    double currentBalance = 0.0;
     if (_detailedTransactions.isNotEmpty) {
-      // For vacation accounts, calculate remaining balance (initial - paid expenses)
       if (widget.account.isVacationAccount == true) {
-        double totalPaidExpenses = 0.0;
+        // Vacation accounts: exclude initialBalance entirely.
+        // Compute currentBalance purely from paid transactions (income - expenses).
         for (final detailedTransaction in _detailedTransactions) {
           final transaction = detailedTransaction.transaction;
-          final isExpense = transaction.type.toString().toLowerCase().contains('expense');
-          if (isExpense && transaction.paid == true) {
-            totalPaidExpenses += transaction.amount;
+          if (transaction.paid == true) {
+            if (transaction.type == 'income') {
+              currentBalance += transaction.amount;
+            } else {
+              currentBalance -= transaction.amount;
+            }
           }
         }
-        currentBalance = (widget.account.initialBalance - totalPaidExpenses).clamp(0.0, double.infinity);
       } else {
-        // For normal accounts, calculate balance from paid transactions only
+        // Normal accounts: start from initialBalance and apply paid transactions.
+        currentBalance = widget.account.initialBalance;
         for (final detailedTransaction in _detailedTransactions) {
           final transaction = detailedTransaction.transaction;
           if (transaction.paid == true) {
@@ -276,70 +279,71 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
           ),
           child: Column(
             children: [
-              // Row for Initial Balance and Current Balance/Expenses
-              Row(
-                children: [
-                  Expanded(
-                    child: Semantics(
-                      label: 'Initial Balance',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)!.balanceDetailInitialBalance,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500,
+              // For vacation accounts we remove Initial Balance display and show only the expenses summary centered.
+              if (widget.account.isVacationAccount == true)
+                Center(child: _buildVacationExpensesSummary())
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        label: 'Initial Balance',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              AppLocalizations.of(context)!.balanceDetailInitialBalance,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            currencyFormat.format(widget.account.initialBalance),
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            const SizedBox(height: 4),
+                            Text(
+                              currencyFormat.format(widget.account.initialBalance),
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 50,
-                    color: Colors.black.withOpacity(0.2),
-                  ),
-                  Expanded(
-                    child: widget.account.isVacationAccount == true
-                        ? _buildVacationExpensesSummary()
-                        : Semantics(
-                            label: 'Current Balance',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(context)!.balanceDetailCurrentBalance,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  currencyFormat.format(currentBalance),
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    color: currentBalance >= 0 ? Colors.black : Colors.red[300],
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                    Container(
+                      width: 1,
+                      height: 50,
+                      color: Colors.black.withOpacity(0.2),
+                    ),
+                    Expanded(
+                      child: Semantics(
+                        label: 'Current Balance',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              AppLocalizations.of(context)!.balanceDetailCurrentBalance,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                  ),
-                ],
-              ),
+                            const SizedBox(height: 4),
+                            Text(
+                              currencyFormat.format(currentBalance),
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: currentBalance >= 0 ? Colors.black : Colors.red[300],
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 16),
               // Display filtered subtotal if a date range is selected
               if (_selectedDateRange != null)

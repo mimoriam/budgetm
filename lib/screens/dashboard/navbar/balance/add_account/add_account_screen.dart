@@ -171,8 +171,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 24),
-                      _buildAmountField(),
-                      const SizedBox(height: 16),
+                      if (!widget.isCreatingVacationAccount) ...[
+                        _buildAmountField(),
+                        const SizedBox(height: 16),
+                      ],
                       _buildFormSection(
                         context,
                         AppLocalizations.of(context)!.name,
@@ -574,19 +576,19 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   Widget _buildAmountField() {
     return Column(
       children: [
-        Center(
-          child: Text(
-            widget.isCreatingVacationAccount
-                ? AppLocalizations.of(context)!.homeTotalBudget
-                : AppLocalizations.of(context)!.addAccountInitialBalance,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.secondaryTextColorLight,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+        // Remove the label for vacation accounts; keep it for normal account creation
+        if (!widget.isCreatingVacationAccount)
+          Center(
+            child: Text(
+              AppLocalizations.of(context)!.addAccountInitialBalance,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.secondaryTextColorLight,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
+        if (!widget.isCreatingVacationAccount) const SizedBox(height: 4),
         FormBuilderTextField(
           name: 'amount',
           focusNode: _amountFocusNode,
@@ -782,9 +784,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
                           final values = _formKey.currentState!.value;
                           final name = values['name'] as String;
-                          final amount =
-                              double.tryParse(values['amount'].toString()) ??
-                              0.0;
+                          final amount = widget.isCreatingVacationAccount
+                              ? 0.0
+                              : (double.tryParse(values['amount']?.toString() ?? '') ?? 0.0);
                           final accountType = values['account_type'] as String;
 
                           // Determine creditLimit or balanceLimit based on _isCreditSelected

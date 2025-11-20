@@ -11,6 +11,7 @@ import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
 import 'package:budgetm/viewmodels/locale_provider.dart';
+import 'package:device_preview/device_preview.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -45,66 +46,69 @@ Future<void> main() async {
   await subscriptionProvider.init();
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => VacationProvider()),
-        ChangeNotifierProvider(create: (_) => CurrencyProvider()),
-        ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
-        ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
-        ChangeNotifierProvider.value(value: subscriptionProvider),
-        ChangeNotifierProvider.value(value: localeProvider),
-        ChangeNotifierProxyProvider3<
-          CurrencyProvider,
-          VacationProvider,
-          HomeScreenProvider,
-          BudgetProvider
-        >(
-          create: (context) => BudgetProvider(
-            currencyProvider: Provider.of<CurrencyProvider>(
-              context,
-              listen: false,
-            ),
-            vacationProvider: Provider.of<VacationProvider>(
-              context,
-              listen: false,
-            ),
-            homeScreenProvider: Provider.of<HomeScreenProvider>(
-              context,
-              listen: false,
-            ),
-          ),
-          update:
-              (
+    DevicePreview(
+      enabled: true,
+      builder: (context) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(create: (_) => UserProvider()),
+          ChangeNotifierProvider(create: (_) => VacationProvider()),
+          ChangeNotifierProvider(create: (_) => CurrencyProvider()),
+          ChangeNotifierProvider(create: (_) => HomeScreenProvider()),
+          ChangeNotifierProvider(create: (_) => NavbarVisibilityProvider()),
+          ChangeNotifierProvider.value(value: subscriptionProvider),
+          ChangeNotifierProvider.value(value: localeProvider),
+          ChangeNotifierProxyProvider3<
+            CurrencyProvider,
+            VacationProvider,
+            HomeScreenProvider,
+            BudgetProvider
+          >(
+            create: (context) => BudgetProvider(
+              currencyProvider: Provider.of<CurrencyProvider>(
                 context,
-                currencyProvider,
-                vacationProvider,
-                homeScreenProvider,
-                budgetProvider,
-              ) =>
-                  budgetProvider ??
-                  BudgetProvider(
-                    currencyProvider: currencyProvider,
-                    vacationProvider: vacationProvider,
-                    homeScreenProvider: homeScreenProvider,
-                  ),
-        ),
-        ChangeNotifierProxyProvider<CurrencyProvider, GoalsProvider>(
-          create: (context) => GoalsProvider(
-            currencyProvider: Provider.of<CurrencyProvider>(
-              context,
-              listen: false,
+                listen: false,
+              ),
+              vacationProvider: Provider.of<VacationProvider>(
+                context,
+                listen: false,
+              ),
+              homeScreenProvider: Provider.of<HomeScreenProvider>(
+                context,
+                listen: false,
+              ),
             ),
+            update:
+                (
+                  context,
+                  currencyProvider,
+                  vacationProvider,
+                  homeScreenProvider,
+                  budgetProvider,
+                ) =>
+                    budgetProvider ??
+                    BudgetProvider(
+                      currencyProvider: currencyProvider,
+                      vacationProvider: vacationProvider,
+                      homeScreenProvider: homeScreenProvider,
+                    ),
           ),
-          update: (context, currencyProvider, goalsProvider) =>
-              goalsProvider ??
-              GoalsProvider(currencyProvider: currencyProvider),
+          ChangeNotifierProxyProvider<CurrencyProvider, GoalsProvider>(
+            create: (context) => GoalsProvider(
+              currencyProvider: Provider.of<CurrencyProvider>(
+                context,
+                listen: false,
+              ),
+            ),
+            update: (context, currencyProvider, goalsProvider) =>
+                goalsProvider ??
+                GoalsProvider(currencyProvider: currencyProvider),
+          ),
+        ],
+        child: MyApp(
+          onboardingDone: onboardingDone,
+          localeProvider: localeProvider,
         ),
-      ],
-      child: MyApp(
-        onboardingDone: onboardingDone,
-        localeProvider: localeProvider,
       ),
     ),
   );
@@ -125,10 +129,11 @@ class MyApp extends StatelessWidget {
     return Consumer2<ThemeProvider, LocaleProvider>(
       builder: (context, themeProvider, localeProvider, child) {
         return MaterialApp(
+          builder: DevicePreview.appBuilder,
           debugShowCheckedModeBanner: false,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          locale: localeProvider.currentLocale,
+          locale: DevicePreview.locale(context) ?? localeProvider.currentLocale,
           theme: AppTheme.lightTheme(),
           darkTheme: AppTheme.darkTheme(),
           // themeMode: themeProvider.themeMode,
