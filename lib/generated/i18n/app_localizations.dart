@@ -355,31 +355,31 @@ abstract class AppLocalizations {
   /// No description provided for @paywallPersonalizedBudgetInsights.
   ///
   /// In en, this message translates to:
-  /// **'Personalized budget insights'**
+  /// **'Create Recurring Budgets'**
   String get paywallPersonalizedBudgetInsights;
 
   /// No description provided for @paywallDailyProgressTracking.
   ///
   /// In en, this message translates to:
-  /// **'Daily progress tracking'**
+  /// **'Multi-account creation'**
   String get paywallDailyProgressTracking;
 
   /// No description provided for @paywallExpenseManagementTools.
   ///
   /// In en, this message translates to:
-  /// **'Expense management tools'**
+  /// **'Personalized Vacation Mode'**
   String get paywallExpenseManagementTools;
 
   /// No description provided for @paywallFinancialHealthTimeline.
   ///
   /// In en, this message translates to:
-  /// **'Financial health timeline'**
+  /// **'Colors and customization'**
   String get paywallFinancialHealthTimeline;
 
   /// No description provided for @paywallExpertGuidanceTips.
   ///
   /// In en, this message translates to:
-  /// **'Expert guidance & tips'**
+  /// **'Custom categories'**
   String get paywallExpertGuidanceTips;
 
   /// No description provided for @paywallCommunitySupportAccess.

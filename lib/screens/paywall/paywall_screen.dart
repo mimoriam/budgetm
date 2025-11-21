@@ -592,11 +592,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
           AppLocalizations.of(context)!.paywallFinancialHealthTimeline,
           Icons.timeline,
         ),
-        _buildFeatureItem(
-          context,
-          AppLocalizations.of(context)!.paywallExpertGuidanceTips,
-          Icons.lightbulb,
-        ),
+        // _buildFeatureItem(
+        //   context,
+        //   AppLocalizations.of(context)!.paywallExpertGuidanceTips,
+        //   Icons.lightbulb,
+        // ),
         _buildFeatureItem(
           context,
           AppLocalizations.of(context)!.paywallCommunitySupportAccess,

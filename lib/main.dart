@@ -58,7 +58,7 @@ Future<void> main() async {
 
   runApp(
     DevicePreview(
-      enabled: true,
+      enabled: false,
       builder: (context) => MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => ThemeProvider()),

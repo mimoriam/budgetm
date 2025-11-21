@@ -14,10 +14,73 @@ class FeedbackScreen extends StatefulWidget {
 }
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
+  static const String _playStorePackageId = 'xtra.budget.manager';
+  static const String _playStoreWebUrl =
+      'https://play.google.com/store/apps/details?id=xtra.budget.manager';
+
   final _formKey = GlobalKey<FormBuilderState>();
   bool _isLoading = false;
+  int _selectedRating = 4;
 
-  void _sendFeedback() async {
+  bool get _shouldShowForm => _selectedRating <= 3;
+  bool get _isPositiveRating => _selectedRating >= 4;
+
+  void _onRatingSelected(int value) {
+    final bool wasShowingForm = _shouldShowForm;
+    setState(() {
+      _selectedRating = value;
+    });
+
+    if (wasShowingForm && value > 3) {
+      _formKey.currentState?.reset();
+    }
+  }
+
+  Future<void> _handleSend() async {
+    if (_isPositiveRating) {
+      await _openPlayStore();
+      return;
+    }
+
+    if (_shouldShowForm) {
+      await _sendFeedback();
+      return;
+    }
+  }
+
+  Future<void> _openPlayStore() async {
+    final Uri marketUri =
+        Uri.parse('market://details?id=$_playStorePackageId');
+    final Uri webUri = Uri.parse(_playStoreWebUrl);
+
+    try {
+      final bool launchedMarket =
+          await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+      if (!launchedMarket) {
+        final bool launchedWeb =
+            await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        if (!launchedWeb && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open the Play Store.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open the Play Store.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendFeedback() async {
     // Hide keyboard
     FocusScope.of(context).unfocus();
 
@@ -79,74 +142,78 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    FormBuilder(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Description',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.secondaryTextColorLight,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          FormBuilderTextField(
-                            name: 'description',
-                            maxLines: 8,
-                            maxLength: 500, // Added character limit
-                            decoration: InputDecoration(
-                              hintText: AppLocalizations.of(context)!.hintWriteThoughts,
-                              hintStyle: const TextStyle(
-                                color: AppColors.lightGreyBackground,
-                              ),
-                              filled: true,
-                              fillColor: Colors.white,
-                              counterText: "", // Hide default counter
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 16.0,
-                                horizontal: 20.0,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16.0),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16.0),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).primaryColor,
-                                  width: 1.5,
-                                ),
+                    _buildRatingSection(),
+                    if (_shouldShowForm) ...[
+                      const SizedBox(height: 24),
+                      FormBuilder(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Description',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.secondaryTextColorLight,
                               ),
                             ),
-                            // Added character counter
-                            buildCounter:
-                                (
-                                  context, {
-                                  required int currentLength,
-                                  required bool isFocused,
-                                  required int? maxLength,
-                                }) {
-                                  return Container(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      '$currentLength/$maxLength',
-                                      style: const TextStyle(
-                                        color:
-                                            AppColors.secondaryTextColorLight,
-                                        fontSize: 12,
+                            const SizedBox(height: 8),
+                            FormBuilderTextField(
+                              name: 'description',
+                              maxLines: 8,
+                              maxLength: 500, // Added character limit
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context)!.hintWriteThoughts,
+                                hintStyle: const TextStyle(
+                                  color: AppColors.lightGreyBackground,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                counterText: "", // Hide default counter
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 16.0,
+                                  horizontal: 20.0,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16.0),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16.0),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).primaryColor,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                              // Added character counter
+                              buildCounter:
+                                  (
+                                    context, {
+                                    required int currentLength,
+                                    required bool isFocused,
+                                    required int? maxLength,
+                                  }) {
+                                    return Container(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        '$currentLength/$maxLength',
+                                        style: const TextStyle(
+                                          color:
+                                              AppColors.secondaryTextColorLight,
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                          ),
-                        ],
+                                    );
+                                  },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 24),
                     // Buttons are now inside the scroll view
                     _buildBottomButtons(),
@@ -216,13 +283,54 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     );
   }
 
+  Widget _buildRatingSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'How would you rate your experience?',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.secondaryTextColorLight,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: List.generate(5, (index) {
+            final starValue = index + 1;
+            final bool isFilled = starValue <= _selectedRating;
+            return IconButton(
+              onPressed: () => _onRatingSelected(starValue),
+              icon: Icon(
+                isFilled ? Icons.star : Icons.star_border,
+                color: isFilled ? AppColors.gradientEnd : Colors.grey.shade400,
+                size: 32,
+              ),
+            );
+          }),
+        ),
+        Text(
+          _isPositiveRating
+              ? 'Awesome! Tap send to rate us on the Play Store.'
+              : 'Please tell us what went wrong so we can improve.',
+          style: const TextStyle(
+            color: AppColors.secondaryTextColorLight,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBottomButtons() {
+    final bool disableButton = _shouldShowForm && _isLoading;
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _isLoading ? null : _sendFeedback,
+            onPressed: disableButton ? null : _handleSend,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gradientEnd,
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -230,7 +338,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 borderRadius: BorderRadius.circular(30.0),
               ),
             ),
-            child: _isLoading
+            child: _shouldShowForm && _isLoading
                 ? const SizedBox(
                     width: 24,
                     height: 24,
@@ -240,11 +348,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     ),
                   )
                 : Text(
-                    'Send',
+                    _isPositiveRating ? 'Rate on Play Store' : 'Send',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
                   ),
           ),
         ),
