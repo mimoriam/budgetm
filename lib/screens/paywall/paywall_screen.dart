@@ -24,6 +24,7 @@ class PaywallScreen extends StatefulWidget {
 class _PaywallScreenState extends State<PaywallScreen> {
   ProductDetails? _selectedProduct;
   bool _isPurchasing = false;
+  bool _isBlockingUi = false;
 
   // Product IDs - must match Google Play Console and Cloud Functions
   final String _monthlyProductID = 'android_monthly_subs';
@@ -37,9 +38,29 @@ class _PaywallScreenState extends State<PaywallScreen> {
     // Auto-close when subscription becomes active
     if (subscriptionProvider.isSubscribed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).maybePop();
+        if (mounted) {
+          setState(() => _isBlockingUi = false);
+          Navigator.of(context).maybePop();
+        }
       });
     }
+
+    // Check if we should clear the blocking UI
+    // Clear when: subscription is active, or provider finished loading (success/error/cancel)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _isBlockingUi) {
+        // Clear blocking UI if subscription is active (success case)
+        if (subscriptionProvider.isSubscribed) {
+          setState(() => _isBlockingUi = false);
+        }
+        // Clear blocking UI if provider finished processing (not loading anymore)
+        // and purchase flow is complete (not purchasing anymore)
+        // This handles: errors, cancellations, or any completion state
+        else if (!subscriptionProvider.isLoading && !_isPurchasing) {
+          setState(() => _isBlockingUi = false);
+        }
+      }
+    });
 
     // Find products by ID
     ProductDetails? monthlyProduct;
@@ -96,6 +117,40 @@ class _PaywallScreenState extends State<PaywallScreen> {
             bottom: 0,
             child: _buildPurchaseButton(context, subscriptionProvider),
           ),
+          // Loading overlay when blocking UI
+          if (_isBlockingUi)
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  ModalBarrier(
+                    color: Colors.black.withOpacity(0.5),
+                    dismissible: false,
+                  ),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Processing Purchase...',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.primaryTextColorLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -317,12 +372,20 @@ class _PaywallScreenState extends State<PaywallScreen> {
       return;
     }
 
-    setState(() => _isPurchasing = true);
+    setState(() {
+      _isPurchasing = true;
+      _isBlockingUi = false; // Reset blocking UI flag before starting
+    });
 
     try {
       final success = await provider.purchaseProduct(_selectedProduct!);
 
       if (!success && mounted) {
+        // Purchase initiation failed - clear blocking UI immediately
+        setState(() {
+          _isPurchasing = false;
+          _isBlockingUi = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(provider.error ?? 'Purchase initiation failed'),
@@ -330,20 +393,21 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
         );
       } else if (success && mounted) {
-        // Show processing message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              // AppLocalizations.of(context)!.paywallProcessingPurchase,
-              "Processing Purchase",
-            ),
-            backgroundColor: Colors.blue,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        // Purchase initiated successfully - start blocking UI
+        // Keep _isPurchasing true until provider finishes
+        setState(() {
+          _isBlockingUi = true;
+        });
+        // Note: _isPurchasing will be set to false in the finally block,
+        // but _isBlockingUi will remain true until provider completes
       }
     } catch (e) {
+      // Exception occurred - clear blocking UI immediately
       if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+          _isBlockingUi = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -356,6 +420,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
         );
       }
     } finally {
+      // Reset _isPurchasing flag, but keep _isBlockingUi true if purchase was initiated
+      // The blocking UI will be cleared when provider finishes (handled in build method)
       if (mounted) {
         setState(() => _isPurchasing = false);
       }
