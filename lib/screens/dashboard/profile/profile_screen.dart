@@ -879,35 +879,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context) {
         return Consumer<LocaleProvider>(
           builder: (context, localeProvider, child) {
+            final supportedLocales = AppLocalizations.supportedLocales;
+            
             return AlertDialog(
               title: Text(AppLocalizations.of(context)!.languageSelectLanguage),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildLanguageOption(
-                    context,
-                    localeProvider,
-                    const Locale('en'),
-                    AppLocalizations.of(context)!.languageEnglish,
-                    '🇺🇸',
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 400),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: supportedLocales.map((locale) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: _buildLanguageOption(
+                          context,
+                          localeProvider,
+                          locale,
+                          localeProvider.getLocaleDisplayName(locale),
+                          localeProvider.getLocaleFlag(locale),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                  const SizedBox(height: 8),
-                  _buildLanguageOption(
-                    context,
-                    localeProvider,
-                    const Locale('es'),
-                    AppLocalizations.of(context)!.languageSpanish,
-                    '🇪🇸',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildLanguageOption(
-                    context,
-                    localeProvider,
-                    const Locale('ar'),
-                    AppLocalizations.of(context)!.languageArabic,
-                    '🇸🇦',
-                  ),
-                ],
+                ),
               ),
               actions: [
                 TextButton(

@@ -51,61 +51,63 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 32.0,
-                          horizontal: 24.0,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 24.0,
+                      horizontal: 24.0,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppColors.gradientStart2,
+                          AppColors.gradientEnd3,
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          spreadRadius: 5,
+                          blurRadius: 15,
                         ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppColors.gradientStart2,
-                              AppColors.gradientEnd3,
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30.0),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              spreadRadius: 5,
-                              blurRadius: 15,
-                            ),
-                          ],
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)!.languageSelectLanguage,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.displayLarge?.copyWith(fontSize: 24),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              AppLocalizations.of(context)!.languageSelectLanguage,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.displayLarge?.copyWith(fontSize: 28),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              AppLocalizations.of(context)!.selectCurrencySubtitle,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: AppColors.secondaryTextColorLight,
-                                  ),
-                            ),
-                            const SizedBox(height: 30),
-                            // Language selection list
-                            ...supportedLocales.map((locale) {
+                        const SizedBox(height: 6),
+                        Text(
+                          AppLocalizations.of(context)!.selectCurrencySubtitle,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppColors.secondaryTextColorLight,
+                                fontSize: 13,
+                              ),
+                        ),
+                        const SizedBox(height: 20),
+                        // Scrollable language selection list
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: supportedLocales.map((locale) {
                               final isSelected = currentSelectedLocale.languageCode == locale.languageCode;
                               return Padding(
-                                padding: const EdgeInsets.only(bottom: 12.0),
+                                padding: const EdgeInsets.only(bottom: 8.0),
                                 child: GestureDetector(
                                   onTap: () {
                                     setState(() {
@@ -114,14 +116,14 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 16,
+                                      horizontal: 14,
+                                      vertical: 12,
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? AppColors.gradientEnd.withOpacity(0.1)
                                           : Colors.white,
-                                      borderRadius: BorderRadius.circular(30.0),
+                                      borderRadius: BorderRadius.circular(20.0),
                                       border: Border.all(
                                         color: isSelected
                                             ? AppColors.gradientEnd
@@ -133,14 +135,14 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                       children: [
                                         Text(
                                           _getLanguageFlag(locale),
-                                          style: const TextStyle(fontSize: 24),
+                                          style: const TextStyle(fontSize: 20),
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
                                             _getLanguageName(locale),
                                             style: TextStyle(
-                                              fontSize: 16,
+                                              fontSize: 15,
                                               fontWeight: isSelected
                                                   ? FontWeight.bold
                                                   : FontWeight.normal,
@@ -154,6 +156,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                           Icon(
                                             Icons.check_circle,
                                             color: AppColors.gradientEnd,
+                                            size: 20,
                                           ),
                                       ],
                                     ),
@@ -161,85 +164,86 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                 ),
                               );
                             }).toList(),
-                            const SizedBox(height: 30),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.gradientEnd,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30.0),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 18,
-                                  ),
-                                ),
-                                onPressed: _isLoading
-                                    ? null
-                                    : () async {
-                                        setState(() {
-                                          _isLoading = true;
-                                        });
-
-                                        try {
-                                          await localeProvider.setLocale(currentSelectedLocale);
-
-                                          if (context.mounted) {
-                                            Navigator.pushAndRemoveUntil(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const MainScreen(showIntroPaywall: true),
-                                              ),
-                                              (route) => false,
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  AppLocalizations.of(context)!
-                                                      .errorDuringSetup(e.toString()),
-                                                ),
-                                                backgroundColor: AppColors.errorColor,
-                                              ),
-                                            );
-                                          }
-                                        } finally {
-                                          if (mounted) {
-                                            setState(() {
-                                              _isLoading = false;
-                                            });
-                                          }
-                                        }
-                                      },
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            Colors.white,
-                                          ),
-                                        ),
-                                      )
-                                    : Text(
-                                        AppLocalizations.of(context)!.continueButton,
-                                        style: Theme.of(context).textTheme.labelLarge
-                                            ?.copyWith(color: Colors.white),
-                                      ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.gradientEnd,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
                               ),
                             ),
-                          ],
+                            onPressed: _isLoading
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      _isLoading = true;
+                                    });
+
+                                    try {
+                                      await localeProvider.setLocale(currentSelectedLocale);
+
+                                      if (context.mounted) {
+                                        Navigator.pushAndRemoveUntil(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const MainScreen(showIntroPaywall: true),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              AppLocalizations.of(context)!
+                                                  .errorDuringSetup(e.toString()),
+                                            ),
+                                            backgroundColor: AppColors.errorColor,
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                      }
+                                    }
+                                  },
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    AppLocalizations.of(context)!.continueButton,
+                                    style: Theme.of(context).textTheme.labelLarge
+                                        ?.copyWith(color: Colors.white),
+                                  ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

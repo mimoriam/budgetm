@@ -14,8 +14,11 @@ import 'package:budgetm/viewmodels/locale_provider.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/firebase_options.dart';
@@ -23,7 +26,7 @@ import 'package:budgetm/firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Initialize Firebase
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -35,10 +38,21 @@ Future<void> main() async {
       rethrow;
     }
   }
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,
-    appleProvider: AppleProvider.debug,
-  );
+
+  // Initialize Firebase App Check
+  try {
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.debug,
+      appleProvider: AppleProvider.debug,
+    );
+  } catch (e) {
+    // Log error but don't crash the app if App Check fails
+    debugPrint('Failed to activate Firebase App Check: $e');
+  }
+
+  // Initialize Firebase Crashlytics
+  await _initializeCrashlytics();
+
   final SharedPreferences prefs = await SharedPreferences.getInstance();
 
   // Enable Firestore offline persistence
@@ -123,6 +137,75 @@ Future<void> main() async {
       ),
     ),
   );
+}
+
+/// Initialize Firebase Crashlytics with comprehensive error handling
+Future<void> _initializeCrashlytics() async {
+  try {
+    // Get app version from package_info (reads from pubspec.yaml)
+    PackageInfo packageInfo;
+    String appVersion = 'unknown';
+    String buildNumber = 'unknown';
+    
+    try {
+      packageInfo = await PackageInfo.fromPlatform();
+      appVersion = packageInfo.version;
+      buildNumber = packageInfo.buildNumber;
+    } catch (e) {
+      debugPrint('Failed to get package info: $e');
+    }
+
+    // Get environment from build configuration or fallback to debug/production
+    // Can be set via: flutter run --dart-define=ENVIRONMENT=staging
+    const String environmentFromBuild = String.fromEnvironment(
+      'ENVIRONMENT',
+      defaultValue: '',
+    );
+    final String environment = environmentFromBuild.isNotEmpty
+        ? environmentFromBuild
+        : (kDebugMode ? 'debug' : 'production');
+
+    // Pass all uncaught "fatal" errors from the framework to Crashlytics
+    FlutterError.onError = (FlutterErrorDetails errorDetails) {
+      // Log to console in debug mode
+      if (kDebugMode) {
+        FlutterError.presentError(errorDetails);
+      }
+      
+      // Send to Crashlytics
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+
+    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+    PlatformDispatcher.instance.onError = (error, stack) {
+      // Log to console in debug mode
+      if (kDebugMode) {
+        debugPrint('Async error: $error\n$stack');
+      }
+      
+      // Send to Crashlytics
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+
+    // Enable Crashlytics collection (can be toggled based on user consent)
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+
+    // Set custom keys for better debugging
+    await FirebaseCrashlytics.instance.setCustomKey('app_version', appVersion);
+    await FirebaseCrashlytics.instance.setCustomKey('build_number', buildNumber);
+    await FirebaseCrashlytics.instance.setCustomKey('environment', environment);
+    
+    if (kDebugMode) {
+      debugPrint('Firebase Crashlytics initialized successfully');
+      debugPrint('App Version: $appVersion (Build: $buildNumber)');
+      debugPrint('Environment: $environment');
+    }
+  } catch (e, stackTrace) {
+    // If Crashlytics initialization fails, log the error but don't crash the app
+    debugPrint('Failed to initialize Firebase Crashlytics: $e');
+    debugPrint('Stack trace: $stackTrace');
+  }
 }
 
 class MyApp extends StatelessWidget {

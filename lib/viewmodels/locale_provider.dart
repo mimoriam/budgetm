@@ -79,6 +79,14 @@ class LocaleProvider extends ChangeNotifier {
         return 'Español';
       case 'ar':
         return 'العربية';
+      case 'ja':
+        return '日本語';
+      case 'ko':
+        return '한국어';
+      case 'fr':
+        return 'Français';
+      case 'de':
+        return 'Deutsch';
       default:
         return locale.languageCode.toUpperCase();
     }
@@ -93,6 +101,14 @@ class LocaleProvider extends ChangeNotifier {
         return '🇪🇸';
       case 'ar':
         return '🇸🇦';
+      case 'ja':
+        return '🇯🇵';
+      case 'ko':
+        return '🇰🇷';
+      case 'fr':
+        return '🇫🇷';
+      case 'de':
+        return '🇩🇪';
       default:
         return '🌐';
     }

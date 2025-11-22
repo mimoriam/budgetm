@@ -24,6 +24,8 @@ plugins {
     id("com.google.gms.google-services") version("4.3.15") apply false
     // END: FlutterFire Configuration
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    // Firebase Crashlytics Gradle plugin (used by the Android app module)
+    id("com.google.firebase.crashlytics") version "3.0.6" apply false
 }
 
 include(":app")

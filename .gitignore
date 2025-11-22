@@ -49,3 +49,6 @@ lib/main.dart
 ios/Runner/Info.plist
 ios/Runner/GoogleService-Info.plist
 android/app/google-services.json
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+ios/Runner/Info.plist
