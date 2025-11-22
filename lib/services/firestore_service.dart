@@ -1170,6 +1170,19 @@ class FirestoreService {
     }
   }
 
+  // Stream all transactions ordered by date (descending) - no filters
+  Stream<List<FirestoreTransaction>> getTransactionsStream() {
+    try {
+      return _transactionsCollection
+          .orderBy('date', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    } catch (e) {
+      print('Error streaming all transactions: $e');
+      return Stream.empty();
+    }
+  }
+
   // Stream transactions for a date range (optionally filtered by vacation mode and accountId)
   Stream<List<FirestoreTransaction>> streamTransactionsForDateRange(
     DateTime startDate,

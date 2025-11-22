@@ -330,28 +330,7 @@ class MonthPageDataManager {
   final FirestoreService _firestoreService = FirestoreService.instance;
   final VacationProvider _vacationProvider;
 
-  // Streams for data that is constant across all months.
-  // shareReplay(maxSize: 1) caches the last emitted value and shares it with new subscribers,
-  // preventing redundant database calls.
-  late final Stream<List<FirestoreAccount>> _allAccountsStream;
-  late final Stream<List<Category>> _allCategoriesStream;
-
-  // A cache to hold the data stream for each month index and vacation mode combination.
-  final Map<String, Stream<MonthPageData>> _pageStreamCache = {};
-  // Cache for currency-only vacation streams
-  final Map<String, Stream<MonthPageData>> _vacationCurrencyStreamCache = {};
-  // Stream version counter to force stream recreation
-  int _streamVersion = 0;
-
-  MonthPageDataManager(this._vacationProvider) {
-    // Initialize the shared streams immediately.
-    _allAccountsStream = _firestoreService.streamAccounts().shareReplay(
-          maxSize: 1,
-        );
-    _allCategoriesStream = _firestoreService.streamCategories().shareReplay(
-          maxSize: 1,
-        );
-  }
+  MonthPageDataManager(this._vacationProvider);
 
   Stream<MonthPageData> getStreamForMonth(
     int monthIndex,
@@ -363,30 +342,10 @@ class MonthPageDataManager {
     final activeVacationAccountId =
         isVacation ? _vacationProvider.activeVacationAccountId : null;
 
-    // Create a composite key that includes monthIndex, isVacation status, accountId, version, and filter state
-    final cacheKey =
-        '$monthIndex-$isVacation-${activeVacationAccountId ?? 'all'}-v$_streamVersion-includeVac$includeVacationTransactions';
-
     print(
         'DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, includeVacation=$includeVacationTransactions');
-    print('DEBUG: Cache key: $cacheKey');
 
-    // In vacation mode without an active account, bypass caching to avoid stale 'all' cache reuse.
-    final bool bypassCache = isVacation && (activeVacationAccountId == null);
-    if (bypassCache) {
-      print(
-          'DEBUG: Bypassing cache for vacation mode without active account (key=$cacheKey)');
-    }
-
-    // If a stream for this specific combination is already in the cache, return it.
-    if (!bypassCache && _pageStreamCache.containsKey(cacheKey)) {
-      print('DEBUG: Using cached stream for key: $cacheKey');
-      return _pageStreamCache[cacheKey]!;
-    }
-
-    print('DEBUG: Creating new stream for key: $cacheKey');
-
-    // If not cached, create a new stream for the month.
+    // Create a new stream for the month.
     final startOfMonth = DateTime(month.year, month.month, 1);
     final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
 
@@ -429,8 +388,8 @@ class MonthPageDataManager {
         startOfMonth,
         endOfMonth,
       ),
-      _allAccountsStream, // <-- Use the shared/replayed stream
-      _allCategoriesStream, // <-- Use the shared/replayed stream
+      _firestoreService.streamAccounts(), // Fresh stream each time
+      _firestoreService.streamCategories(), // Fresh stream each time
       (
         List<FirestoreTransaction> transactions,
         List<FirestoreTask> tasks,
@@ -532,16 +491,8 @@ class MonthPageDataManager {
         ) // Immediately emit a loading state.
         .handleError((error) {
       return MonthPageData.error(error.toString());
-    }).shareReplay(
-      maxSize: 1,
-    ); // Cache the result of this month's stream.
+    });
 
-    // Store the newly created stream in the cache with the composite key if not bypassing the cache, then return it.
-    if (!bypassCache) {
-      _pageStreamCache[cacheKey] = stream;
-    } else {
-      print('DEBUG: Not caching stream for key=$cacheKey due to bypass');
-    }
     return stream;
   }
 
@@ -549,13 +500,6 @@ class MonthPageDataManager {
   Stream<MonthPageData> getVacationAllCurrenciesStream() {
     final isVacation = true;
     final activeVacationAccountId = _vacationProvider.activeVacationAccountId;
-    final cacheKey = 'vacation-all-${activeVacationAccountId ?? 'all'}';
-
-    if (_vacationCurrencyStreamCache.containsKey(cacheKey)) {
-      print(
-          'DEBUG: Using cached vacation all currencies stream for key: $cacheKey');
-      return _vacationCurrencyStreamCache[cacheKey]!;
-    }
 
     print(
         'DEBUG: Creating vacation all currencies stream for accountId=$activeVacationAccountId');
@@ -567,8 +511,8 @@ class MonthPageDataManager {
         isVacation: isVacation,
         accountId: activeVacationAccountId,
       ),
-      _allAccountsStream,
-      _allCategoriesStream,
+      _firestoreService.streamAccounts(), // Fresh stream each time
+      _firestoreService.streamCategories(), // Fresh stream each time
       (
         List<FirestoreTransaction> transactions,
         List<FirestoreAccount> accounts,
@@ -629,36 +573,24 @@ class MonthPageDataManager {
           expensesByCurrency: expensesByCurrency,
         );
       },
-    ).startWith(MonthPageData.loading()).shareReplay(maxSize: 1);
+    ).startWith(MonthPageData.loading());
 
-    _vacationCurrencyStreamCache[cacheKey] = stream;
     return stream;
   }
 
   // Method to invalidate cache for a specific month and vacation mode combination
+  // No-op: Streams are now always fresh, no cache to invalidate
   void invalidateMonth(int monthIndex, [bool? isVacation]) {
     print(
-        'DEBUG: Invalidating cache for monthIndex=$monthIndex, isVacation=$isVacation');
-    print(
-        'DEBUG: Active vacation accountId=${_vacationProvider.activeVacationAccountId}');
-
-    // Increment stream version to force recreation of all streams
-    _streamVersion++;
-    print('DEBUG: Stream version incremented to $_streamVersion');
-
-    // Clear all cached streams to force recreation
-    _pageStreamCache.clear();
-    _vacationCurrencyStreamCache.clear();
-
-    print(
-        'DEBUG: Cache invalidation complete. All streams cleared, version=$_streamVersion');
+        'DEBUG: invalidateMonth called (no-op) - monthIndex=$monthIndex, isVacation=$isVacation');
+    // Streams are now always fresh, no cache to invalidate
   }
 
   // Method to clear the cache if a full refresh is needed (e.g., on user logout/login).
+  // No-op: Streams are now always fresh, no cache to clear
   void clearCache() {
-    _streamVersion++;
-    _pageStreamCache.clear();
-    _vacationCurrencyStreamCache.clear();
+    print('DEBUG: clearCache called (no-op) - streams are always fresh');
+    // Streams are now always fresh, no cache to clear
   }
 }
 
@@ -2881,12 +2813,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _show3DotMenu(BuildContext context, HomeScreenProvider homeScreenProvider) async {
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
-      ),
-      Offset.zero & overlay.size,
+    final Size overlaySize = overlay.size;
+    final Offset buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
+    
+    // Position menu to align from the right side of the screen
+    // Menu width is approximately 280px, so we position it 16px from the right edge
+    const double menuWidth = 280.0;
+    const double rightPadding = 16.0;
+    final double topPosition = buttonPosition.dy + button.size.height - 16; // -16px gap below button
+    
+    final RelativeRect position = RelativeRect.fromLTRB(
+      overlaySize.width - menuWidth - rightPadding, // Left position to align right edge
+      topPosition,
+      rightPadding,
+      overlaySize.height - topPosition - 100, // Bottom space (approximate)
     );
 
     final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
@@ -2899,48 +2839,102 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await showMenu(
         context: context,
         position: position,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         items: [
           PopupMenuItem(
             enabled: false,
+            padding: EdgeInsets.zero,
             child: StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
-                return CheckboxListTile(
-                  title: Text(
-                    AppLocalizations.of(context)!.includeVacationTransaction,
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    AppLocalizations.of(context)!.showVacationTransactions,
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  value: homeScreenProvider.includeVacationTransactions,
-                  onChanged: (bool? value) async {
-                    if (value != null) {
-                      // Update the filter state
-                      await homeScreenProvider.setIncludeVacationTransactions(value);
-                      
-                      // Close the menu
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
+                final isEnabled = homeScreenProvider.includeVacationTransactions;
+                return InkWell(
+                  onTap: () async {
+                    final newValue = !isEnabled;
+                    // Update the filter state
+                    await homeScreenProvider.setIncludeVacationTransactions(newValue);
+                    
+                    // Close the menu
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                    
+                    // Force complete reset of all providers and cache
+                    if (mounted) {
+                      // Clear all cached streams first
+                      _pageDataManager.clearCache();
+                      // Dispose and recreate all month providers to avoid stale paginated data
+                      for (final provider in _monthProviders.values) {
+                        provider.dispose();
                       }
-                      
-                      // Force complete reset of all providers and cache
-                      if (mounted) {
-                        // Clear all cached streams first
-                        _pageDataManager.clearCache();
-                        // Dispose and recreate all month providers to avoid stale paginated data
-                        for (final provider in _monthProviders.values) {
-                          provider.dispose();
-                        }
-                        _monthProviders.clear();
+                      _monthProviders.clear();
 
-                        // Trigger a rebuild to get fresh data
-                        this.setState(() {});
-                      }
+                      // Trigger a rebuild to get fresh data
+                      this.setState(() {});
                     }
                   },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                AppLocalizations.of(context)!.includeVacationTransaction,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryTextColorLight,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                AppLocalizations.of(context)!.showVacationTransactions,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.secondaryTextColorLight,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Switch(
+                          value: isEnabled,
+                          onChanged: (bool value) async {
+                            // Update the filter state
+                            await homeScreenProvider.setIncludeVacationTransactions(value);
+                            
+                            // Close the menu
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                            
+                            // Force complete reset of all providers and cache
+                            if (mounted) {
+                              // Clear all cached streams first
+                              _pageDataManager.clearCache();
+                              // Dispose and recreate all month providers to avoid stale paginated data
+                              for (final provider in _monthProviders.values) {
+                                provider.dispose();
+                              }
+                              _monthProviders.clear();
+
+                              // Trigger a rebuild to get fresh data
+                              this.setState(() {});
+                            }
+                          },
+                          activeColor: AppColors.buttonBackground,
+                          activeTrackColor: AppColors.gradientEnd2,
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),

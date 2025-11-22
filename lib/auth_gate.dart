@@ -1,4 +1,5 @@
 import 'package:budgetm/screens/auth/first_time_settings/select_currency_screen.dart';
+import 'package:budgetm/screens/auth/first_time_settings/language_selection_screen.dart';
 import 'package:budgetm/screens/auth/login/login_screen.dart';
 import 'package:budgetm/screens/dashboard/main_screen.dart';
 import 'package:budgetm/screens/onboarding/onboarding_screen.dart';
@@ -6,6 +7,7 @@ import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:budgetm/viewmodels/locale_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -129,6 +131,12 @@ class _AuthGateState extends State<AuthGate> {
             }
             final bool initialized = initSnapshot.data == true;
             if (initialized) {
+              // Check if user has persisted locale selection
+              final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+              if (!localeProvider.hasPersistedLocale) {
+                // User is initialized but hasn't selected language - show language screen
+                return const LanguageSelectionScreen();
+              }
               return const MainScreen();
             }
             // Not initialized yet: send user to first-time setup flow

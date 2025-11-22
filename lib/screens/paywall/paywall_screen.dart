@@ -147,9 +147,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: kToolbarHeight - 20),
+
         // Crown Icon
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Colors.orangeAccent.shade100,
             shape: BoxShape.circle,
@@ -157,11 +158,16 @@ class _PaywallScreenState extends State<PaywallScreen> {
           child: Icon(Icons.workspace_premium, color: Colors.orange, size: 32),
         ),
         const SizedBox(height: 12),
+
+        // Features Section
+        _buildFeaturesSection(context),
+        const SizedBox(height: 18),
+
         // Title
         Text(
           AppLocalizations.of(context)!.paywallChooseYourPlan,
           style: Theme.of(context).textTheme.displayLarge?.copyWith(
-            fontSize: 24,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: AppColors.primaryTextColorLight,
           ),
@@ -177,7 +183,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 26),
+        const SizedBox(height: 22),
 
         // Monthly Plan Card
         if (monthlyProduct != null)
@@ -204,13 +210,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
             onTap: () => setState(() => _selectedProduct = yearlyProduct),
           ),
 
-        const SizedBox(height: 24),
-        // Features Section
-        _buildFeaturesSection(context),
-        const SizedBox(height: 24),
+        const SizedBox(height: 18),
         // Savings Box
         _buildSavingsBox(context),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
       ],
     );
   }
@@ -375,6 +378,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
     return AppLocalizations.of(context)!.paywallSaveAmount(f.format(savings));
   }
 
+  /// Filters the product title to remove app name in parentheses.
+  /// Example: "Monthly Subs (Buck: Budget & Expense Tracker)" -> "Monthly Subs"
+  String _filterProductTitle(String title) {
+    // Remove text in parentheses (e.g., "(Buck: Budget & Expense Tracker)")
+    return title.replaceAll(RegExp(r'\s*\([^)]*\)\s*'), '').trim();
+  }
+
   Widget _buildPlanCard({
     required BuildContext context,
     required ProductDetails product,
@@ -391,7 +401,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
         clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20.0),
@@ -424,7 +434,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product.title,
+                        _filterProductTitle(product.title),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.bold,

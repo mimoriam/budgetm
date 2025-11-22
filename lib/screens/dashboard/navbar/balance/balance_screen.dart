@@ -427,11 +427,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             _buildPieChart(allAccounts),
                             const SizedBox(height: 16),
                             _buildLegend(allAccounts),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
                           ] else if (allAccounts.isNotEmpty) ...[
                             // Show logo with currency picker when 1 account exists
-                            _buildSingleAccountView(allAccounts),
-                            const SizedBox(height: 24),
+                            // _buildSingleAccountView(allAccounts),
+                            // const SizedBox(height: 16),
                           ],
                           // My Accounts section
                           _buildSectionHeaderWithButton(
@@ -450,10 +450,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                 
                                 if (normalAccounts.length >= 1) {
                                   // Show paywall if user is not subscribed and already has a normal account
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const PaywallScreen(),
-                                    ),
+                                  PersistentNavBarNavigator.pushNewScreen(
+                                    context,
+                                    screen: const PaywallScreen(),
+                                    withNavBar: false,
+                                    pageTransitionAnimation:
+                                        PageTransitionAnimation.cupertino,
                                   );
                                   return;
                                 }
@@ -542,10 +544,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                               // Prevent ANY vacation account creation if unsubscribed
                               if (!subscriptionProvider.isSubscribed) {
                                 // Show paywall if user is not subscribed
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const PaywallScreen(),
-                                  ),
+                                PersistentNavBarNavigator.pushNewScreen(
+                                  context,
+                                  screen: const PaywallScreen(),
+                                  withNavBar: false,
+                                  pageTransitionAnimation:
+                                      PageTransitionAnimation.cupertino,
                                 );
                                 return;
                               }
@@ -707,10 +711,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             
                             if (normalAccounts.length >= 1) {
                               // Show paywall if user is not subscribed and already has a normal account
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const PaywallScreen(),
-                                ),
+                              PersistentNavBarNavigator.pushNewScreen(
+                                context,
+                                screen: const PaywallScreen(),
+                                withNavBar: false,
+                                pageTransitionAnimation:
+                                    PageTransitionAnimation.cupertino,
                               );
                               return;
                             }
@@ -1127,14 +1133,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(
         horizontal: 20.0,
-        vertical: 16.0,
+        vertical: 12.0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Account Balance card with currency selector
-          _buildEmptyAccountBalanceCard(),
-          const SizedBox(height: 24),
+          // _buildEmptyAccountBalanceCard(),
+          // const SizedBox(height: 24),
           
           // MY ACCOUNTS section
           _buildSectionHeaderWithButton(
@@ -1153,10 +1159,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 
                 if (normalAccounts.length >= 1) {
                   // Show paywall if user is not subscribed and already has a normal account
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const PaywallScreen(),
-                    ),
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: const PaywallScreen(),
+                    withNavBar: false,
+                    pageTransitionAnimation:
+                        PageTransitionAnimation.cupertino,
                   );
                   return;
                 }
@@ -1198,10 +1206,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               // Prevent ANY vacation account creation if unsubscribed
               if (!subscriptionProvider.isSubscribed) {
                 // Show paywall if user is not subscribed
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const PaywallScreen(),
-                  ),
+                PersistentNavBarNavigator.pushNewScreen(
+                  context,
+                  screen: const PaywallScreen(),
+                  withNavBar: false,
+                  pageTransitionAnimation:
+                      PageTransitionAnimation.cupertino,
                 );
                 return;
               }

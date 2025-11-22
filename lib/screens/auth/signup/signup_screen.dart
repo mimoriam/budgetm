@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
@@ -521,22 +523,24 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 45,
-                          child: SignInButton(
-                            Buttons.apple,
-                            text: AppLocalizations.of(context)!.continueWithApple,
-                            onPressed: _isLoading || _isLoadingGoogle
-                                ? () {}
-                                : () {},
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                              side: BorderSide.none,
+                        if (Platform.isIOS) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 45,
+                            child: SignInButton(
+                              Buttons.apple,
+                              text: AppLocalizations.of(context)!.continueWithApple,
+                              onPressed: _isLoading || _isLoadingGoogle
+                                  ? () {}
+                                  : () {},
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                                side: BorderSide.none,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                         const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,

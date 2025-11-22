@@ -54,121 +54,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       final isSubscribed = subscriptionProvider.isSubscribed;
                       final isLoading = subscriptionProvider.isLoading;
 
-                      return Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: isSubscribed
-                              ? const LinearGradient(
-                                  colors: [
-                                    Color(0xFF4CAF50),
-                                    Color(0xFF2E7D32),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                )
-                              : const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFF9800),
-                                    Color(0xFFE65100),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                          borderRadius: BorderRadius.circular(16.0),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  (isSubscribed ? Colors.green : Colors.orange)
-                                      .withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                isSubscribed
-                                    ? Icons.workspace_premium
-                                    : Icons.lock_outline,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    isSubscribed
-                                        ? AppLocalizations.of(
-                                            context,
-                                          )!.profilePremiumActive
-                                        : AppLocalizations.of(
-                                            context,
-                                          )!.profileFreePlan,
-                                    textAlign: TextAlign.start,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                      return GestureDetector(
+                        onTap: isLoading
+                            ? null
+                            : () {
+                                if (isSubscribed) {
+                                  _showSubscriptionActionsSheet(context);
+                                } else {
+                                  PersistentNavBarNavigator.pushNewScreen(
+                                    context,
+                                    screen: const PaywallScreen(),
+                                    withNavBar: false,
+                                    pageTransitionAnimation:
+                                        PageTransitionAnimation.cupertino,
+                                  );
+                                }
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: isSubscribed
+                                ? const LinearGradient(
+                                    colors: [
+                                      Color(0xFF4CAF50),
+                                      Color(0xFF2E7D32),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : const LinearGradient(
+                                    colors: [
+                                      Color(0xFFFF9800),
+                                      Color(0xFFE65100),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    isSubscribed
-                                        ? AppLocalizations.of(
-                                            context,
-                                          )!.profilePremiumDescription
-                                        : AppLocalizations.of(
-                                            context,
-                                          )!.profileUpgradeDescription,
-                                    textAlign: TextAlign.start,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                            borderRadius: BorderRadius.circular(16.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    (isSubscribed ? Colors.green : Colors.orange)
+                                        .withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
                               ),
-                            ),
-                            if (isLoading)
+                            ],
+                          ),
+                          child: Row(
+                            children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
-                                child: const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isSubscribed
+                                      ? Icons.workspace_premium
+                                      : Icons.lock_outline,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isSubscribed
+                                          ? AppLocalizations.of(
+                                              context,
+                                            )!.profilePremiumActive
+                                          : AppLocalizations.of(
+                                              context,
+                                            )!.profileFreePlan,
+                                      textAlign: TextAlign.start,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isSubscribed
+                                          ? AppLocalizations.of(
+                                              context,
+                                            )!.profilePremiumDescription
+                                          : AppLocalizations.of(
+                                              context,
+                                            )!.profileUpgradeDescription,
+                                      textAlign: TextAlign.start,
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isLoading)
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              )
-                            else
-                              GestureDetector(
-                                onTap: () {
-                                  if (isSubscribed) {
-                                    _showSubscriptionActionsSheet(context);
-                                  } else {
-                                    PersistentNavBarNavigator.pushNewScreen(
-                                      context,
-                                      screen: const PaywallScreen(),
-                                      withNavBar: false,
-                                      pageTransitionAnimation:
-                                          PageTransitionAnimation.cupertino,
-                                    );
-                                  }
-                                },
-                                child: Container(
+                                )
+                              else
+                                Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.2),
@@ -182,8 +184,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     size: 16,
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -485,15 +487,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   );
                                                   await user.reload();
                                                   try {
+                                                    // Update Firestore with 'name' field (consistent with registration)
                                                     await FirestoreService
                                                         .instance
                                                         .updateUserData(
                                                           user.uid,
                                                           {
-                                                            'displayName':
-                                                                newName,
+                                                            'name': newName,
                                                           },
                                                         );
+                                                    // Refresh UserProvider to get updated name from Firestore
+                                                    if (context.mounted) {
+                                                      await Provider.of<UserProvider>(
+                                                        context,
+                                                        listen: false,
+                                                      ).refreshUserData();
+                                                    }
                                                   } catch (e) {
                                                     debugPrint(
                                                       'Failed to update Firestore user document: $e',
@@ -567,7 +576,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         displayName,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),

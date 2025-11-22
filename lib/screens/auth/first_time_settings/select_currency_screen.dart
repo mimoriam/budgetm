@@ -1,6 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
-import 'package:budgetm/screens/dashboard/main_screen.dart';
+import 'package:budgetm/screens/auth/first_time_settings/language_selection_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:provider/provider.dart';
@@ -186,13 +186,12 @@ class _SelectCurrencyScreenState extends State<SelectCurrencyScreen> {
                                       );
 
                                       if (context.mounted) {
-                                        Navigator.pushAndRemoveUntil(
+                                        Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const MainScreen(showIntroPaywall: true),
+                                                const LanguageSelectionScreen(),
                                           ),
-                                          (route) => false,
                                         );
                                       }
                                     } catch (e) {

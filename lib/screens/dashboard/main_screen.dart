@@ -190,6 +190,21 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  void _handleTransactionFlowResult(bool? result, DateTime? fallbackDate) {
+    if (!mounted || result != true) {
+      return;
+    }
+
+    final budgetProvider = context.read<BudgetProvider>();
+    budgetProvider.initialize();
+
+    final homeScreenProvider = context.read<HomeScreenProvider>();
+    // Always trigger refresh after a transaction is added to ensure cache invalidation
+    // and month range recalculation, especially for new months
+    homeScreenProvider.triggerRefresh(transactionDate: fallbackDate);
+    // homeScreenProvider.triggerTransactionsRefresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vacationProvider = context.watch<VacationProvider>();
@@ -262,6 +277,7 @@ navbarVisibility.setNavBarVisibility(true);
                       child: FloatingActionButton(
                         onPressed: vacationProvider.isVacationMode ? () async {
                           final homeScreenProvider = context.read<HomeScreenProvider>();
+                          final fallbackDate = homeScreenProvider.selectedDate;
                           final result = await PersistentNavBarNavigator.pushNewScreen(
                             context,
                             screen: AddTransactionScreen(
@@ -272,17 +288,7 @@ navbarVisibility.setNavBarVisibility(true);
                             pageTransitionAnimation: PageTransitionAnimation.cupertino,
                           );
 
-                          // If the transaction was successfully added, trigger a refresh of the home screen
-                          if (result == true) {
-                            if (mounted) {
-                              final homeScreenProvider = context.read<HomeScreenProvider>();
-                              homeScreenProvider.triggerRefresh();
-                              
-                              // Also refresh the budget provider
-                              final budgetProvider = context.read<BudgetProvider>();
-                              budgetProvider.initialize();
-                            }
-                          }
+                          _handleTransactionFlowResult(result, fallbackDate);
                         } : _toggleFabMenu,
                         elevation: 1,
                         backgroundColor: vacationProvider.isVacationMode ? AppColors.aiGradientStart : AppColors.gradientEnd,
@@ -331,6 +337,7 @@ navbarVisibility.setNavBarVisibility(true);
               onPressed: () async {
                 _toggleFabMenu();
                 final homeScreenProvider = context.read<HomeScreenProvider>();
+                final fallbackDate = homeScreenProvider.selectedDate;
                 final result = await PersistentNavBarNavigator.pushNewScreen(
                   context,
                   screen: AddTransactionScreen(
@@ -341,17 +348,7 @@ navbarVisibility.setNavBarVisibility(true);
                   pageTransitionAnimation: PageTransitionAnimation.cupertino,
                 );
 
-                // If the transaction was successfully added, trigger a refresh of the home screen
-                if (result == true) {
-                  if (mounted) {
-                    final homeScreenProvider = context.read<HomeScreenProvider>();
-                    homeScreenProvider.triggerRefresh();
-                    
-                    // Also refresh the budget provider
-                    final budgetProvider = context.read<BudgetProvider>();
-                    budgetProvider.initialize();
-                  }
-                }
+                _handleTransactionFlowResult(result, fallbackDate);
               },
             ),
           ];
@@ -364,6 +361,7 @@ navbarVisibility.setNavBarVisibility(true);
             onPressed: () async {
               _toggleFabMenu();
               final homeScreenProvider = context.read<HomeScreenProvider>();
+              final fallbackDate = homeScreenProvider.selectedDate;
               final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: AddTransactionScreen(
@@ -374,17 +372,7 @@ navbarVisibility.setNavBarVisibility(true);
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
 
-              // If the transaction was successfully added, trigger a refresh of the home screen
-              if (result == true) {
-                if (mounted) {
-                  final homeScreenProvider = context.read<HomeScreenProvider>();
-                  homeScreenProvider.triggerRefresh();
-                  
-                  // Also refresh the budget provider
-                  final budgetProvider = context.read<BudgetProvider>();
-                  budgetProvider.initialize();
-                }
-              }
+              _handleTransactionFlowResult(result, fallbackDate);
             },
           ),
           const SizedBox(height: 16),
@@ -395,6 +383,7 @@ navbarVisibility.setNavBarVisibility(true);
             onPressed: () async {
               _toggleFabMenu();
               final homeScreenProvider = context.read<HomeScreenProvider>();
+              final fallbackDate = homeScreenProvider.selectedDate;
               final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: AddTransactionScreen(
@@ -405,17 +394,7 @@ navbarVisibility.setNavBarVisibility(true);
                 pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
 
-              // If the transaction was successfully added, trigger a refresh of the home screen
-              if (result == true) {
-                if (mounted) {
-                  final homeScreenProvider = context.read<HomeScreenProvider>();
-                  homeScreenProvider.triggerRefresh();
-                  
-                  // Also refresh the budget provider
-                  final budgetProvider = context.read<BudgetProvider>();
-                  budgetProvider.initialize();
-                }
-              }
+              _handleTransactionFlowResult(result, fallbackDate);
             },
           ),
         ];
