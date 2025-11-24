@@ -59,27 +59,27 @@ class MonthPageData {
 
   // Create a loading state
   factory MonthPageData.loading() => MonthPageData(
-        transactions: [],
-        totalIncome: 0.0,
-        totalExpenses: 0.0,
-        transactionsWithAccounts: [],
-        upcomingTasks: [],
-        incomeByCurrency: {},
-        expensesByCurrency: {},
-        isLoading: true,
-      );
+    transactions: [],
+    totalIncome: 0.0,
+    totalExpenses: 0.0,
+    transactionsWithAccounts: [],
+    upcomingTasks: [],
+    incomeByCurrency: {},
+    expensesByCurrency: {},
+    isLoading: true,
+  );
 
   // Create an error state
   factory MonthPageData.error(String error) => MonthPageData(
-        transactions: [],
-        totalIncome: 0.0,
-        totalExpenses: 0.0,
-        transactionsWithAccounts: [],
-        upcomingTasks: [],
-        incomeByCurrency: {},
-        expensesByCurrency: {},
-        error: error,
-      );
+    transactions: [],
+    totalIncome: 0.0,
+    totalExpenses: 0.0,
+    transactionsWithAccounts: [],
+    upcomingTasks: [],
+    incomeByCurrency: {},
+    expensesByCurrency: {},
+    error: error,
+  );
 }
 
 // Data structure to hold a transaction with its associated account and category
@@ -134,7 +134,8 @@ model.Transaction _convertToUiTransaction(
         .accountId, // Pass accountId from Firestore transaction
     categoryId: firestoreTransaction.categoryId, // Already String in Firestore
     paid: firestoreTransaction.paid, // CRITICAL: carry paid flag into UI model
-    currency: firestoreTransaction.currency, // Use the actual currency from the transaction
+    currency: firestoreTransaction
+        .currency, // Use the actual currency from the transaction
   );
 }
 
@@ -181,14 +182,17 @@ class MonthPageProvider extends ChangeNotifier {
           .take(8)
           .toList();
       print(
-          'DEBUG: MonthPageProvider.initialize - txWithAccounts=${data.transactionsWithAccounts.length}, newHash=$currentDataHash, lastHash=$_lastDataHash, isInitialized=$_isInitialized, hasReachedEnd=$_hasReachedEnd, currentPage=$_currentPage, sampleIds=$sampleIds');
+        'DEBUG: MonthPageProvider.initialize - txWithAccounts=${data.transactionsWithAccounts.length}, newHash=$currentDataHash, lastHash=$_lastDataHash, isInitialized=$_isInitialized, hasReachedEnd=$_hasReachedEnd, currentPage=$_currentPage, sampleIds=$sampleIds',
+      );
     } catch (e) {
       print('DEBUG: MonthPageProvider.initialize - logging error: $e');
     }
 
     // Always reset state if this is the first initialization or if data has changed
     if (!_isInitialized || currentDataHash != _lastDataHash) {
-      print('DEBUG: MonthPageProvider.initialize - RESETTING STATE: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}');
+      print(
+        'DEBUG: MonthPageProvider.initialize - RESETTING STATE: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}',
+      );
       _allTransactions = data.transactionsWithAccounts;
       _paginatedTransactions = [];
       _currentPage = 0;
@@ -202,13 +206,17 @@ class MonthPageProvider extends ChangeNotifier {
         fetchNextPage();
       }
     } else {
-      print('DEBUG: MonthPageProvider.initialize - SKIPPING RESET: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}');
+      print(
+        'DEBUG: MonthPageProvider.initialize - SKIPPING RESET: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}',
+      );
     }
   }
 
   // Force re-initialization (used when filter changes)
   void forceReinitialize(MonthPageData data) {
-    print('DEBUG: MonthPageProvider.forceReinitialize - forcing complete reset');
+    print(
+      'DEBUG: MonthPageProvider.forceReinitialize - forcing complete reset',
+    );
     _allTransactions = data.transactionsWithAccounts;
     _paginatedTransactions = [];
     _currentPage = 0;
@@ -322,7 +330,6 @@ class MonthPageProvider extends ChangeNotifier {
     print('DEBUG: MonthPageProvider.reset() - Provider state completely reset');
     notifyListeners();
   }
-
 }
 
 // Data manager for handling and caching month-specific data streams.
@@ -339,11 +346,13 @@ class MonthPageDataManager {
     bool includeVacationTransactions,
   ) {
     // Get the active vacation account ID when in vacation mode
-    final activeVacationAccountId =
-        isVacation ? _vacationProvider.activeVacationAccountId : null;
+    final activeVacationAccountId = isVacation
+        ? _vacationProvider.activeVacationAccountId
+        : null;
 
     print(
-        'DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, includeVacation=$includeVacationTransactions');
+      'DEBUG: getStreamForMonth - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, includeVacation=$includeVacationTransactions',
+    );
 
     // Create a new stream for the month.
     final startOfMonth = DateTime(month.year, month.month, 1);
@@ -359,139 +368,159 @@ class MonthPageDataManager {
             accountId: activeVacationAccountId,
           )
         : (includeVacationTransactions
-            ? Rx.combineLatest2(
-                _firestoreService.streamTransactionsForDateRange(
+              ? Rx.combineLatest2(
+                  _firestoreService.streamTransactionsForDateRange(
+                    startOfMonth,
+                    endOfMonth,
+                    isVacation: false,
+                  ),
+                  _firestoreService.streamTransactionsForDateRange(
+                    startOfMonth,
+                    endOfMonth,
+                    isVacation: true,
+                  ),
+                  (
+                    List<FirestoreTransaction> normalTxns,
+                    List<FirestoreTransaction> vacationTxns,
+                  ) {
+                    // Combine both normal and vacation transactions
+                    return [...normalTxns, ...vacationTxns];
+                  },
+                )
+              : _firestoreService.streamTransactionsForDateRange(
                   startOfMonth,
                   endOfMonth,
                   isVacation: false,
-                ),
-                _firestoreService.streamTransactionsForDateRange(
-                  startOfMonth,
-                  endOfMonth,
-                  isVacation: true,
-                ),
-                (List<FirestoreTransaction> normalTxns,
-                    List<FirestoreTransaction> vacationTxns) {
-                  // Combine both normal and vacation transactions
-                  return [...normalTxns, ...vacationTxns];
-                },
-              )
-            : _firestoreService.streamTransactionsForDateRange(
+                ));
+
+    final stream =
+        Rx.combineLatest4(
+              transactionStream,
+              _firestoreService.streamUpcomingTasksForDateRange(
                 startOfMonth,
                 endOfMonth,
-                isVacation: false,
-              ));
+              ),
+              _firestoreService.streamAccounts(), // Fresh stream each time
+              _firestoreService.streamCategories(), // Fresh stream each time
+              (
+                List<FirestoreTransaction> transactions,
+                List<FirestoreTask> tasks,
+                List<FirestoreAccount> accounts,
+                List<Category> categories,
+              ) {
+                // Sort transactions by date in descending order (newest first)
+                transactions.sort((a, b) => b.date.compareTo(a.date));
 
-    final stream = Rx.combineLatest4(
-      transactionStream,
-      _firestoreService.streamUpcomingTasksForDateRange(
-        startOfMonth,
-        endOfMonth,
-      ),
-      _firestoreService.streamAccounts(), // Fresh stream each time
-      _firestoreService.streamCategories(), // Fresh stream each time
-      (
-        List<FirestoreTransaction> transactions,
-        List<FirestoreTask> tasks,
-        List<FirestoreAccount> accounts,
-        List<Category> categories,
-      ) {
-        // Sort transactions by date in descending order (newest first)
-        transactions.sort((a, b) => b.date.compareTo(a.date));
+                // Create maps for accounts and categories
+                final accountMap = {
+                  for (var account in accounts) account.id: account,
+                };
+                final categoryMap = {
+                  for (var category in categories) category.id: category,
+                };
 
-        // Create maps for accounts and categories
-        final accountMap = {
-          for (var account in accounts) account.id: account,
-        };
-        final categoryMap = {
-          for (var category in categories) category.id: category,
-        };
+                // Create TransactionWithAccount objects
+                final transactionsWithAccounts = transactions.map((
+                  transaction,
+                ) {
+                  return TransactionWithAccount(
+                    transaction: transaction,
+                    account: transaction.accountId != null
+                        ? accountMap[transaction.accountId]
+                        : null,
+                    category: transaction.categoryId != null
+                        ? categoryMap[transaction.categoryId]
+                        : null,
+                  );
+                }).toList();
 
-        // Create TransactionWithAccount objects
-        final transactionsWithAccounts = transactions.map((
-          transaction,
-        ) {
-          return TransactionWithAccount(
-            transaction: transaction,
-            account: transaction.accountId != null
-                ? accountMap[transaction.accountId]
-                : null,
-            category: transaction.categoryId != null
-                ? categoryMap[transaction.categoryId]
-                : null,
-          );
-        }).toList();
+                // Sort transactions within each date group by time in descending order
+                transactionsWithAccounts.sort(
+                  (a, b) => b.transaction.date.compareTo(a.transaction.date),
+                );
 
-        // Sort transactions within each date group by time in descending order
-        transactionsWithAccounts.sort(
-          (a, b) => b.transaction.date.compareTo(a.transaction.date),
-        );
+                // Calculate totals client-side.
+                // The 'paid' status of a transaction is for informational purposes only and does not
+                // affect the calculation of total income and expenses. All transactions, paid or unpaid,
+                // are included in these totals.
+                // IMPORTANT: Only include transactions that match the current mode (vacation vs normal)
+                final totalIncome = transactions
+                    .where((transaction) => transaction.type == 'income')
+                    .fold<double>(
+                      0.0,
+                      (sum, transaction) => sum + transaction.amount,
+                    );
 
-        // Calculate totals client-side.
-        // The 'paid' status of a transaction is for informational purposes only and does not
-        // affect the calculation of total income and expenses. All transactions, paid or unpaid,
-        // are included in these totals.
-        // IMPORTANT: Only include transactions that match the current mode (vacation vs normal)
-        final totalIncome = transactions
-            .where((transaction) => transaction.type == 'income')
-            .fold<double>(
-                0.0, (sum, transaction) => sum + transaction.amount);
+                final totalExpenses = transactions
+                    .where((transaction) => transaction.type == 'expense')
+                    .fold<double>(
+                      0.0,
+                      (sum, transaction) => sum + transaction.amount,
+                    );
 
-        final totalExpenses = transactions
-            .where((transaction) => transaction.type == 'expense')
-            .fold<double>(
-                0.0, (sum, transaction) => sum + transaction.amount);
+                // Group transactions by currency and calculate totals for each currency
+                final Map<String, double> incomeByCurrency = {};
+                final Map<String, double> expensesByCurrency = {};
 
-        // Group transactions by currency and calculate totals for each currency
-        final Map<String, double> incomeByCurrency = {};
-        final Map<String, double> expensesByCurrency = {};
+                for (final transaction in transactions) {
+                  final currency = transaction.currency;
+                  if (currency.isEmpty) continue;
 
-        for (final transaction in transactions) {
-          final currency = transaction.currency;
-          if (currency.isEmpty) continue;
+                  if (transaction.type == 'income') {
+                    incomeByCurrency[currency] =
+                        (incomeByCurrency[currency] ?? 0.0) +
+                        transaction.amount;
+                  } else if (transaction.type == 'expense') {
+                    expensesByCurrency[currency] =
+                        (expensesByCurrency[currency] ?? 0.0) +
+                        transaction.amount;
+                  }
+                }
 
-          if (transaction.type == 'income') {
-            incomeByCurrency[currency] =
-                (incomeByCurrency[currency] ?? 0.0) + transaction.amount;
-          } else if (transaction.type == 'expense') {
-            expensesByCurrency[currency] =
-                (expensesByCurrency[currency] ?? 0.0) + transaction.amount;
-          }
-        }
+                // DEBUG: emit stats before returning MonthPageData to validate stream updates
+                try {
+                  final linkedCount = transactions
+                      .where(
+                        (transaction) =>
+                            transaction.linkedTransactionId != null,
+                      )
+                      .length;
+                  final vacationCount = transactions
+                      .where((transaction) => transaction.isVacation == true)
+                      .length;
+                  final normalCount = transactions
+                      .where((transaction) => transaction.isVacation != true)
+                      .length;
+                  final sampleIds = transactions
+                      .map((t) => t.id)
+                      .take(6)
+                      .toList();
+                  print(
+                    'DEBUG: MonthPageDataManager.combine - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, txCount=${transactions.length}, normalCount=$normalCount, vacationCount=$vacationCount, linkedCount=$linkedCount, totalIncome=$totalIncome, totalExpenses=$totalExpenses, sampleIds=$sampleIds',
+                  );
+                } catch (e) {
+                  print(
+                    'DEBUG: MonthPageDataManager.combine - logging error: $e',
+                  );
+                }
 
-        // DEBUG: emit stats before returning MonthPageData to validate stream updates
-        try {
-          final linkedCount = transactions
-              .where((transaction) => transaction.linkedTransactionId != null)
-              .length;
-          final vacationCount =
-              transactions.where((transaction) => transaction.isVacation == true).length;
-          final normalCount =
-              transactions.where((transaction) => transaction.isVacation != true).length;
-          final sampleIds = transactions.map((t) => t.id).take(6).toList();
-          print(
-              'DEBUG: MonthPageDataManager.combine - monthIndex=$monthIndex, isVacation=$isVacation, accountId=$activeVacationAccountId, txCount=${transactions.length}, normalCount=$normalCount, vacationCount=$vacationCount, linkedCount=$linkedCount, totalIncome=$totalIncome, totalExpenses=$totalExpenses, sampleIds=$sampleIds');
-        } catch (e) {
-          print('DEBUG: MonthPageDataManager.combine - logging error: $e');
-        }
-
-        return MonthPageData(
-          transactions: transactions,
-          totalIncome: totalIncome,
-          totalExpenses: totalExpenses,
-          transactionsWithAccounts: transactionsWithAccounts,
-          upcomingTasks: tasks,
-          incomeByCurrency: incomeByCurrency,
-          expensesByCurrency: expensesByCurrency,
-        );
-      },
-    )
-        .startWith(
-          MonthPageData.loading(),
-        ) // Immediately emit a loading state.
-        .handleError((error) {
-      return MonthPageData.error(error.toString());
-    });
+                return MonthPageData(
+                  transactions: transactions,
+                  totalIncome: totalIncome,
+                  totalExpenses: totalExpenses,
+                  transactionsWithAccounts: transactionsWithAccounts,
+                  upcomingTasks: tasks,
+                  incomeByCurrency: incomeByCurrency,
+                  expensesByCurrency: expensesByCurrency,
+                );
+              },
+            )
+            .startWith(
+              MonthPageData.loading(),
+            ) // Immediately emit a loading state.
+            .handleError((error) {
+              return MonthPageData.error(error.toString());
+            });
 
     return stream;
   }
@@ -502,7 +531,8 @@ class MonthPageDataManager {
     final activeVacationAccountId = _vacationProvider.activeVacationAccountId;
 
     print(
-        'DEBUG: Creating vacation all currencies stream for accountId=$activeVacationAccountId');
+      'DEBUG: Creating vacation all currencies stream for accountId=$activeVacationAccountId',
+    );
 
     final stream = Rx.combineLatest3(
       _firestoreService.streamTransactionsForDateRange(
@@ -525,12 +555,15 @@ class MonthPageDataManager {
         final categoryMap = {for (var c in categories) c.id: c};
 
         final transactionsWithAccounts = transactions
-            .map((t) => TransactionWithAccount(
-                  transaction: t,
-                  account: t.accountId != null ? accountMap[t.accountId] : null,
-                  category:
-                      t.categoryId != null ? categoryMap[t.categoryId] : null,
-                ))
+            .map(
+              (t) => TransactionWithAccount(
+                transaction: t,
+                account: t.accountId != null ? accountMap[t.accountId] : null,
+                category: t.categoryId != null
+                    ? categoryMap[t.categoryId]
+                    : null,
+              ),
+            )
             .toList();
 
         // Multi-currency totals
@@ -550,17 +583,23 @@ class MonthPageDataManager {
           }
         }
 
-        final totalIncome = incomeByCurrency.values
-            .fold<double>(0.0, (sum, amount) => sum + amount);
-        final totalExpenses = expensesByCurrency.values
-            .fold<double>(0.0, (sum, amount) => sum + amount);
+        final totalIncome = incomeByCurrency.values.fold<double>(
+          0.0,
+          (sum, amount) => sum + amount,
+        );
+        final totalExpenses = expensesByCurrency.values.fold<double>(
+          0.0,
+          (sum, amount) => sum + amount,
+        );
 
         try {
           final sampleIds = transactions.map((t) => t.id).take(6).toList();
-          final vacationTxCount =
-              transactions.where((t) => t.isVacation == true).length;
+          final vacationTxCount = transactions
+              .where((t) => t.isVacation == true)
+              .length;
           print(
-              'DEBUG: VacationAllCurrencies.combine - txCount=${transactions.length}, vacationTxCount=$vacationTxCount, currencies=${incomeByCurrency.keys.toSet().union(expensesByCurrency.keys.toSet()).toList()}, sampleIds=$sampleIds');
+            'DEBUG: VacationAllCurrencies.combine - txCount=${transactions.length}, vacationTxCount=$vacationTxCount, currencies=${incomeByCurrency.keys.toSet().union(expensesByCurrency.keys.toSet()).toList()}, sampleIds=$sampleIds',
+          );
         } catch (_) {}
 
         return MonthPageData(
@@ -582,7 +621,8 @@ class MonthPageDataManager {
   // No-op: Streams are now always fresh, no cache to invalidate
   void invalidateMonth(int monthIndex, [bool? isVacation]) {
     print(
-        'DEBUG: invalidateMonth called (no-op) - monthIndex=$monthIndex, isVacation=$isVacation');
+      'DEBUG: invalidateMonth called (no-op) - monthIndex=$monthIndex, isVacation=$isVacation',
+    );
     // Streams are now always fresh, no cache to invalidate
   }
 
@@ -645,7 +685,10 @@ class _MonthPageViewState extends State<MonthPageView> {
     // Initialize the provider with data if it hasn't been initialized yet
     if (_provider.allTransactions.isEmpty) {
       // Get includeVacationTransactions from context
-      final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+      final homeScreenProvider = Provider.of<HomeScreenProvider>(
+        context,
+        listen: false,
+      );
       widget.dataManager
           .getStreamForMonth(
             widget.monthIndex,
@@ -655,10 +698,10 @@ class _MonthPageViewState extends State<MonthPageView> {
           )
           .first
           .then((data) {
-        if (mounted) {
-          _provider.initialize(data);
-        }
-      });
+            if (mounted) {
+              _provider.initialize(data);
+            }
+          });
     }
   }
 
@@ -692,15 +735,18 @@ class _MonthPageViewState extends State<MonthPageView> {
                   snapshot.data!.error == null) {
                 // DEBUG: log incoming snapshot before provider.initialize to trace refresh
                 try {
-                  final txCount = snapshot.data!.transactionsWithAccounts.length;
+                  final txCount =
+                      snapshot.data!.transactionsWithAccounts.length;
                   final linkedCount = snapshot.data!.transactions
                       .where((t) => t.linkedTransactionId != null)
                       .length;
                   print(
-                      'DEBUG: MonthPageView.StreamBuilder - monthIndex=${widget.monthIndex}, isVacation=${widget.isVacation}, txCount=$txCount, linkedCount=$linkedCount, providerInitialized=${provider.isInitialized}, paginatedCount=${provider.paginatedTransactions.length}');
+                    'DEBUG: MonthPageView.StreamBuilder - monthIndex=${widget.monthIndex}, isVacation=${widget.isVacation}, txCount=$txCount, linkedCount=$linkedCount, providerInitialized=${provider.isInitialized}, paginatedCount=${provider.paginatedTransactions.length}',
+                  );
                 } catch (e) {
                   print(
-                      'DEBUG: MonthPageView.StreamBuilder - logging error: $e');
+                    'DEBUG: MonthPageView.StreamBuilder - logging error: $e',
+                  );
                 }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   provider.initialize(snapshot.data!);
@@ -801,7 +847,8 @@ class _MonthPageViewState extends State<MonthPageView> {
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.only(top: 16),
-              itemCount: sortedKeys.length +
+              itemCount:
+                  sortedKeys.length +
                   (provider.hasReachedEnd ? 1 : 0) +
                   (provider.isLoading ? 1 : 0),
               itemBuilder: (context, index) {
@@ -887,7 +934,9 @@ class _MonthPageViewState extends State<MonthPageView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.homeErrorLoadingMoreTransactions,
+                  AppLocalizations.of(
+                    context,
+                  )!.homeErrorLoadingMoreTransactions,
                   style: TextStyle(
                     color: Colors.red.shade600,
                     fontWeight: FontWeight.bold,
@@ -1180,9 +1229,13 @@ class _MonthPageViewState extends State<MonthPageView> {
   }
 
   Color _getTransactionBackgroundColor(
-      FirestoreTransaction transaction, FirestoreAccount? account) {
-    final vacationProvider =
-        Provider.of<VacationProvider>(context, listen: false);
+    FirestoreTransaction transaction,
+    FirestoreAccount? account,
+  ) {
+    final vacationProvider = Provider.of<VacationProvider>(
+      context,
+      listen: false,
+    );
     final isVacationTransaction = transaction.isVacation == true;
 
     if (vacationProvider.isVacationMode) {
@@ -1191,7 +1244,9 @@ class _MonthPageViewState extends State<MonthPageView> {
     } else {
       // In normal mode: differentiate vacation transactions with a light blue background
       if (isVacationTransaction) {
-        return Colors.blue.shade50; // Light blue for vacation transactions in normal mode
+        return Colors
+            .blue
+            .shade50; // Light blue for vacation transactions in normal mode
       } else {
         return Colors.white; // Normal white background for regular transactions
       }
@@ -1199,8 +1254,10 @@ class _MonthPageViewState extends State<MonthPageView> {
   }
 
   Color _getTransactionBorderColor(FirestoreTransaction transaction) {
-    final vacationProvider =
-        Provider.of<VacationProvider>(context, listen: false);
+    final vacationProvider = Provider.of<VacationProvider>(
+      context,
+      listen: false,
+    );
     final isVacationTransaction = transaction.isVacation == true;
 
     if (vacationProvider.isVacationMode) {
@@ -1209,9 +1266,13 @@ class _MonthPageViewState extends State<MonthPageView> {
     } else {
       // In normal mode: use blue border for vacation transactions
       if (isVacationTransaction) {
-        return Colors.blue.shade300; // Blue border for vacation transactions in normal mode
+        return Colors
+            .blue
+            .shade300; // Blue border for vacation transactions in normal mode
       } else {
-        return Colors.grey.shade200; // Normal grey border for regular transactions
+        return Colors
+            .grey
+            .shade200; // Normal grey border for regular transactions
       }
     }
   }
@@ -1237,7 +1298,8 @@ class _MonthPageViewState extends State<MonthPageView> {
     // DEBUG: Log each transaction item render (may be verbose)
     try {
       print(
-          'DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}, paid=${transaction.paid}');
+        'DEBUG: BuildTransactionItem - id=${transaction.id}, isVacationTxn=$isVacationTransaction, linkedId=${transaction.linkedTransactionId}, accountId=${account?.id}, date=${transaction.date.toIso8601String()}, type=${transaction.type}, amount=${transaction.amount}, paid=${transaction.paid}',
+      );
     } catch (e) {
       print('DEBUG: BuildTransactionItem - logging error: $e');
     }
@@ -1254,7 +1316,10 @@ class _MonthPageViewState extends State<MonthPageView> {
 
         if (result == true) {
           // Trigger a refresh to get the updated transaction data from Firestore
-          final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+          final homeScreenProvider = Provider.of<HomeScreenProvider>(
+            context,
+            listen: false,
+          );
           homeScreenProvider.triggerTransactionsRefresh();
         }
       },
@@ -1264,8 +1329,10 @@ class _MonthPageViewState extends State<MonthPageView> {
         decoration: BoxDecoration(
           color: _getTransactionBackgroundColor(transaction, account),
           borderRadius: BorderRadius.circular(18),
-          border:
-              Border.all(color: _getTransactionBorderColor(transaction), width: 1),
+          border: Border.all(
+            color: _getTransactionBorderColor(transaction),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.05),
@@ -1310,9 +1377,10 @@ class _MonthPageViewState extends State<MonthPageView> {
                   const SizedBox(height: 2),
                   if (account != null && (account.isDefault != true))
                     Text(
-                      [account.name, account.accountType]
-                          .where((text) => text.isNotEmpty)
-                          .join(' - '),
+                      [
+                        account.name,
+                        account.accountType,
+                      ].where((text) => text.isNotEmpty).join(' - '),
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                 ],
@@ -1331,8 +1399,10 @@ class _MonthPageViewState extends State<MonthPageView> {
                 ),
                 // Add vacation icon for vacation transactions in normal mode
                 if (transaction.isVacation == true &&
-                    !Provider.of<VacationProvider>(context, listen: false)
-                        .isVacationMode) ...[
+                    !Provider.of<VacationProvider>(
+                      context,
+                      listen: false,
+                    ).isVacationMode) ...[
                   const SizedBox(width: 4),
                   Icon(
                     Icons.flight_takeoff,
@@ -1455,8 +1525,10 @@ Future<void> _showCurrencyChangeDialog(
   String vacationCurrency,
   CurrencyProvider currencyProvider,
 ) async {
-  final navbarProvider =
-      Provider.of<NavbarVisibilityProvider>(context, listen: false);
+  final navbarProvider = Provider.of<NavbarVisibilityProvider>(
+    context,
+    listen: false,
+  );
 
   // Enable dialog mode to allow navbar hiding on home screen
   navbarProvider.setDialogMode(true);
@@ -1488,8 +1560,10 @@ Future<void> _showCurrencyChangeDialog(
                   showFlag: true,
                   showSearchField: true,
                   onSelect: (Currency currency) async {
-                    final currencyProvider =
-                        Provider.of<CurrencyProvider>(context, listen: false);
+                    final currencyProvider = Provider.of<CurrencyProvider>(
+                      context,
+                      listen: false,
+                    );
                     await currencyProvider.setCurrency(currency, 1.0);
                   },
                 );
@@ -1519,8 +1593,10 @@ Future<void> _showCurrencyBreakdownDialog(
   double totalBudget,
   String? vacationAccountCurrency,
 ) async {
-  final navbarProvider =
-      Provider.of<NavbarVisibilityProvider>(context, listen: false);
+  final navbarProvider = Provider.of<NavbarVisibilityProvider>(
+    context,
+    listen: false,
+  );
 
   // Enable dialog mode to allow navbar hiding on home screen
   navbarProvider.setDialogMode(true);
@@ -1534,7 +1610,11 @@ Future<void> _showCurrencyBreakdownDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(isVacationMode ? AppLocalizations.of(context)!.homeVacationBudgetBreakdown : AppLocalizations.of(context)!.homeBalanceBreakdown),
+          title: Text(
+            isVacationMode
+                ? AppLocalizations.of(context)!.homeVacationBudgetBreakdown
+                : AppLocalizations.of(context)!.homeBalanceBreakdown,
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: _buildCurrencyBreakdownContent(
@@ -1597,7 +1677,7 @@ Widget _buildCurrencyBreakdownContent(
       final selectedCurrency = currencyProvider.selectedCurrencyCode;
       final aIsSelected = a == selectedCurrency;
       final bIsSelected = b == selectedCurrency;
-      
+
       if (aIsSelected && !bIsSelected) return -1;
       if (!aIsSelected && bIsSelected) return 1;
       return a.compareTo(b);
@@ -1617,7 +1697,11 @@ Widget _buildCurrencyBreakdownContent(
             ),
             child: Row(
               children: [
-                Icon(Icons.account_balance_wallet, color: Colors.blue.shade600, size: 20),
+                Icon(
+                  Icons.account_balance_wallet,
+                  color: Colors.blue.shade600,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   '${AppLocalizations.of(context)!.homeTotalBudget}: ${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
@@ -1635,8 +1719,9 @@ Widget _buildCurrencyBreakdownContent(
           final income = incomeByCurrency[currency] ?? 0.0;
           final expenses = expensesByCurrency[currency] ?? 0.0;
           final balance = income - expenses;
-          final isSelectedCurrency = currency == currencyProvider.selectedCurrencyCode;
-          
+          final isSelectedCurrency =
+              currency == currencyProvider.selectedCurrencyCode;
+
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
@@ -1644,7 +1729,9 @@ Widget _buildCurrencyBreakdownContent(
               color: isSelectedCurrency ? Colors.grey.shade50 : Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelectedCurrency ? Colors.grey.shade400 : Colors.grey.shade200,
+                color: isSelectedCurrency
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade200,
                 width: isSelectedCurrency ? 2 : 1,
               ),
             ),
@@ -1659,12 +1746,17 @@ Widget _buildCurrencyBreakdownContent(
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: isSelectedCurrency ? Colors.black87 : Colors.black54,
+                        color: isSelectedCurrency
+                            ? Colors.black87
+                            : Colors.black54,
                       ),
                     ),
                     if (isSelectedCurrency)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade100,
                           borderRadius: BorderRadius.circular(4),
@@ -1712,18 +1804,26 @@ Widget _buildCurrencyBreakdownContent(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: balance >= 0 ? Colors.green.shade50 : Colors.red.shade50,
+                    color: balance >= 0
+                        ? Colors.green.shade50
+                        : Colors.red.shade50,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: balance >= 0 ? Colors.green.shade200 : Colors.red.shade200,
+                      color: balance >= 0
+                          ? Colors.green.shade200
+                          : Colors.red.shade200,
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        balance >= 0 ? Icons.account_balance_wallet : Icons.warning,
-                        color: balance >= 0 ? Colors.green.shade600 : Colors.red.shade600,
+                        balance >= 0
+                            ? Icons.account_balance_wallet
+                            : Icons.warning,
+                        color: balance >= 0
+                            ? Colors.green.shade600
+                            : Colors.red.shade600,
                         size: 16,
                       ),
                       const SizedBox(width: 4),
@@ -1731,7 +1831,9 @@ Widget _buildCurrencyBreakdownContent(
                         'Balance: $currency ${balance.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: balance >= 0 ? Colors.green.shade700 : Colors.red.shade700,
+                          color: balance >= 0
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
                         ),
                       ),
                     ],
@@ -1764,10 +1866,7 @@ Widget _buildCurrencyRow(
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             Text(
               '$currencyCode ${amount.toStringAsFixed(2)}',
@@ -1789,8 +1888,10 @@ Future<void> _showVacationCurrencyDialog(
   BuildContext context,
   CurrencyProvider currencyProvider,
 ) async {
-  final navbarProvider =
-      Provider.of<NavbarVisibilityProvider>(context, listen: false);
+  final navbarProvider = Provider.of<NavbarVisibilityProvider>(
+    context,
+    listen: false,
+  );
 
   // Enable dialog mode to allow navbar hiding on home screen
   navbarProvider.setDialogMode(true);
@@ -1813,14 +1914,22 @@ Future<void> _showVacationCurrencyDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(AppLocalizations.of(context)!.vacationCurrencyDialogTitle),
+          title: Text(
+            AppLocalizations.of(context)!.vacationCurrencyDialogTitle,
+          ),
           content: Text(
-            AppLocalizations.of(context)!.vacationCurrencyDialogMessage(previousCurrency),
+            AppLocalizations.of(
+              context,
+            )!.vacationCurrencyDialogMessage(previousCurrency),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(AppLocalizations.of(context)!.vacationCurrencyDialogKeepCurrent(previousCurrency)),
+              child: Text(
+                AppLocalizations.of(
+                  context,
+                )!.vacationCurrencyDialogKeepCurrent(previousCurrency),
+              ),
             ),
             TextButton(
               onPressed: () async {
@@ -1831,8 +1940,10 @@ Future<void> _showVacationCurrencyDialog(
                   showFlag: true,
                   showSearchField: true,
                   onSelect: (Currency currency) async {
-                    final currencyProvider =
-                        Provider.of<CurrencyProvider>(context, listen: false);
+                    final currencyProvider = Provider.of<CurrencyProvider>(
+                      context,
+                      listen: false,
+                    );
                     await currencyProvider.setCurrency(currency, 1.0);
                   },
                 );
@@ -1868,8 +1979,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedMonthIndex = 0;
 
   // Future month handling configuration
-  static const int _baselineHorizonMonths = 6; // initial future months beyond current
-  static const int _extensionStepMonths = 6; // extend in this many months when near end
+  static const int _baselineHorizonMonths =
+      6; // initial future months beyond current
+  static const int _extensionStepMonths =
+      6; // extend in this many months when near end
   static const int _maxFutureMonths = 36; // cap to avoid infinite future
 
   // Removed unused field: _isTogglingVacationMode
@@ -2010,8 +2123,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     // Provisional end: current + baseline horizon, capped
-    DateTime provisionalEnd = DateTime(nowMonth.year, nowMonth.month + _baselineHorizonMonths, 1);
-    final capEnd = DateTime(nowMonth.year, nowMonth.month + _maxFutureMonths, 1);
+    DateTime provisionalEnd = DateTime(
+      nowMonth.year,
+      nowMonth.month + _baselineHorizonMonths,
+      1,
+    );
+    final capEnd = DateTime(
+      nowMonth.year,
+      nowMonth.month + _maxFutureMonths,
+      1,
+    );
     if (provisionalEnd.isAfter(capEnd)) {
       provisionalEnd = capEnd;
     }
@@ -2030,7 +2151,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _selectedMonthIndex = _months.length - 1;
         }
 
-        final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+        final homeScreenProvider = Provider.of<HomeScreenProvider>(
+          context,
+          listen: false,
+        );
         homeScreenProvider.setSelectedDate(_months[_selectedMonthIndex]);
       });
     }
@@ -2046,8 +2170,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _pageController.jumpToPage(_selectedMonthIndex);
 
           // Initialize provider for the initial month
-          final isVacation = Provider.of<VacationProvider>(context, listen: false).isVacationMode;
-          final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+          final isVacation = Provider.of<VacationProvider>(
+            context,
+            listen: false,
+          ).isVacationMode;
+          final homeScreenProvider = Provider.of<HomeScreenProvider>(
+            context,
+            listen: false,
+          );
           final provider = _getOrCreateProvider(_selectedMonthIndex);
 
           if (provider.allTransactions.isEmpty) {
@@ -2073,19 +2203,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         DateTime refinedStart = provisionalStart;
         if (earliest != null) {
           refinedStart = DateTime(earliest.year, earliest.month, 1);
-          await prefs.setString('dataStartDate', refinedStart.toIso8601String());
+          await prefs.setString(
+            'dataStartDate',
+            refinedStart.toIso8601String(),
+          );
         }
 
         // Determine refined end based on tasks and cap
-        DateTime refinedEnd = DateTime(nowMonth.year, nowMonth.month + _baselineHorizonMonths, 1);
+        DateTime refinedEnd = DateTime(
+          nowMonth.year,
+          nowMonth.month + _baselineHorizonMonths,
+          1,
+        );
         try {
           final allTasks = await _firestoreService.getAllTasks();
           final latestDue = allTasks
               .where((t) => (t.isCompleted != true))
               .map((t) => t.dueDate)
-              .fold<DateTime?>(null, (acc, d) => acc == null || d.isAfter(acc) ? d : acc);
+              .fold<DateTime?>(
+                null,
+                (acc, d) => acc == null || d.isAfter(acc) ? d : acc,
+              );
           if (latestDue != null) {
-            final latestTaskMonth = DateTime(latestDue.year, latestDue.month, 1);
+            final latestTaskMonth = DateTime(
+              latestDue.year,
+              latestDue.month,
+              1,
+            );
             if (latestTaskMonth.isAfter(refinedEnd)) {
               refinedEnd = latestTaskMonth;
             }
@@ -2094,14 +2238,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // Non-fatal: keep baseline horizon if tasks fetch fails
         }
 
-        final capEnd2 = DateTime(nowMonth.year, nowMonth.month + _maxFutureMonths, 1);
+        final capEnd2 = DateTime(
+          nowMonth.year,
+          nowMonth.month + _maxFutureMonths,
+          1,
+        );
         if (refinedEnd.isAfter(capEnd2)) {
           refinedEnd = capEnd2;
         }
 
         // If range changed, update months
         final newMonths = _buildMonthRange(refinedStart, refinedEnd);
-        final needUpdate = _months.isEmpty ||
+        final needUpdate =
+            _months.isEmpty ||
             _months.first.year != newMonths.first.year ||
             _months.first.month != newMonths.first.month ||
             _months.last.year != newMonths.last.year ||
@@ -2110,7 +2259,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           setState(() {
             _months = newMonths;
             // Re-select current month (or closest)
-            final idx = _months.indexWhere((m) => m.year == nowMonth.year && m.month == nowMonth.month);
+            final idx = _months.indexWhere(
+              (m) => m.year == nowMonth.year && m.month == nowMonth.month,
+            );
             _selectedMonthIndex = idx >= 0 ? idx : (_months.length - 1);
           });
           if (_pageController.hasClients) {
@@ -2129,7 +2280,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   // Build list of months inclusive of start and end (month precision)
-  List<DateTime> _buildMonthRange(DateTime startInclusive, DateTime endInclusive) {
+  List<DateTime> _buildMonthRange(
+    DateTime startInclusive,
+    DateTime endInclusive,
+  ) {
     final start = DateTime(startInclusive.year, startInclusive.month, 1);
     final end = DateTime(endInclusive.year, endInclusive.month, 1);
     final result = <DateTime>[];
@@ -2148,7 +2302,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final last = _months.last;
       final now = DateTime.now();
       final nowMonth = DateTime(now.year, now.month, 1);
-      final capEnd = DateTime(nowMonth.year, nowMonth.month + _maxFutureMonths, 1);
+      final capEnd = DateTime(
+        nowMonth.year,
+        nowMonth.month + _maxFutureMonths,
+        1,
+      );
       if (last.isBefore(capEnd)) {
         final newEnd = _minMonth(
           DateTime(last.year, last.month + _extensionStepMonths, 1),
@@ -2177,7 +2335,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_selectedMonthIndex != -1) {
       final screenWidth = MediaQuery.of(context).size.width;
       const itemWidth = 85.0; // Adjusted width
-      final offset = (_selectedMonthIndex * itemWidth) -
+      final offset =
+          (_selectedMonthIndex * itemWidth) -
           (screenWidth / 2) +
           (itemWidth / 2);
       _monthScrollController.animateTo(
@@ -2327,10 +2486,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 // Update the selected date in HomeScreenProvider
                                 final homeScreenProvider =
                                     Provider.of<HomeScreenProvider>(
-                                  context,
-                                  listen: false,
+                                      context,
+                                      listen: false,
+                                    );
+                                homeScreenProvider.setSelectedDate(
+                                  _months[index],
                                 );
-                                homeScreenProvider.setSelectedDate(_months[index]);
 
                                 _scrollToSelectedMonth();
 
@@ -2338,14 +2499,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 _maybeExtendFutureMonths(index);
 
                                 // Pre-load adjacent months after the page change is complete
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
                                   _preloadAdjacentMonths(index);
                                 });
                               },
                               itemBuilder: (context, index) {
                                 // Watch VacationProvider so that changes to activeVacationAccountId also rebuild
-                                final vacationProvider =
-                                    context.watch<VacationProvider>();
+                                final vacationProvider = context
+                                    .watch<VacationProvider>();
                                 final isVacation =
                                     vacationProvider.isVacationMode;
                                 final activeVacationAccountId =
@@ -2359,7 +2522,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 return MonthPageView(
                                   // Include activeVacationAccountId in the key to avoid stale cached children when account changes
                                   key: ValueKey<String>(
-                                      '$index-$isVacation-${activeVacationAccountId ?? 'all'}-includeVac$includeVacation'),
+                                    '$index-$isVacation-${activeVacationAccountId ?? 'all'}-includeVac$includeVacation',
+                                  ),
                                   monthIndex: index,
                                   month: _months[index],
                                   isVacation: isVacation,
@@ -2384,7 +2548,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final vacationProvider = context.watch<VacationProvider>();
 
     print(
-        'DEBUG: _buildVacationCurrencyList - isVacationMode=${vacationProvider.isVacationMode}, activeVacationAccountId=${vacationProvider.activeVacationAccountId}');
+      'DEBUG: _buildVacationCurrencyList - isVacationMode=${vacationProvider.isVacationMode}, activeVacationAccountId=${vacationProvider.activeVacationAccountId}',
+    );
 
     // Reuse a single MonthPageProvider under key -1 for vacation currency list
     final provider = _monthProviders.putIfAbsent(-1, () => MonthPageProvider());
@@ -2402,7 +2567,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         return MonthPageView(
           key: ValueKey<String>(
-              'vacation-all-${vacationProvider.activeVacationAccountId ?? 'all'}'),
+            'vacation-all-${vacationProvider.activeVacationAccountId ?? 'all'}',
+          ),
           monthIndex: -1,
           month: DateTime.now(), // Unused in vacation view
           isVacation: true,
@@ -2448,13 +2614,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final Stream<MonthPageData> topStream = isVacation
             ? _pageDataManager.getVacationAllCurrenciesStream()
             : (_selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length
-                ? _pageDataManager.getStreamForMonth(
-                    _selectedMonthIndex,
-                    _months[_selectedMonthIndex],
-                    isVacation,
-                    homeScreenProvider.includeVacationTransactions,
-                  )
-                : Stream.value(MonthPageData.loading()));
+                  ? _pageDataManager.getStreamForMonth(
+                      _selectedMonthIndex,
+                      _months[_selectedMonthIndex],
+                      isVacation,
+                      homeScreenProvider.includeVacationTransactions,
+                    )
+                  : Stream.value(MonthPageData.loading()));
 
         return StreamBuilder<MonthPageData>(
           stream: topStream,
@@ -2465,8 +2631,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
             if (vacationProvider.isVacationMode) {
               // In vacation mode: show total budget minus all expenses across all currencies
-              final totalExpenses = snapshot.data?.expensesByCurrency.values
-                      .fold<double>(0.0, (sum, amount) => sum + amount) ??
+              final totalExpenses =
+                  snapshot.data?.expensesByCurrency.values.fold<double>(
+                    0.0,
+                    (sum, amount) => sum + amount,
+                  ) ??
                   0.0;
               topBalance = totalBudget - totalExpenses;
             } else {
@@ -2479,7 +2648,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             }
 
             return Container(
-              height: statusBarHeight +
+              height:
+                  statusBarHeight +
                   80, // Match the toolbarHeight from SliverAppBar plus status bar height
               padding: const EdgeInsets.only(
                 top: 20,
@@ -2519,9 +2689,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       'MMMM',
                                     ).format(_months[_selectedMonthIndex])
                                   : 'Balance',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: Colors.black54,
                                     fontWeight: FontWeight.w500,
@@ -2570,9 +2738,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           onPressed: () async {
                             final vacationProvider =
                                 Provider.of<VacationProvider>(
-                              context,
-                              listen: false,
-                            );
+                                  context,
+                                  listen: false,
+                                );
                             final currentVacationMode =
                                 vacationProvider.isVacationMode;
 
@@ -2583,16 +2751,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               // Show currency change dialog
                               if (context.mounted) {
                                 final currencyProvider =
-                                    Provider.of<CurrencyProvider>(context,
-                                        listen: false);
+                                    Provider.of<CurrencyProvider>(
+                                      context,
+                                      listen: false,
+                                    );
                                 final currentCode =
                                     currencyProvider.selectedCurrencyCode;
 
                                 // Get the pre-vacation currency
                                 final prefs =
                                     await SharedPreferences.getInstance();
-                                final preVacationCode =
-                                    prefs.getString('preVacationCurrencyCode');
+                                final preVacationCode = prefs.getString(
+                                  'preVacationCurrencyCode',
+                                );
 
                                 if (preVacationCode != null &&
                                     preVacationCode != currentCode) {
@@ -2606,23 +2777,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   // Show simple informational dialog if no currency change
                                   final navbarProvider =
                                       Provider.of<NavbarVisibilityProvider>(
-                                          context,
-                                          listen: false);
+                                        context,
+                                        listen: false,
+                                      );
                                   navbarProvider.setDialogMode(true);
                                   navbarProvider.setNavBarVisibility(false);
 
                                   // Add a small delay to ensure navbar is hidden before showing dialog
                                   await Future.delayed(
-                                      const Duration(milliseconds: 100));
+                                    const Duration(milliseconds: 100),
+                                  );
 
                                   try {
                                     await showDialog<void>(
                                       context: context,
                                       builder: (ctx) {
                                         return AlertDialog(
-                                          title: Text(AppLocalizations.of(context)!.normalMode),
+                                          title: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.normalMode,
+                                          ),
                                           content: Text(
-                                              AppLocalizations.of(context)!.normalModeWithCurrency(currentCode)),
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.normalModeWithCurrency(
+                                              currentCode,
+                                            ),
+                                          ),
                                           actions: [
                                             TextButton(
                                               onPressed: () =>
@@ -2635,8 +2817,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     );
                                   } finally {
                                     if (context.mounted) {
-                                      navbarProvider
-                                          .setNavBarVisibility(true);
+                                      navbarProvider.setNavBarVisibility(true);
                                       navbarProvider.setDialogMode(false);
                                     }
                                   }
@@ -2646,35 +2827,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               // Turning ON vacation mode: check subscription and existing accounts
                               final subscriptionProvider =
                                   Provider.of<SubscriptionProvider>(
-                                context,
-                                listen: false,
-                              );
-                              
+                                    context,
+                                    listen: false,
+                                  );
+
                               // Only prevent vacation mode switching if unsubscribed AND no existing vacation accounts
                               // This allows users who created vacation accounts while subscribed
                               // to continue using them even after subscription expires
                               if (!subscriptionProvider.isSubscribed) {
-                                final firestoreService = FirestoreService.instance;
-                                final allAccounts = await firestoreService.getAllAccounts();
+                                final firestoreService =
+                                    FirestoreService.instance;
+                                final allAccounts = await firestoreService
+                                    .getAllAccounts();
                                 final vacationAccounts = allAccounts
                                     .where((a) => a.isVacationAccount == true)
                                     .toList();
-                                
+
                                 // If no existing vacation accounts, show paywall to prevent creation
                                 if (vacationAccounts.isEmpty) {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const PaywallScreen(),
-                                    ),
+                                  PersistentNavBarNavigator.pushNewScreen(
+                                    context,
+                                    screen: const PaywallScreen(),
+                                    withNavBar: false,
+                                    pageTransitionAnimation:
+                                        PageTransitionAnimation.cupertino,
                                   );
+                                  // Navigator.of(context).push(
+                                  //   MaterialPageRoute(
+                                  //     builder: (context) => const PaywallScreen(),
+                                  //   ),
+                                  // );
                                   return;
                                 }
                                 // If they have existing vacation accounts, allow switching to use them
                               }
-                              
+
                               // Turning ON vacation mode: go through selection flow
-                              await vacationProvider
-                                  .checkAndShowVacationDialog(
+                              await vacationProvider.checkAndShowVacationDialog(
                                 context,
                               );
 
@@ -2682,8 +2871,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               if (context.mounted &&
                                   vacationProvider.isVacationMode) {
                                 final currencyProvider =
-                                    Provider.of<CurrencyProvider>(context,
-                                        listen: false);
+                                    Provider.of<CurrencyProvider>(
+                                      context,
+                                      listen: false,
+                                    );
                                 await _showVacationCurrencyDialog(
                                   context,
                                   currencyProvider,
@@ -2700,31 +2891,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               // Trigger rebuild and data refresh.
                               setState(() {
                                 // Reset all providers and clear the data manager cache to force fresh streams.
-                                for (final provider
-                                    in _monthProviders.values) {
+                                for (final provider in _monthProviders.values) {
                                   provider.forceReset();
                                 }
                                 // Prefer clearing cached page streams instead of recreating the manager
                                 _pageDataManager.clearCache();
                                 print(
-                                    'DEBUG: Vacation mode changed -> cleared MonthPageDataManager cache and reset all MonthPageProviders');
+                                  'DEBUG: Vacation mode changed -> cleared MonthPageDataManager cache and reset all MonthPageProviders',
+                                );
                               });
                             }
                           },
                           isActive: vacationProvider.isVacationMode,
                         ),
-                        _buildAppBarButton(
-                          HugeIcons.strokeRoundedAnalytics02,
-                          onPressed: () {
-                            PersistentNavBarNavigator.pushNewScreen(
-                              context,
-                              screen: const AnalyticsScreen(),
-                              withNavBar: false,
-                              pageTransitionAnimation:
-                                  PageTransitionAnimation.cupertino,
-                            );
-                          },
-                        ),
+                        // _buildAppBarButton(
+                        //   HugeIcons.strokeRoundedAnalytics02,
+                        //   onPressed: () {
+                        //     PersistentNavBarNavigator.pushNewScreen(
+                        //       context,
+                        //       screen: const AnalyticsScreen(),
+                        //       withNavBar: false,
+                        //       pageTransitionAnimation:
+                        //           PageTransitionAnimation.cupertino,
+                        //     );
+                        //   },
+                        // ),
                         // Only show 3-dot menu in normal mode
                         if (!vacationProvider.isVacationMode)
                           _build3DotMenuButton(context, homeScreenProvider),
@@ -2766,9 +2957,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _build3DotMenuButton(BuildContext context, HomeScreenProvider homeScreenProvider) {
+  Widget _build3DotMenuButton(
+    BuildContext context,
+    HomeScreenProvider homeScreenProvider,
+  ) {
     final isFilterActive = !homeScreenProvider.includeVacationTransactions;
-    
+
     return Stack(
       children: [
         Container(
@@ -2810,27 +3004,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _show3DotMenu(BuildContext context, HomeScreenProvider homeScreenProvider) async {
+  void _show3DotMenu(
+    BuildContext context,
+    HomeScreenProvider homeScreenProvider,
+  ) async {
     final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
     final Size overlaySize = overlay.size;
-    final Offset buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
-    
+    final Offset buttonPosition = button.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
+
     // Position menu to align from the right side of the screen
     // Menu width is approximately 280px, so we position it 16px from the right edge
     const double menuWidth = 280.0;
     const double rightPadding = 16.0;
-    final double topPosition = buttonPosition.dy + button.size.height - 16; // -16px gap below button
-    
+    final double topPosition =
+        buttonPosition.dy + button.size.height - 16; // -16px gap below button
+
     final RelativeRect position = RelativeRect.fromLTRB(
-      overlaySize.width - menuWidth - rightPadding, // Left position to align right edge
+      overlaySize.width -
+          menuWidth -
+          rightPadding, // Left position to align right edge
       topPosition,
       rightPadding,
       overlaySize.height - topPosition - 100, // Bottom space (approximate)
     );
 
-    final navbarProvider = Provider.of<NavbarVisibilityProvider>(context, listen: false);
-    
+    final navbarProvider = Provider.of<NavbarVisibilityProvider>(
+      context,
+      listen: false,
+    );
+
     // Hide navbar while showing menu
     navbarProvider.setDialogMode(true);
     navbarProvider.setNavBarVisibility(false);
@@ -2839,27 +3046,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await showMenu(
         context: context,
         position: position,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         items: [
           PopupMenuItem(
             enabled: false,
             padding: EdgeInsets.zero,
             child: StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
-                final isEnabled = homeScreenProvider.includeVacationTransactions;
+                final isEnabled =
+                    homeScreenProvider.includeVacationTransactions;
                 return InkWell(
                   onTap: () async {
                     final newValue = !isEnabled;
                     // Update the filter state
-                    await homeScreenProvider.setIncludeVacationTransactions(newValue);
-                    
+                    await homeScreenProvider.setIncludeVacationTransactions(
+                      newValue,
+                    );
+
                     // Close the menu
                     if (context.mounted) {
                       Navigator.of(context).pop();
                     }
-                    
+
                     // Force complete reset of all providers and cache
                     if (mounted) {
                       // Clear all cached streams first
@@ -2875,7 +3083,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
@@ -2884,7 +3095,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                AppLocalizations.of(context)!.includeVacationTransaction,
+                                AppLocalizations.of(
+                                  context,
+                                )!.includeVacationTransaction,
                                 style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
@@ -2893,7 +3106,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                AppLocalizations.of(context)!.showVacationTransactions,
+                                AppLocalizations.of(
+                                  context,
+                                )!.showVacationTransactions,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors.secondaryTextColorLight,
@@ -2908,13 +3123,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           value: isEnabled,
                           onChanged: (bool value) async {
                             // Update the filter state
-                            await homeScreenProvider.setIncludeVacationTransactions(value);
-                            
+                            await homeScreenProvider
+                                .setIncludeVacationTransactions(value);
+
                             // Close the menu
                             if (context.mounted) {
                               Navigator.of(context).pop();
                             }
-                            
+
                             // Force complete reset of all providers and cache
                             if (mounted) {
                               // Clear all cached streams first
@@ -3006,13 +3222,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       stream: vacationProvider.isVacationMode
           ? _pageDataManager.getVacationAllCurrenciesStream()
           : (_selectedMonthIndex >= 0 && _selectedMonthIndex < _months.length
-              ? _pageDataManager.getStreamForMonth(
-                  _selectedMonthIndex,
-                  _months[_selectedMonthIndex],
-                  false, // Normal mode - will fetch normal or both based on filter
-                  homeScreenProvider.includeVacationTransactions,
-                )
-              : Stream.value(MonthPageData.loading())),
+                ? _pageDataManager.getStreamForMonth(
+                    _selectedMonthIndex,
+                    _months[_selectedMonthIndex],
+                    false, // Normal mode - will fetch normal or both based on filter
+                    homeScreenProvider.includeVacationTransactions,
+                  )
+                : Stream.value(MonthPageData.loading())),
       builder: (context, monthSnapshot) {
         // Get vacation accounts to find the active one
         return StreamBuilder<List<FirestoreAccount>>(
@@ -3189,7 +3405,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 if (amountsByCurrency.isEmpty)
                   Text(
-                    title == AppLocalizations.of(context)!.analyticsIncome ? '+ 0.00' : '- 0.00',
+                    title == AppLocalizations.of(context)!.analyticsIncome
+                        ? '+ 0.00'
+                        : '- 0.00',
                     style: TextStyle(
                       color: color,
                       fontSize: 16,
@@ -3201,18 +3419,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     // Sort currencies: active currency first, then alphabetically
                     final sortedEntries = amountsByCurrency.entries.toList()
                       ..sort((a, b) {
-                        final activeCurrency = currencyProvider.selectedCurrencyCode;
+                        final activeCurrency =
+                            currencyProvider.selectedCurrencyCode;
                         final aIsActive = a.key == activeCurrency;
                         final bIsActive = b.key == activeCurrency;
-                        
+
                         // If one is active and the other isn't, active comes first
                         if (aIsActive && !bIsActive) return -1;
                         if (!aIsActive && bIsActive) return 1;
-                        
+
                         // If both are active or both are not active, sort alphabetically
                         return a.key.compareTo(b.key);
                       });
-                    
+
                     return sortedEntries.map((entry) {
                       final currency = entry.key;
                       final amount = entry.value;
@@ -3240,7 +3459,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
- 
+
   Widget _buildVacationExpenseCards(
     Map<String, double> expensesByCurrency,
     CurrencyProvider currencyProvider,
@@ -3258,11 +3477,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (!aIsSelected && bIsSelected) return 1;
         return a.key.compareTo(b.key);
       });
- 
+
     if (entries.isEmpty) {
       return const SizedBox.shrink();
     }
- 
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
@@ -3271,17 +3490,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           final currency = entry.key;
           final expenses = entry.value;
           final isSelected = currency == currencyProvider.selectedCurrencyCode;
- 
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: InkWell(
               onTap: () {
                 // Build single-currency maps for dialog
                 final incomeMap = <String, double>{
-                  currency: monthData?.incomeByCurrency[currency] ?? 0.0
+                  currency: monthData?.incomeByCurrency[currency] ?? 0.0,
                 };
                 final expensesMap = <String, double>{
-                  currency: monthData?.expensesByCurrency[currency] ?? 0.0
+                  currency: monthData?.expensesByCurrency[currency] ?? 0.0,
                 };
                 _showCurrencyBreakdownDialog(
                   context,
@@ -3297,13 +3516,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Container(
                 width: 160,
                 height: 120,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       AppColors.vacationColor,
-                      AppColors.vacationColor.withOpacity(0.85)
+                      AppColors.vacationColor.withOpacity(0.85),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -3369,20 +3590,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
- 
+
   // Helper method to get the appropriate profile image
   ImageProvider _getProfileImage() {
     final user = FirebaseAuth.instance.currentUser;
-    
+
     // Check if user is logged in via Google and has a photo URL
     if (user != null &&
         user.providerData.any((p) => p.providerId == 'google.com') &&
         user.photoURL != null) {
       return NetworkImage(user.photoURL!);
     }
-    
+
     // Fall back to the default asset image
     return const AssetImage('images/backgrounds/onboarding1.png');
   }
 }
-

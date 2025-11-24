@@ -26,6 +26,8 @@ import 'package:budgetm/models/goal.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:budgetm/screens/paywall/paywall_screen.dart';
+import 'package:budgetm/screens/dashboard/profile/categories/add_category/add_category_screen.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType transactionType;
@@ -167,21 +169,75 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (!_hasAutoOpenedCategorySheet && _categories.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted) return;
-          final selectedCategory = _categories.firstWhere(
-            (cat) => cat.id == _selectedCategoryId,
-            orElse: () => _categories.first,
-          );
+          
+          // Helper function to show the category selection sheet
+          Future<Category?> showCategorySheet() async {
+            final selectedCategory = _categories.firstWhere(
+              (cat) => cat.id == _selectedCategoryId,
+              orElse: () => _categories.first,
+            );
 
-          final result = await _showPrettySelectionBottomSheet<Category>(
-            title: AppLocalizations.of(context)!.titleSelectCategory,
-            items: _categories,
-            selectedItem: selectedCategory,
-            getDisplayName: (category) => category.name ?? AppLocalizations.of(context)!.unnamedCategory,
-            getLeading: (category) => HugeIcon(
-              icon: getIcon(category.icon),
-              color: AppColors.primaryTextColorLight,
-            ),
-          );
+            return await _showPrettySelectionBottomSheet<Category>(
+              title: AppLocalizations.of(context)!.titleSelectCategory,
+              items: _categories,
+              selectedItem: selectedCategory,
+              getDisplayName: (category) => category.name ?? AppLocalizations.of(context)!.unnamedCategory,
+              getLeading: (category) => HugeIcon(
+                icon: getIcon(category.icon),
+                color: AppColors.primaryTextColorLight,
+              ),
+              actionButton: IconButton(
+                icon: const Icon(Icons.add, color: AppColors.primaryTextColorLight),
+                onPressed: () async {
+                  // Check subscription status before allowing category creation
+                  final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                  if (!subscriptionProvider.isSubscribed) {
+                    // Show paywall if user is not subscribed
+                    Navigator.of(context).pop(); // Close the current bottom sheet first
+                    PersistentNavBarNavigator.pushNewScreen(
+                      context,
+                      screen: const PaywallScreen(),
+                      withNavBar: false,
+                      pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                    );
+                    return;
+                  }
+                  
+                  // Close the current bottom sheet
+                  Navigator.of(context).pop();
+                  
+                                              // Create new category
+                                              final newCategory = await _createAndSelectCategory();
+                                              
+                                              if (newCategory != null && mounted) {
+                                                // Set the newly created category as selected
+                                                setState(() {
+                                                  _selectedCategoryId = newCategory.id;
+                                                });
+                                                // Reopen the bottom sheet with the new category selected
+                                                final result = await showCategorySheet();
+                                                if (result != null) {
+                                                  setState(() {
+                                                    _selectedCategoryId = result.id;
+                                                  });
+                                                  _formKey.currentState?.patchValue({'category': result.id});
+                                                }
+                                              } else if (mounted) {
+                                                // If no category was created, reopen the sheet with current selection
+                                                final result = await showCategorySheet();
+                                                if (result != null) {
+                                                  setState(() {
+                                                    _selectedCategoryId = result.id;
+                                                  });
+                                                  _formKey.currentState?.patchValue({'category': result.id});
+                                                }
+                                              }
+                },
+              ),
+            );
+          }
+
+          final result = await showCategorySheet();
 
           if (result != null) {
             setState(() {
@@ -248,12 +304,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   /// - [getLeading]: Optional builder to provide a leading widget for each item
   ///   in the list (e.g., an icon). If provided, it is passed through to
   ///   PrettyBottomSheet so each list tile can render a leading widget.
+  /// - [actionButton]: Optional action button widget to display in the header.
   Future<T?> _showPrettySelectionBottomSheet<T>({
     required String title,
     required List<T> items,
     required T selectedItem,
     required String Function(T) getDisplayName,
     Widget Function(T)? getLeading,
+    Widget? actionButton,
   }) async {
     return await showModalBottomSheet<T>(
       context: context,
@@ -265,9 +323,61 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           selectedItem: selectedItem,
           getDisplayName: getDisplayName,
           getLeading: getLeading,
+          actionButton: actionButton,
         );
       },
     );
+  }
+
+  /// Creates a new category and returns it, or null if creation was cancelled.
+  /// The category type is determined by the current transaction type.
+  Future<Category?> _createAndSelectCategory() async {
+    // Check subscription status before allowing category creation
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+    if (!subscriptionProvider.isSubscribed) {
+      // Show paywall if user is not subscribed
+      PersistentNavBarNavigator.pushNewScreen(
+        context,
+        screen: const PaywallScreen(),
+        withNavBar: false,
+        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+      );
+      return null;
+    }
+
+    // Determine the category type based on transaction type
+    final categoryType = widget.transactionType == TransactionType.income
+        ? 'income'
+        : 'expense';
+
+    // Open AddCategoryScreen with the correct type
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => AddCategoryScreen(
+          initialCategoryType: categoryType,
+        ),
+      ),
+    );
+
+    // If category was created successfully
+    if (result == true && mounted) {
+      // Reload categories to get the newly created one
+      await _loadCategories();
+
+      // Find the newly created category (highest displayOrder for this type)
+      if (_categories.isNotEmpty) {
+        final categoriesOfType = _categories
+            .where((cat) => cat.type == categoryType)
+            .toList();
+        if (categoriesOfType.isNotEmpty) {
+          // Sort by displayOrder descending to get the newest (highest order)
+          categoriesOfType.sort((a, b) => b.displayOrder.compareTo(a.displayOrder));
+          return categoriesOfType.first;
+        }
+      }
+    }
+
+    return null;
   }
 
   Future<void> _showPrettyCalendarPicker(BuildContext context) async {
@@ -509,24 +619,81 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                       if (_categories.isEmpty) {
                                         return;
                                       }
-                                      final result =
-                                          await _showPrettySelectionBottomSheet<
-                                            Category
-                                          >(
-                                            title: AppLocalizations.of(context)!.titleSelectCategory,
-                                            items: _categories,
-                                            selectedItem:
-                                                selectedCategory ??
-                                                _categories.first,
-                                            getDisplayName: (category) =>
-                                                category.name ??
-                                                AppLocalizations.of(context)!.unnamedCategory,
-                                            getLeading: (category) => HugeIcon(
-                                              icon: getIcon(category.icon),
-                                              color: AppColors
-                                                  .primaryTextColorLight,
-                                            ),
-                                          );
+                                      
+                                      // Helper function to show the category selection sheet
+                                      Future<Category?> showCategorySheet() async {
+                                        final currentSelectedCategory = _categories.firstWhere(
+                                          (cat) => cat.id == _selectedCategoryId,
+                                          orElse: () => _categories.first,
+                                        );
+                                        
+                                        return await _showPrettySelectionBottomSheet<
+                                          Category
+                                        >(
+                                          title: AppLocalizations.of(context)!.titleSelectCategory,
+                                          items: _categories,
+                                          selectedItem:
+                                              currentSelectedCategory,
+                                          getDisplayName: (category) =>
+                                              category.name ??
+                                              AppLocalizations.of(context)!.unnamedCategory,
+                                          getLeading: (category) => HugeIcon(
+                                            icon: getIcon(category.icon),
+                                            color: AppColors
+                                                .primaryTextColorLight,
+                                          ),
+                                          actionButton: IconButton(
+                                            icon: const Icon(Icons.add, color: AppColors.primaryTextColorLight),
+                                            onPressed: () async {
+                                              // Check subscription status before allowing category creation
+                                              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                                              if (!subscriptionProvider.isSubscribed) {
+                                                // Show paywall if user is not subscribed
+                                                Navigator.of(context).pop(); // Close the current bottom sheet first
+                                                PersistentNavBarNavigator.pushNewScreen(
+                                                  context,
+                                                  screen: const PaywallScreen(),
+                                                  withNavBar: false,
+                                                  pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                                                );
+                                                return;
+                                              }
+                                              
+                                              // Close the current bottom sheet
+                                              Navigator.of(context).pop();
+                                              
+                                              // Create new category
+                                              final newCategory = await _createAndSelectCategory();
+                                              
+                                              if (newCategory != null && mounted) {
+                                                // Set the newly created category as selected
+                                                setState(() {
+                                                  _selectedCategoryId = newCategory.id;
+                                                });
+                                                // Reopen the bottom sheet with the new category selected
+                                                final result = await showCategorySheet();
+                                                if (result != null) {
+                                                  setState(() {
+                                                    _selectedCategoryId = result.id;
+                                                  });
+                                                  field.didChange(result.id);
+                                                }
+                                              } else if (mounted) {
+                                                // If no category was created, reopen the sheet with current selection
+                                                final result = await showCategorySheet();
+                                                if (result != null) {
+                                                  setState(() {
+                                                    _selectedCategoryId = result.id;
+                                                  });
+                                                  field.didChange(result.id);
+                                                }
+                                              }
+                                            },
+                                          ),
+                                        );
+                                      }
+
+                                      final result = await showCategorySheet();
 
                                       if (result != null) {
                                         setState(() {

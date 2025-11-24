@@ -363,7 +363,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallPersonalizedBudgetInsights.
   ///
   /// In en, this message translates to:
-  /// **'Create Recurring Budgets'**
+  /// **'Vacation Mode'**
   String get paywallPersonalizedBudgetInsights;
 
   /// No description provided for @paywallDailyProgressTracking.
@@ -375,13 +375,13 @@ abstract class AppLocalizations {
   /// No description provided for @paywallExpenseManagementTools.
   ///
   /// In en, this message translates to:
-  /// **'Personalized Vacation Mode'**
+  /// **'Recurring Budgets'**
   String get paywallExpenseManagementTools;
 
   /// No description provided for @paywallFinancialHealthTimeline.
   ///
   /// In en, this message translates to:
-  /// **'Colors and customization'**
+  /// **'Colors and Icon customization'**
   String get paywallFinancialHealthTimeline;
 
   /// No description provided for @paywallExpertGuidanceTips.

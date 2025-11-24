@@ -621,11 +621,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       value: vacationProvider.isVacationMode,
                       onChanged: (value) async {
                         if (value) {
+                          // Turning ON vacation mode: check subscription and existing accounts
+                          final subscriptionProvider =
+                              Provider.of<SubscriptionProvider>(
+                                context,
+                                listen: false,
+                              );
+
+                          // Only prevent vacation mode switching if unsubscribed AND no existing vacation accounts
+                          // This allows users who created vacation accounts while subscribed
+                          // to continue using them even after subscription expires
+                          if (!subscriptionProvider.isSubscribed) {
+                            final firestoreService =
+                                FirestoreService.instance;
+                            final allAccounts = await firestoreService
+                                .getAllAccounts();
+                            final vacationAccounts = allAccounts
+                                .where((a) => a.isVacationAccount == true)
+                                .toList();
+
+                            // If no existing vacation accounts, show paywall to prevent creation
+                            if (vacationAccounts.isEmpty) {
+                              PersistentNavBarNavigator.pushNewScreen(
+                                context,
+                                screen: const PaywallScreen(),
+                                withNavBar: false,
+                                pageTransitionAnimation:
+                                    PageTransitionAnimation.cupertino,
+                              );
+                              return;
+                            }
+                            // If they have existing vacation accounts, allow switching to use them
+                          }
+
+                          // Turning ON vacation mode: go through selection flow
                           await Provider.of<VacationProvider>(
                             context,
                             listen: false,
                           ).checkAndShowVacationDialog(context);
                         } else {
+                          // Turning OFF vacation mode
                           await Provider.of<VacationProvider>(
                             context,
                             listen: false,

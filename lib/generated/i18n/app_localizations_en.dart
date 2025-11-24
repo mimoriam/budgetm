@@ -148,16 +148,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallEverythingIncluded => 'Everything included:';
 
   @override
-  String get paywallPersonalizedBudgetInsights => 'Create Recurring Budgets';
+  String get paywallPersonalizedBudgetInsights => 'Vacation Mode';
 
   @override
   String get paywallDailyProgressTracking => 'Multi-account creation';
 
   @override
-  String get paywallExpenseManagementTools => 'Personalized Vacation Mode';
+  String get paywallExpenseManagementTools => 'Recurring Budgets';
 
   @override
-  String get paywallFinancialHealthTimeline => 'Colors and customization';
+  String get paywallFinancialHealthTimeline => 'Colors and Icon customization';
 
   @override
   String get paywallExpertGuidanceTips => 'Custom categories';

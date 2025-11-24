@@ -7,6 +7,10 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/widgets/pretty_bottom_sheet.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   final String? initialCategoryType;
@@ -49,6 +53,19 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
   }
 
   Future<void> _saveCategory() async {
+    // Check subscription status before allowing category creation
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+    if (!subscriptionProvider.isSubscribed) {
+      // Show paywall if user is not subscribed
+      PersistentNavBarNavigator.pushNewScreen(
+        context,
+        screen: const PaywallScreen(),
+        withNavBar: false,
+        pageTransitionAnimation: PageTransitionAnimation.cupertino,
+      );
+      return;
+    }
+
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       try {
         setState(() {

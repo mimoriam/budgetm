@@ -267,8 +267,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
         const SizedBox(height: 18),
         // Savings Box
-        _buildSavingsBox(context),
-        const SizedBox(height: 18),
+        // _buildSavingsBox(context),
+        // const SizedBox(height: 18),
       ],
     );
   }
@@ -651,12 +651,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
         _buildFeatureItem(
           context,
           AppLocalizations.of(context)!.paywallPersonalizedBudgetInsights,
-          Icons.insights,
+          Icons.flight,
         ),
         _buildFeatureItem(
           context,
           AppLocalizations.of(context)!.paywallDailyProgressTracking,
-          Icons.trending_up,
+          Icons.account_balance,
         ),
         _buildFeatureItem(
           context,
@@ -666,13 +666,18 @@ class _PaywallScreenState extends State<PaywallScreen> {
         _buildFeatureItem(
           context,
           AppLocalizations.of(context)!.paywallFinancialHealthTimeline,
-          Icons.timeline,
+          Icons.dashboard_customize,
         ),
         // _buildFeatureItem(
         //   context,
         //   AppLocalizations.of(context)!.paywallExpertGuidanceTips,
         //   Icons.lightbulb,
         // ),
+        _buildFeatureItem(
+          context,
+          AppLocalizations.of(context)!.paywallExpertGuidanceTips,
+          Icons.category,
+        ),
         _buildFeatureItem(
           context,
           AppLocalizations.of(context)!.paywallCommunitySupportAccess,
@@ -693,7 +698,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
               color: AppColors.gradientEnd.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 16, color: AppColors.gradientEnd),
+            child: Icon(icon, size: 18, color: AppColors.gradientEnd),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -701,7 +706,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
               text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.primaryTextColorLight,
-                fontSize: 14,
+                fontSize: 15,
               ),
             ),
           ),
