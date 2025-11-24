@@ -3,6 +3,7 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/services/review_service.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/category.dart';
@@ -1725,6 +1726,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           // Create new linked vacation transaction
           print('DEBUG: AddTransactionScreen - creating new linked vacation transaction');
           await _firestoreService.createLinkedVacationTransaction(transaction);
+          
+          // Increment transaction count for review (only for new transactions)
+          ReviewService.instance.incrementTransactionCount();
         }
 
         if (mounted) {
@@ -1848,6 +1852,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           transaction,
           isVacation: false, // Normal mode transactions are not vacation transactions
         );
+        
+        // Increment transaction count for review (only for new transactions)
+        ReviewService.instance.incrementTransactionCount();
       }
 
       // Update account balance

@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:budgetm/services/review_service.dart';
 
 /// Manages subscription state and handles in-app purchases for Google Play.
 ///
@@ -221,6 +222,9 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
           // and the Firestore listener will automatically update _isSubscribed.
           // Calling refresh immediately can cause a race condition where Google Play
           // hasn't propagated the purchase yet, returning stale data.
+
+          // Request in-app review after successful purchase
+          ReviewService.instance.requestReviewIfEligible();
 
           _setLoading(false);
           notifyListeners();

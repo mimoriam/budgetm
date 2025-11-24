@@ -5,6 +5,7 @@ import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/auth/login/forgot_password/forgot_password_screen.dart';
 import 'package:budgetm/screens/auth/signup/signup_screen.dart';
+import 'package:budgetm/services/analytics_service.dart';
 import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -28,8 +29,18 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoadingGoogle = false; // State for Google Sign-In loading indicator
   final FirebaseAuthService _authService = FirebaseAuthService();
 
+  @override
+  void initState() {
+    super.initState();
+    // Log analytics event when login screen is opened
+    AnalyticsService().logEvent('login opened');
+  }
+
   void _handleGoogleSignIn() async {
     if (!mounted) return;
+
+    // Log analytics event when Google sign-in is opened
+    AnalyticsService().logEvent('google sign up opened');
 
     setState(() {
       _isLoadingGoogle = true;

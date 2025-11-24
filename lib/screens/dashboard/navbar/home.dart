@@ -1,5 +1,6 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
+import 'package:budgetm/services/analytics_service.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/models/firestore_task.dart';
@@ -2013,8 +2014,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
     _pageDataManager = MonthPageDataManager(vacationProvider);
 
+    // Log analytics event when home screen is opened for the first time
+    _checkAndLogFirstTimeHomeOpen();
+
     _loadMonths();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  Future<void> _checkAndLogFirstTimeHomeOpen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasOpenedHome = prefs.getBool('hasOpenedHomeScreen') ?? false;
+    
+    if (!hasOpenedHome) {
+      // Log analytics event for first time opening home screen
+      await AnalyticsService().logEvent('user opened home');
+      // Save flag to indicate home screen has been opened
+      await prefs.setBool('hasOpenedHomeScreen', true);
+    }
   }
 
   @override

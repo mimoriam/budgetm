@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firestore_service.dart';
+import 'package:budgetm/services/review_service.dart';
 import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/firestore_transaction.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
@@ -841,6 +842,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
                           final accountId = await _firestoreService
                              .createAccount(newAccount);
+
+                          // Request in-app review after successful account creation
+                          ReviewService.instance.requestReviewIfEligible();
 
                           // Note: Vacation budgets are now created dynamically based on transactions per currency per category
                           // No need to create budgets upfront during vacation account creation

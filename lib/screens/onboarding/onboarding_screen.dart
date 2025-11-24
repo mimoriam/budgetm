@@ -2,6 +2,7 @@
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
+import 'package:budgetm/services/analytics_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,6 +39,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
+    // Log analytics event when onboarding screen is opened
+    AnalyticsService().logEvent('Onboarding Opened');
     _pageController.addListener(() {
       if (_pageController.page != null) {
         setState(() {
