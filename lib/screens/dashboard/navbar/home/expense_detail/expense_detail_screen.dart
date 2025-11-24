@@ -11,6 +11,7 @@ import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -383,15 +384,15 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                             _buildInfoCard(
                               context,
                               AppLocalizations.of(context)!.expenseDetailTotal,
-                              '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
+                              formatCurrency(widget.transaction.amount, widget.transaction.currency),
                             ),
                             const SizedBox(width: 16),
                             _buildInfoCard(
                               context,
                               AppLocalizations.of(context)!.expenseDetailAccumulatedAmount,
                               !_isPaid
-                                  ? '${_getCurrencyCode(widget.transaction.currency)} 0.00'
-                                  : '${_getCurrencyCode(widget.transaction.currency)} ${widget.transaction.amount.toStringAsFixed(2)}',
+                                  ? formatCurrency(0.0, widget.transaction.currency)
+                                  : formatCurrency(widget.transaction.amount, widget.transaction.currency),
                             ),
                           ],
                         ),

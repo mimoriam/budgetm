@@ -21,6 +21,7 @@ import 'dart:math';
 
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 
 class BalanceScreen extends StatefulWidget {
   const BalanceScreen({super.key});
@@ -952,7 +953,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         Text(label, style: Theme.of(context).textTheme.bodyLarge),
         const Spacer(),
         Text(
-          '$currencySymbol${amount.toStringAsFixed(2)}',
+          currencySymbol.isEmpty 
+              ? formatCurrencyAmount(amount)
+              : formatCurrency(amount, currencySymbol),
           style: Theme.of(
             context,
           ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -1089,14 +1092,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   // ),
                   if (creditLimit != null)
                     Text(
-                      AppLocalizations.of(context)!.balanceCreditLimit(_getAccountCurrencySymbol(account) + creditLimit.toStringAsFixed(2)),
+                      AppLocalizations.of(context)!.balanceCreditLimit(formatCurrency(creditLimit, account.currency)),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.secondaryTextColorLight,
                           ),
                     )
                   else if (balanceLimit != null)
                     Text(
-                      AppLocalizations.of(context)!.balanceBalanceLimit(_getAccountCurrencySymbol(account) + balanceLimit.toStringAsFixed(2)),
+                      AppLocalizations.of(context)!.balanceBalanceLimit(formatCurrency(balanceLimit, account.currency)),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.secondaryTextColorLight,
                           ),
@@ -1106,8 +1109,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             ),
             Text(
               isVacationAccount 
-                ? '${account.currency} ${account.initialBalance.toStringAsFixed(2)}'
-                : '${_getAccountCurrencySymbol(account)} ${amount.toStringAsFixed(2)}',
+                ? formatCurrency(account.initialBalance, account.currency)
+                : formatCurrency(amount, account.currency),
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),

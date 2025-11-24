@@ -10,6 +10,7 @@ import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -175,7 +176,6 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
     final accountCurrencyCode = widget.account.currency;
     // For vacation accounts, show the account's specific currency code
     final currencyCode = accountCurrencyCode;
-    final currencyFormat = NumberFormat.currency(symbol: currencyCode);
 
     // Calculate current balance (only from paid transactions)
     double currentBalance = 0.0;
@@ -300,7 +300,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              currencyFormat.format(widget.account.initialBalance),
+                              formatCurrency(widget.account.initialBalance, currencyCode),
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: Colors.black,
                                 fontSize: 18,
@@ -331,7 +331,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              currencyFormat.format(currentBalance),
+                              formatCurrency(currentBalance, currencyCode),
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: currentBalance >= 0 ? Colors.black : Colors.red[300],
                                 fontSize: 18,
@@ -385,7 +385,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        currencyFormat.format(filteredSubtotal),
+                        formatCurrency(filteredSubtotal, currencyCode),
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: filteredSubtotal >= 0 ? Colors.black : Colors.red[300],
                           fontWeight: FontWeight.bold,
@@ -610,7 +610,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                 ],
                 const SizedBox(width: 4),
                 Text(
-                  '${isIncome ? '+' : '-'} $currencyCode ${transaction.amount.toStringAsFixed(2)}',
+                  '${isIncome ? '+' : '-'} ${formatCurrency(transaction.amount, currencyCode)}',
                   style: TextStyle(
                     color: isIncome ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
@@ -894,7 +894,7 @@ class _BalanceDetailScreenState extends State<BalanceDetailScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Text(
-                        '- $currency ${amount.toStringAsFixed(2)}',
+                        '- ${formatCurrency(amount, currency)}',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Colors.red[600],
                           fontSize: 16,

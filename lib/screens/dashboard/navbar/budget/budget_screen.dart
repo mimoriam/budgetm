@@ -13,6 +13,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/add_budget_screen.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'dart:ui';
 
 class BudgetScreen extends StatefulWidget {
@@ -895,7 +896,7 @@ class _BudgetScreenState extends State<BudgetScreen>
         return '$currencyDisplay ${thousands.toStringAsFixed(1)}k';
       }
     }
-    return '$currencyDisplay ${amount.toStringAsFixed(2)}';
+    return formatCurrency(amount, currencyDisplay);
   }
 
   Widget _buildCategoryCard(

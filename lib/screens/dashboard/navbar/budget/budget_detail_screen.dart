@@ -16,6 +16,7 @@ import 'package:budgetm/viewmodels/budget_provider.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
 import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/utils/icon_utils.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
 
 // Helper function to convert Firestore transaction to UI transaction
@@ -542,7 +543,7 @@ class _BudgetDetailScreenState extends State<BudgetDetailScreen> {
                 ],
                 Text(
                   // Match home.dart amount formatting and style (sign + space + currency)
-                  '${transaction.type == 'income' ? '+' : '-'} $_currencySymbol ${transaction.amount.toStringAsFixed(2)}',
+                  '${transaction.type == 'income' ? '+' : '-'} ${formatCurrency(transaction.amount, transaction.currency)}',
                   style: TextStyle(
                     color: transaction.type == 'income' ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,

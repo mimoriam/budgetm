@@ -5,6 +5,7 @@ import 'package:budgetm/models/goal.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:flutter/material.dart';
@@ -537,7 +538,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   const Icon(Icons.check_circle, color: Colors.green, size: 28)
                 else
                   Text(
-                    '${goal.currency} ${NumberFormat('#,##0.00').format(goal.currentAmount)}',
+                    formatCurrency(goal.currentAmount, goal.currency),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -561,7 +562,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${goal.currency} ${NumberFormat('#,##0.00').format(goal.targetAmount)}',
+                      formatCurrency(goal.targetAmount, goal.currency),
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     Text(

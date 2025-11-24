@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -184,13 +185,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               _buildInfoCard(
                 context,
                 'Accumulated Amount',
-                '${widget.goal.currency} ${NumberFormat('#,##0').format(_calculatedCurrentAmount)}',
+                formatCurrency(_calculatedCurrentAmount, widget.goal.currency),
               ),
               const SizedBox(width: 12),
               _buildInfoCard(
                 context,
                 'Total',
-                '${widget.goal.currency} ${NumberFormat('#,##0').format(widget.goal.targetAmount)}',
+                formatCurrency(widget.goal.targetAmount, widget.goal.currency),
               ),
             ],
           ),
@@ -427,7 +428,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '${isIncome ? '+' : '-'} ${widget.goal.currency} ${transaction.amount.toStringAsFixed(2)}',
+                  '${isIncome ? '+' : '-'} ${formatCurrency(transaction.amount, widget.goal.currency)}',
                   style: TextStyle(
                     color: isIncome ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,

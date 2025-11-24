@@ -6,6 +6,7 @@ import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'detailed_item/detailed_item_screen.dart';
@@ -350,7 +351,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
             child: _buildInfoCard(
               context,
               AppLocalizations.of(context)!.personalScreenTotal,
-              '${snapshot.data!.isNotEmpty ? snapshot.data!.first.currency : 'USD'} ${total.toStringAsFixed(2)}',
+              formatCurrency(total, snapshot.data!.isNotEmpty ? snapshot.data!.first.currency : 'USD'),
             ),
           );
         }
@@ -721,7 +722,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   ),
                 ),
                 Text(
-                  '${subscription.currency} ${subscription.price.toStringAsFixed(2)}',
+                  formatCurrency(subscription.price, subscription.currency),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -784,10 +785,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildBorrowedItem(Borrowed item) {
-    final currencyFormat = NumberFormat.currency(
-      symbol: item.currency,
-      decimalDigits: 2,
-    );
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 
@@ -847,7 +844,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   ),
                 ),
                 Text(
-                  currencyFormat.format(item.price),
+                  formatCurrency(item.price, item.currency),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -910,10 +907,6 @@ class _PersonalScreenState extends State<PersonalScreen> {
   }
 
   Widget _buildLentItem(Lent item) {
-    final currencyFormat = NumberFormat.currency(
-      symbol: item.currency,
-      decimalDigits: 2,
-    );
     final dateFormat = DateFormat('MMM dd, yyyy');
     final progressColor = !item.returned ? AppColors.gradientEnd : Colors.grey;
 
@@ -973,7 +966,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   ),
                 ),
                 Text(
-                  currencyFormat.format(item.price),
+                  formatCurrency(item.price, item.currency),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

@@ -7,7 +7,6 @@ import 'package:budgetm/models/firestore_account.dart';
 import 'package:budgetm/models/category.dart';
 import 'package:budgetm/models/transaction.dart' as model;
 import 'package:budgetm/constants/transaction_type_enum.dart';
-import 'package:budgetm/screens/dashboard/navbar/home/analytics/analytics_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_detail_screen.dart';
 import 'package:budgetm/screens/dashboard/profile/profile_screen.dart';
 import 'package:budgetm/viewmodels/vacation_mode_provider.dart';
@@ -30,6 +29,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/utils/appTheme.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -1412,7 +1412,7 @@ class _MonthPageViewState extends State<MonthPageView> {
                 ],
                 const SizedBox(width: 4),
                 Text(
-                  '${transaction.type == 'income' ? '+' : '-'} ${transaction.currency} ${transaction.amount.toStringAsFixed(2)}',
+                  '${transaction.type == 'income' ? '+' : '-'} ${transaction.currency} ${formatCurrencyAmount(transaction.amount)}',
                   style: TextStyle(
                     color: transaction.type == 'income'
                         ? Colors.green
@@ -1505,7 +1505,7 @@ class _MonthPageViewState extends State<MonthPageView> {
             ),
           ),
           Text(
-            '${task.type == 'income' ? '+' : '-'} ${currencyProvider.currencySymbol}${(task.amount * currencyProvider.conversionRate).toStringAsFixed(2)}',
+            '${task.type == 'income' ? '+' : '-'} ${currencyProvider.selectedCurrencyCode} ${formatCurrencyAmount(task.amount * currencyProvider.conversionRate)}',
             style: TextStyle(
               color: task.type == 'income' ? Colors.green : Colors.red,
               fontWeight: FontWeight.bold,
@@ -1703,11 +1703,14 @@ Widget _buildCurrencyBreakdownContent(
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '${AppLocalizations.of(context)!.homeTotalBudget}: ${vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode} ${totalBudget.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
+                Flexible(
+                  child: Text(
+                    '${AppLocalizations.of(context)!.homeTotalBudget}: ${formatCurrency(totalBudget, vacationAccountCurrency ?? currencyProvider.selectedCurrencyCode)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -1827,13 +1830,16 @@ Widget _buildCurrencyBreakdownContent(
                         size: 16,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        'Balance: $currency ${balance.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: balance >= 0
-                              ? Colors.green.shade700
-                              : Colors.red.shade700,
+                      Flexible(
+                        child: Text(
+                          'Balance: $currency ${formatCurrencyAmount(balance)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: balance >= 0
+                                ? Colors.green.shade700
+                                : Colors.red.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -1869,12 +1875,13 @@ Widget _buildCurrencyRow(
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             Text(
-              '$currencyCode ${amount.toStringAsFixed(2)}',
+              formatCurrencyAmount(amount),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: color,
                 fontSize: 14,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -2660,75 +2667,82 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            PersistentNavBarNavigator.pushNewScreen(
-                              context,
-                              screen: const ProfileScreen(),
-                              withNavBar: false,
-                              pageTransitionAnimation:
-                                  PageTransitionAnimation.slideRight,
-                            );
-                          },
-                          child: CircleAvatar(
-                            radius: 22,
-                            backgroundImage: _getProfileImage(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _selectedMonthIndex < _months.length &&
-                                      _selectedMonthIndex >= 0
-                                  ? DateFormat(
-                                      'MMMM',
-                                    ).format(_months[_selectedMonthIndex])
-                                  : 'Balance',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Colors.black54,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                    Flexible(
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              PersistentNavBarNavigator.pushNewScreen(
+                                context,
+                                screen: const ProfileScreen(),
+                                withNavBar: false,
+                                pageTransitionAnimation:
+                                    PageTransitionAnimation.slideRight,
+                              );
+                            },
+                            child: CircleAvatar(
+                              radius: 22,
+                              backgroundImage: _getProfileImage(),
                             ),
-                            const SizedBox(height: 2),
-                            Row(
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${vacationProvider.isVacationMode && vacationAccountCurrency != null ? vacationAccountCurrency : currencyProvider.selectedCurrencyCode} ${topBalance.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 22,
-                                  ),
+                                  _selectedMonthIndex < _months.length &&
+                                          _selectedMonthIndex >= 0
+                                      ? DateFormat(
+                                          'MMMM',
+                                        ).format(_months[_selectedMonthIndex])
+                                      : 'Balance',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                 ),
-                                const SizedBox(width: 4),
-                                GestureDetector(
-                                  onTap: () => _showCurrencyBreakdownDialog(
-                                    context,
-                                    snapshot.data?.incomeByCurrency ?? {},
-                                    snapshot.data?.expensesByCurrency ?? {},
-                                    currencyProvider,
-                                    vacationProvider.isVacationMode,
-                                    totalBudget,
-                                    vacationAccountCurrency,
-                                  ),
-                                  child: Icon(
-                                    Icons.keyboard_arrow_down,
-                                    color: Colors.black54,
-                                    size: 20,
-                                  ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        formatCurrency(topBalance, vacationProvider.isVacationMode && vacationAccountCurrency != null ? vacationAccountCurrency : currencyProvider.selectedCurrencyCode),
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 22,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    GestureDetector(
+                                      onTap: () => _showCurrencyBreakdownDialog(
+                                        context,
+                                        snapshot.data?.incomeByCurrency ?? {},
+                                        snapshot.data?.expensesByCurrency ?? {},
+                                        currencyProvider,
+                                        vacationProvider.isVacationMode,
+                                        totalBudget,
+                                        vacationAccountCurrency,
+                                      ),
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: Colors.black54,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -3314,58 +3328,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildInfoCard(
-    String title,
-    String amount,
-    Color color,
-    List<List<dynamic>> icon,
-    Color backgroundColor,
-  ) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                ),
-              ),
-              HugeIcon(icon: icon, color: color, size: 28),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Text(
-                  amount,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBalanceCard(
     String title,
     Color color,
@@ -3440,7 +3402,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text(
-                          '${title == AppLocalizations.of(context)!.analyticsIncome ? '+' : '-'} $currency ${amount.toStringAsFixed(2)}',
+                          '${title == AppLocalizations.of(context)!.analyticsIncome ? '+' : '-'} $currency ${formatCurrencyAmount(amount)}',
                           style: TextStyle(
                             color: color,
                             fontSize: isSelectedCurrency ? 16 : 14,
@@ -3572,7 +3534,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Row(
                       children: [
                         Text(
-                          '- $currency ${expenses.toStringAsFixed(2)}',
+                          '- $currency ${formatCurrencyAmount(expenses)}',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

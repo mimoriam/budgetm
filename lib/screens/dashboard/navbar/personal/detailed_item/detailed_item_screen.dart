@@ -4,6 +4,7 @@ import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
@@ -87,7 +88,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
                             _buildInfoCard(
                               context,
                               AppLocalizations.of(context)!.personalAmount,
-                              '${_getCurrencyCode(_getCurrency(widget.item))} ${_getAmount(widget.item).toStringAsFixed(2)}',
+                              formatCurrency(_getAmount(widget.item), _getCurrency(widget.item)),
                             ),
                             const SizedBox(width: 12),
                             _buildInfoCard(
@@ -806,7 +807,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
             ),
           ),
           Text(
-            '+ ${sub.currency} ${sub.price.toStringAsFixed(2)}',
+            '+ ${formatCurrency(sub.price, sub.currency)}',
             style: const TextStyle(
               color: Colors.grey,
               fontWeight: FontWeight.bold,
@@ -877,7 +878,7 @@ class _DetailedItemScreenState extends State<DetailedItemScreen> {
             ),
           ),
           Text(
-            '+ ${_getCurrencyCode(_getCurrency(widget.item))} ${entry.amount.toStringAsFixed(2)}',
+            '+ ${formatCurrency(entry.amount, _getCurrency(widget.item))}',
             style: const TextStyle(
               color: Colors.green,
               fontWeight: FontWeight.bold,
