@@ -228,16 +228,27 @@ class MyApp extends StatelessWidget {
             // Handle showcase completion
             try {
               final prefs = await SharedPreferences.getInstance();
-              final hasSeenShowcase = prefs.getBool('hasSeenHomeShowcase') ?? false;
+              final currentShowcase = prefs.getString('currentShowcase');
               
-              // Only set the flag if showcase was actually shown (not already seen)
-              if (!hasSeenShowcase) {
-                await prefs.setBool('hasSeenHomeShowcase', true);
+              if (currentShowcase == 'budget') {
+                await prefs.setBool('hasSeenBudgetShowcase', true);
+                await prefs.remove('currentShowcase');
+              } else if (currentShowcase == 'balance') {
+                await prefs.setBool('hasSeenBalanceShowcase', true);
+                await prefs.remove('currentShowcase');
+              } else if (currentShowcase == 'goals') {
+                await prefs.setBool('hasSeenGoalsShowcase', true);
+                await prefs.remove('currentShowcase');
+              } else {
+                // Default to home showcase for backward compatibility
+                final hasSeenShowcase = prefs.getBool('hasSeenHomeShowcase') ?? false;
+                if (!hasSeenShowcase) {
+                  await prefs.setBool('hasSeenHomeShowcase', true);
+                }
+                // Set a flag to indicate showcase just completed
+                // This will be checked by main_screen.dart to trigger paywall
+                await prefs.setBool('showcaseJustCompleted', true);
               }
-              
-              // Set a flag to indicate showcase just completed
-              // This will be checked by main_screen.dart to trigger paywall
-              await prefs.setBool('showcaseJustCompleted', true);
             } catch (e) {
               // Non-fatal error
               debugPrint('Error handling showcase completion: $e');

@@ -4115,6 +4115,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No history yet'**
   String get noHistoryYet;
+
+  /// No description provided for @budgetShowcaseAddBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Budget'**
+  String get budgetShowcaseAddBudget;
+
+  /// No description provided for @budgetShowcaseAddBudgetDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to create a new budget and set spending limits for your categories.'**
+  String get budgetShowcaseAddBudgetDesc;
+
+  /// No description provided for @budgetShowcaseTypeSelector.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget Type'**
+  String get budgetShowcaseTypeSelector;
+
+  /// No description provided for @budgetShowcaseTypeSelectorDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between Daily, Weekly, and Monthly budgets to track your spending over different time periods.'**
+  String get budgetShowcaseTypeSelectorDesc;
+
+  /// No description provided for @budgetShowcasePeriodSelector.
+  ///
+  /// In en, this message translates to:
+  /// **'Period Selector'**
+  String get budgetShowcasePeriodSelector;
+
+  /// No description provided for @budgetShowcasePeriodSelectorDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigate between different time periods to view your budget history.'**
+  String get budgetShowcasePeriodSelectorDesc;
+
+  /// No description provided for @budgetShowcasePieChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending Overview'**
+  String get budgetShowcasePieChart;
+
+  /// No description provided for @budgetShowcasePieChartDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View your spending breakdown by category in this visual chart.'**
+  String get budgetShowcasePieChartDesc;
+
+  /// No description provided for @budgetShowcaseCategoryList.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget Categories'**
+  String get budgetShowcaseCategoryList;
+
+  /// No description provided for @budgetShowcaseCategoryListDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'See all your budgets organized by category. Tap any budget to view details and edit limits.'**
+  String get budgetShowcaseCategoryListDesc;
+
+  /// No description provided for @balanceShowcaseAddAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Account'**
+  String get balanceShowcaseAddAccount;
+
+  /// No description provided for @balanceShowcaseAddAccountDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to create a new account and start tracking your balances.'**
+  String get balanceShowcaseAddAccountDesc;
+
+  /// No description provided for @balanceShowcasePieChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Balance'**
+  String get balanceShowcasePieChart;
+
+  /// No description provided for @balanceShowcasePieChartDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Visual overview of your account balances across different currencies.'**
+  String get balanceShowcasePieChartDesc;
+
+  /// No description provided for @balanceShowcaseAccountCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Cards'**
+  String get balanceShowcaseAccountCard;
+
+  /// No description provided for @balanceShowcaseAccountCardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View and manage all your accounts. Tap any account to see detailed transactions.'**
+  String get balanceShowcaseAccountCardDesc;
+
+  /// No description provided for @goalsShowcaseAddGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Goal'**
+  String get goalsShowcaseAddGoal;
+
+  /// No description provided for @goalsShowcaseAddGoalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to create a new financial goal and track your progress.'**
+  String get goalsShowcaseAddGoalDesc;
+
+  /// No description provided for @goalsShowcaseToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal Filter'**
+  String get goalsShowcaseToggle;
+
+  /// No description provided for @goalsShowcaseToggleDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between Pending and Fulfilled goals to see your progress.'**
+  String get goalsShowcaseToggleDesc;
+
+  /// No description provided for @goalsShowcaseGoalItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal Cards'**
+  String get goalsShowcaseGoalItem;
+
+  /// No description provided for @goalsShowcaseGoalItemDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View all your goals with progress tracking. Tap any goal to see details and add progress.'**
+  String get goalsShowcaseGoalItemDesc;
 }
 
 class _AppLocalizationsDelegate

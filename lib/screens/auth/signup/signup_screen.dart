@@ -361,6 +361,11 @@ class _SignupScreenState extends State<SignupScreen> {
                                             'isLoggedIn',
                                             true,
                                           );
+                                          // Mark onboarding as done since user has authenticated
+                                          await prefs.setBool(
+                                            'onboardingDone',
+                                            true,
+                                          );
                                           // Since this is a new user, set isFirstTimeUser to true
                                           await prefs.setBool(
                                             'isFirstTimeUser',
@@ -477,6 +482,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                         final prefs =
                                             await SharedPreferences.getInstance();
                                         await prefs.setBool('isLoggedIn', true);
+                                        // Mark onboarding as done since user has authenticated
+                                        await prefs.setBool('onboardingDone', true);
                                         // Since this is a new user, set isFirstTimeUser to true
                                         await prefs.setBool(
                                           'isFirstTimeUser',

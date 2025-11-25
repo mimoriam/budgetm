@@ -56,6 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
         // Successful login
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
+        // Mark onboarding as done since user has authenticated
+        await prefs.setBool('onboardingDone', true);
 
         // Store first-time user flag
         await prefs.setBool('isFirstTimeUser', isFirstTime);
@@ -356,6 +358,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                               await SharedPreferences.getInstance();
                                           await prefs.setBool(
                                             'isLoggedIn',
+                                            true,
+                                          );
+                                          // Mark onboarding as done since user has authenticated
+                                          await prefs.setBool(
+                                            'onboardingDone',
                                             true,
                                           );
 

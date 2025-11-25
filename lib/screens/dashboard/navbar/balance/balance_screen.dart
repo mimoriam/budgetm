@@ -22,6 +22,8 @@ import 'dart:math';
 import 'package:budgetm/screens/dashboard/navbar/balance/add_account/add_account_screen.dart';
 import 'package:budgetm/utils/account_icon_utils.dart';
 import 'package:budgetm/utils/currency_formatter.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BalanceScreen extends StatefulWidget {
   const BalanceScreen({super.key});
@@ -72,6 +74,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   // Add HomeScreenProvider listener for transaction updates
   HomeScreenProvider? _homeScreenProvider;
   VoidCallback? _homeScreenListener;
+  
+  // GlobalKeys for showcase views
+  final GlobalKey _addAccountKey = GlobalKey();
+  final GlobalKey _pieChartKey = GlobalKey();
+  final GlobalKey _accountCardKey = GlobalKey();
 
   @override
   void initState() {
@@ -116,6 +123,92 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       }
     };
     _homeScreenProvider?.addListener(_homeScreenListener!);
+    
+    // Start showcase for new users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startShowcaseIfNeeded();
+    });
+  }
+  
+  Future<void> _startShowcaseIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenShowcase = prefs.getBool('hasSeenBalanceShowcase') ?? false;
+    
+    if (!hasSeenShowcase && mounted) {
+      // Wait for UI to render and data to load from stream
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Wait for stream data to be available
+      int attempts = 0;
+      while ((_latestAccounts == null || _latestTransactions == null) && 
+             attempts < 30 && mounted) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+      
+      if (mounted) {
+        // Wait for widgets to be built in the widget tree
+        // We need to wait for the StreamBuilder to render
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        final List<GlobalKey> showcaseKeys = [];
+        
+        // Check state conditions to determine which widgets are rendered
+        final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
+        final isVacationMode = vacationProvider.isVacationMode;
+        
+        // Add Account button - only if not in vacation mode and widget is rendered
+        if (!isVacationMode && _isWidgetRendered(_addAccountKey)) {
+          showcaseKeys.add(_addAccountKey);
+        }
+        
+        // Calculate if we have accounts to show
+        final allAccounts = _latestAccounts ?? [];
+        final nonDefaultAccounts = allAccounts
+            .where((account) => !(account.isDefault ?? false))
+            .toList();
+        final normalAccounts = nonDefaultAccounts
+            .where((account) => (account.isVacationAccount != true))
+            .toList();
+        
+        // Check if charts should be shown (2+ accounts for same currency)
+        final shouldShowCharts = _shouldShowCharts(nonDefaultAccounts.map((acc) {
+          return {'account': acc};
+        }).toList());
+        
+        // Pie chart - only if charts should be shown and widget is rendered
+        if (shouldShowCharts && _isWidgetRendered(_pieChartKey)) {
+          showcaseKeys.add(_pieChartKey);
+        }
+        
+        // Account card - only if accounts exist and widget is rendered
+        if (normalAccounts.isNotEmpty && _isWidgetRendered(_accountCardKey)) {
+          showcaseKeys.add(_accountCardKey);
+        }
+        
+        // Only start showcase if we have at least one valid key
+        if (showcaseKeys.isNotEmpty) {
+          // Set flag to indicate balance showcase is starting
+          await prefs.setString('currentShowcase', 'balance');
+          
+          // Start showcase
+          ShowCaseWidget.of(context).startShowCase(showcaseKeys);
+        } else {
+          // If no widgets are available, mark showcase as seen to avoid retrying
+          await prefs.setBool('hasSeenBalanceShowcase', true);
+        }
+      }
+    }
+  }
+  
+  // Helper method to check if a widget is actually rendered
+  bool _isWidgetRendered(GlobalKey key) {
+    try {
+      final context = key.currentContext;
+      return context != null;
+    } catch (e) {
+      return false;
+    }
   }
 
   void _initStreams() {
@@ -503,7 +596,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                                   as double;
                                           final isHighlighted =
                                               index == touchedIndex;
-                                          return _buildAccountCard(
+                                          // Show showcase only on first account card
+                                          final accountCard = _buildAccountCard(
                                             context: context,
                                             account: account,
                                             icon: getAccountIcon(
@@ -527,6 +621,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                                 accountData['transactionCount']
                                                     as int,
                                           );
+                                          
+                                          // Wrap first account card with showcase
+                                          if (index == 0) {
+                                            return Showcase(
+                                              key: _accountCardKey,
+                                              title: AppLocalizations.of(context)!.balanceShowcaseAccountCard,
+                                              description: AppLocalizations.of(context)!.balanceShowcaseAccountCardDesc,
+                                              child: accountCard,
+                                            );
+                                          }
+                                          return accountCard;
                                         },
                                       ),
                                       const SizedBox(height: 6),
@@ -659,20 +764,24 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   ),
                   // Add Account button - only visible in normal mode
                   if (!vacationProvider.isVacationMode)
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        shape: BoxShape.rectangle,
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.gradientStart,
-                            AppColors.gradientEnd,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                    Showcase(
+                      key: _addAccountKey,
+                      title: AppLocalizations.of(context)!.balanceShowcaseAddAccount,
+                      description: AppLocalizations.of(context)!.balanceShowcaseAddAccountDesc,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          shape: BoxShape.rectangle,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.gradientStart,
+                              AppColors.gradientEnd,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                         ),
-                      ),
-                      child: TextButton(
+                        child: TextButton(
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -736,7 +845,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                           }
                         },
                       ),
-                    ),
+                        ),
+                      ),
                 ],
               ),
             ),
@@ -780,20 +890,24 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return Showcase(
+      key: _pieChartKey,
+      title: AppLocalizations.of(context)!.balanceShowcasePieChart,
+      description: AppLocalizations.of(context)!.balanceShowcasePieChartDesc,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -841,6 +955,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

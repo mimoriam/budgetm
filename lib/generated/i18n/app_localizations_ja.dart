@@ -2072,4 +2072,81 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get noHistoryYet => 'まだ履歴はありません';
+
+  @override
+  String get budgetShowcaseAddBudget => 'Add Budget';
+
+  @override
+  String get budgetShowcaseAddBudgetDesc =>
+      'Tap here to create a new budget and set spending limits for your categories.';
+
+  @override
+  String get budgetShowcaseTypeSelector => 'Budget Type';
+
+  @override
+  String get budgetShowcaseTypeSelectorDesc =>
+      'Switch between Daily, Weekly, and Monthly budgets to track your spending over different time periods.';
+
+  @override
+  String get budgetShowcasePeriodSelector => 'Period Selector';
+
+  @override
+  String get budgetShowcasePeriodSelectorDesc =>
+      'Navigate between different time periods to view your budget history.';
+
+  @override
+  String get budgetShowcasePieChart => 'Spending Overview';
+
+  @override
+  String get budgetShowcasePieChartDesc =>
+      'View your spending breakdown by category in this visual chart.';
+
+  @override
+  String get budgetShowcaseCategoryList => 'Budget Categories';
+
+  @override
+  String get budgetShowcaseCategoryListDesc =>
+      'See all your budgets organized by category. Tap any budget to view details and edit limits.';
+
+  @override
+  String get balanceShowcaseAddAccount => 'Add Account';
+
+  @override
+  String get balanceShowcaseAddAccountDesc =>
+      'Tap here to create a new account and start tracking your balances.';
+
+  @override
+  String get balanceShowcasePieChart => 'Account Balance';
+
+  @override
+  String get balanceShowcasePieChartDesc =>
+      'Visual overview of your account balances across different currencies.';
+
+  @override
+  String get balanceShowcaseAccountCard => 'Account Cards';
+
+  @override
+  String get balanceShowcaseAccountCardDesc =>
+      'View and manage all your accounts. Tap any account to see detailed transactions.';
+
+  @override
+  String get goalsShowcaseAddGoal => 'Add Goal';
+
+  @override
+  String get goalsShowcaseAddGoalDesc =>
+      'Tap here to create a new financial goal and track your progress.';
+
+  @override
+  String get goalsShowcaseToggle => 'Goal Filter';
+
+  @override
+  String get goalsShowcaseToggleDesc =>
+      'Switch between Pending and Fulfilled goals to see your progress.';
+
+  @override
+  String get goalsShowcaseGoalItem => 'Goal Cards';
+
+  @override
+  String get goalsShowcaseGoalItemDesc =>
+      'View all your goals with progress tracking. Tap any goal to see details and add progress.';
 }
