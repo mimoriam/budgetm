@@ -40,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void initState() {
     super.initState();
     // Log analytics event when onboarding screen is opened
-    AnalyticsService().logEvent('Onboarding Opened');
+    AnalyticsService().logEvent('onboarding_opened');
     _pageController.addListener(() {
       if (_pageController.page != null) {
         setState(() {

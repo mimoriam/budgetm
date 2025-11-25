@@ -11,4 +11,3 @@ class AnalyticsService {
     await _analytics.logEvent(name: name, parameters: parameters);
   }
 }
-

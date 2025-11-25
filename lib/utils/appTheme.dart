@@ -2,7 +2,6 @@
 
 import 'package:budgetm/constants/appColors.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Converts a hex color string to a Color object.
 ///
@@ -57,7 +56,100 @@ Color getContrastingColor(Color backgroundColor) {
 }
 
 class AppTheme {
-  static final TextTheme _baseTextTheme = GoogleFonts.rubikTextTheme();
+  static const String _fontFamily = 'Rubik';
+  
+  static final TextTheme _baseTextTheme = TextTheme(
+    displayLarge: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 57.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: -0.25,
+    ),
+    displayMedium: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 45.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.0,
+    ),
+    displaySmall: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 36.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.0,
+    ),
+    headlineLarge: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 32.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.0,
+    ),
+    headlineMedium: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 28.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.0,
+    ),
+    headlineSmall: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 24.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.0,
+    ),
+    titleLarge: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 22.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.0,
+    ),
+    titleMedium: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 16.0,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.15,
+    ),
+    titleSmall: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 14.0,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.1,
+    ),
+    bodyLarge: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 16.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.5,
+    ),
+    bodyMedium: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 14.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.25,
+    ),
+    bodySmall: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 12.0,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0.4,
+    ),
+    labelLarge: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 14.0,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.1,
+    ),
+    labelMedium: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 12.0,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.5,
+    ),
+    labelSmall: const TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 11.0,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.5,
+    ),
+  );
 
   static final TextTheme _lightTextTheme = _baseTextTheme.copyWith(
     displayLarge: _baseTextTheme.displayLarge?.copyWith(

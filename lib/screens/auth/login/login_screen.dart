@@ -33,14 +33,14 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     // Log analytics event when login screen is opened
-    AnalyticsService().logEvent('login opened');
+    AnalyticsService().logEvent('login_opened');
   }
 
   void _handleGoogleSignIn() async {
     if (!mounted) return;
 
     // Log analytics event when Google sign-in is opened
-    AnalyticsService().logEvent('google sign up opened');
+    AnalyticsService().logEvent('google_sign_up_opened');
 
     setState(() {
       _isLoadingGoogle = true;

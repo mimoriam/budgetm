@@ -2027,7 +2027,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     
     if (!hasOpenedHome) {
       // Log analytics event for first time opening home screen
-      await AnalyticsService().logEvent('user opened home');
+      await AnalyticsService().logEvent('user_opened_home');
       // Save flag to indicate home screen has been opened
       await prefs.setBool('hasOpenedHomeScreen', true);
     }
