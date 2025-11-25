@@ -18,6 +18,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainScreen extends StatefulWidget {
   final bool showIntroPaywall;
@@ -28,14 +30,41 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
+// Static reference to FAB key for showcase coordination
+class MainScreenShowcaseKeys {
+  static GlobalKey? fabKey;
+}
+
+// Static callback handler for showcase completion
+class ShowcaseCompletionHandler {
+  static VoidCallback? onShowcaseCompleted;
+  
+  static void notifyCompletion() {
+    onShowcaseCompleted?.call();
+  }
+}
+
 class _MainScreenState extends State<MainScreen> {
   late PersistentTabController _controller;
   bool _isFabMenuOpen = false;
   bool _hasPresentedIntroPaywall = false;
-
+  int _showcasePollAttempts = 0;
+  static const int _maxShowcasePollAttempts = 60; // 30 seconds max (60 * 500ms)
+  
+  // GlobalKey for FAB showcase
+  final GlobalKey _fabKey = GlobalKey();
+  
   @override
   void initState() {
     super.initState();
+    // Register FAB key for showcase coordination
+    MainScreenShowcaseKeys.fabKey = _fabKey;
+    
+    // Register showcase completion callback if paywall should be shown
+    if (widget.showIntroPaywall) {
+      ShowcaseCompletionHandler.onShowcaseCompleted = _maybeShowIntroPaywall;
+    }
+    
     _controller = PersistentTabController(initialIndex: 0);
     _controller.addListener(() {
       setState(() {});
@@ -48,16 +77,96 @@ class _MainScreenState extends State<MainScreen> {
       });
     });
     
-    // Show intro paywall after first frame if requested
+    // Check if we should show paywall immediately (if showcase already completed or not needed)
     if (widget.showIntroPaywall) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _maybeShowIntroPaywall();
+        _checkAndMaybeShowPaywall();
       });
     }
   }
   
+  @override
+  void dispose() {
+    // Clear the callback when disposing
+    if (ShowcaseCompletionHandler.onShowcaseCompleted == _maybeShowIntroPaywall) {
+      ShowcaseCompletionHandler.onShowcaseCompleted = null;
+    }
+    super.dispose();
+  }
+  
+  /// Checks if showcase is needed and shows paywall accordingly.
+  /// If showcase already completed or not needed, shows paywall immediately.
+  /// Otherwise, sets up polling to check for showcase completion.
+  Future<void> _checkAndMaybeShowPaywall() async {
+    // Skip if already presented or widget is unmounted
+    if (_hasPresentedIntroPaywall || !mounted) {
+      return;
+    }
+    
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+    
+    // Skip if user is already subscribed
+    if (subscriptionProvider.isSubscribed) {
+      return;
+    }
+    
+    // Check if showcase has already been completed
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenShowcase = prefs.getBool('hasSeenHomeShowcase') ?? false;
+    
+    // If showcase already completed or not needed, show paywall immediately
+    if (hasSeenShowcase) {
+      _maybeShowIntroPaywall();
+    } else {
+      // Showcase is being shown, wait for completion
+      // Set up polling to check for completion flag
+      _waitForShowcaseCompletion();
+    }
+  }
+  
+  /// Polls for showcase completion and shows paywall when complete.
+  /// Stops polling after max attempts to prevent infinite polling.
+  void _waitForShowcaseCompletion() {
+    // Stop polling if max attempts reached or widget unmounted
+    if (!mounted || _hasPresentedIntroPaywall || _showcasePollAttempts >= _maxShowcasePollAttempts) {
+      if (_showcasePollAttempts >= _maxShowcasePollAttempts) {
+        // Timeout reached, treat as completed and show paywall
+        // This handles edge case where showcase was dismissed early or never completed
+        debugPrint('Showcase polling timeout reached, showing paywall');
+        _maybeShowIntroPaywall();
+      }
+      return;
+    }
+    
+    _showcasePollAttempts++;
+    
+    // Poll every 500ms to check if showcase completed
+    Future.delayed(const Duration(milliseconds: 500), () async {
+      if (!mounted || _hasPresentedIntroPaywall) return;
+      
+      final prefs = await SharedPreferences.getInstance();
+      final showcaseJustCompleted = prefs.getBool('showcaseJustCompleted') ?? false;
+      
+      if (showcaseJustCompleted) {
+        // Clear the flag
+        await prefs.setBool('showcaseJustCompleted', false);
+        
+        // Notify via callback if registered (this will call _maybeShowIntroPaywall)
+        // If callback is not set, call directly
+        if (ShowcaseCompletionHandler.onShowcaseCompleted != null) {
+          ShowcaseCompletionHandler.notifyCompletion();
+        } else {
+          _maybeShowIntroPaywall();
+        }
+      } else {
+        // Continue polling
+        _waitForShowcaseCompletion();
+      }
+    });
+  }
+  
   /// Shows the paywall screen once after first-time setup, if user is not already subscribed.
-  /// This is only called when showIntroPaywall is true and only runs once per screen instance.
+  /// This is called either immediately (if showcase already completed) or after showcase completion.
   void _maybeShowIntroPaywall() {
     // Skip if already presented or widget is unmounted
     if (_hasPresentedIntroPaywall || !mounted) {
@@ -271,31 +380,36 @@ navbarVisibility.setNavBarVisibility(true);
                     if (_isFabMenuOpen)
                       ..._buildFabMenuItemsForCurrentScreen(vacationProvider),
                     const SizedBox(height: 24),
-                    SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: FloatingActionButton(
-                        onPressed: vacationProvider.isVacationMode ? () async {
-                          final homeScreenProvider = context.read<HomeScreenProvider>();
-                          final fallbackDate = homeScreenProvider.selectedDate;
-                          final result = await PersistentNavBarNavigator.pushNewScreen(
-                            context,
-                            screen: AddTransactionScreen(
-                              transactionType: TransactionType.expense,
-                              selectedDate: homeScreenProvider.selectedDate,
-                            ),
-                            withNavBar: false,
-                            pageTransitionAnimation: PageTransitionAnimation.cupertino,
-                          );
+                    Showcase(
+                      key: _fabKey,
+                      title: 'Add Income/Expense',
+                      description: 'Tap here to quickly add income or expense transactions.',
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: FloatingActionButton(
+                          onPressed: vacationProvider.isVacationMode ? () async {
+                            final homeScreenProvider = context.read<HomeScreenProvider>();
+                            final fallbackDate = homeScreenProvider.selectedDate;
+                            final result = await PersistentNavBarNavigator.pushNewScreen(
+                              context,
+                              screen: AddTransactionScreen(
+                                transactionType: TransactionType.expense,
+                                selectedDate: homeScreenProvider.selectedDate,
+                              ),
+                              withNavBar: false,
+                              pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                            );
 
-                          _handleTransactionFlowResult(result, fallbackDate);
-                        } : _toggleFabMenu,
-                        elevation: 1,
-                        backgroundColor: vacationProvider.isVacationMode ? AppColors.aiGradientStart : AppColors.gradientEnd,
-                        shape: const CircleBorder(),
-                        child: Icon(
-                          vacationProvider.isVacationMode ? Icons.add : (_isFabMenuOpen ? Icons.close : Icons.add),
-                          color: Colors.white,
+                            _handleTransactionFlowResult(result, fallbackDate);
+                          } : _toggleFabMenu,
+                          elevation: 1,
+                          backgroundColor: vacationProvider.isVacationMode ? AppColors.aiGradientStart : AppColors.gradientEnd,
+                          shape: const CircleBorder(),
+                          child: Icon(
+                            vacationProvider.isVacationMode ? Icons.add : (_isFabMenuOpen ? Icons.close : Icons.add),
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

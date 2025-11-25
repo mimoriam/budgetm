@@ -22,6 +22,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetm/firebase_options.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -222,18 +223,39 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<ThemeProvider, LocaleProvider>(
       builder: (context, themeProvider, localeProvider, child) {
-        return MaterialApp(
-          builder: DevicePreview.appBuilder,
-          debugShowCheckedModeBanner: false,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: DevicePreview.locale(context) ?? localeProvider.currentLocale,
-          theme: AppTheme.lightTheme(),
-          darkTheme: AppTheme.darkTheme(),
-          // themeMode: themeProvider.themeMode,
-          themeMode: ThemeMode.light,
-          // home: onboardingDone ? const AuthGate() : const OnboardingScreen(),
-          home: AuthGate(),
+        return ShowCaseWidget(
+          onFinish: () async {
+            // Handle showcase completion
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              final hasSeenShowcase = prefs.getBool('hasSeenHomeShowcase') ?? false;
+              
+              // Only set the flag if showcase was actually shown (not already seen)
+              if (!hasSeenShowcase) {
+                await prefs.setBool('hasSeenHomeShowcase', true);
+              }
+              
+              // Set a flag to indicate showcase just completed
+              // This will be checked by main_screen.dart to trigger paywall
+              await prefs.setBool('showcaseJustCompleted', true);
+            } catch (e) {
+              // Non-fatal error
+              debugPrint('Error handling showcase completion: $e');
+            }
+          },
+          builder: (context) => MaterialApp(
+            builder: DevicePreview.appBuilder,
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: DevicePreview.locale(context) ?? localeProvider.currentLocale,
+            theme: AppTheme.lightTheme(),
+            darkTheme: AppTheme.darkTheme(),
+            // themeMode: themeProvider.themeMode,
+            themeMode: ThemeMode.light,
+            // home: onboardingDone ? const AuthGate() : const OnboardingScreen(),
+            home: AuthGate(),
+          ),
         );
       },
     );

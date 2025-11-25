@@ -33,6 +33,8 @@ import 'package:budgetm/utils/appTheme.dart';
 import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:budgetm/screens/dashboard/main_screen.dart';
 
 // Data structure to hold all data for a specific month page
 class MonthPageData {
@@ -2000,6 +2002,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Map to hold MonthPageProvider instances for each month
   final Map<int, MonthPageProvider> _monthProviders = {};
 
+  // GlobalKeys for showcase views
+  final GlobalKey _profileIconKey = GlobalKey();
+  final GlobalKey _currencyKey = GlobalKey();
+  final GlobalKey _sideMenuKey = GlobalKey();
+  final GlobalKey _vacationModeKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -2019,6 +2027,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _loadMonths();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Start showcase for new users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startShowcaseIfNeeded();
+    });
+  }
+
+  Future<void> _startShowcaseIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenShowcase = prefs.getBool('hasSeenHomeShowcase') ?? false;
+    
+    if (!hasSeenShowcase && mounted) {
+      // Wait a bit for the UI to fully render
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        // Access the static FAB key from main_screen
+        final fabKey = MainScreenShowcaseKeys.fabKey;
+        final List<GlobalKey> showcaseKeys = [
+          _profileIconKey,
+          _currencyKey,
+          _sideMenuKey,
+          _vacationModeKey,
+        ];
+        if (fabKey != null) {
+          showcaseKeys.add(fabKey);
+        }
+        
+        // Start showcase
+        // Completion will be handled by the onFinish callback in ShowCaseWidget (main.dart)
+        // which sets the 'showcaseJustCompleted' flag that main_screen.dart polls for
+        ShowCaseWidget.of(context).startShowCase(showcaseKeys);
+        
+        // Don't set hasSeenHomeShowcase here - it will be set when showcase completes
+        // via the onFinish callback in main.dart
+      }
+    } else {
+      // Showcase already seen, notify completion handler in case paywall is waiting
+      // This handles the edge case where showcase was already completed
+      ShowcaseCompletionHandler.notifyCompletion();
+    }
   }
 
   Future<void> _checkAndLogFirstTimeHomeOpen() async {
@@ -2027,7 +2075,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     
     if (!hasOpenedHome) {
       // Log analytics event for first time opening home screen
-      await AnalyticsService().logEvent('user_opened_home');
+      await AnalyticsService().logEvent('user opened home');
       // Save flag to indicate home screen has been opened
       await prefs.setBool('hasOpenedHomeScreen', true);
     }
@@ -2686,19 +2734,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Flexible(
                       child: Row(
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              PersistentNavBarNavigator.pushNewScreen(
-                                context,
-                                screen: const ProfileScreen(),
-                                withNavBar: false,
-                                pageTransitionAnimation:
-                                    PageTransitionAnimation.slideRight,
-                              );
-                            },
-                            child: CircleAvatar(
-                              radius: 22,
-                              backgroundImage: _getProfileImage(),
+                          Showcase(
+                            key: _profileIconKey,
+                            title: 'Profile',
+                            description: 'Tap here to view and manage your profile settings.',
+                            child: GestureDetector(
+                              onTap: () {
+                                PersistentNavBarNavigator.pushNewScreen(
+                                  context,
+                                  screen: const ProfileScreen(),
+                                  withNavBar: false,
+                                  pageTransitionAnimation:
+                                      PageTransitionAnimation.slideRight,
+                                );
+                              },
+                              child: CircleAvatar(
+                                radius: 22,
+                                backgroundImage: _getProfileImage(),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -2736,20 +2789,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    GestureDetector(
-                                      onTap: () => _showCurrencyBreakdownDialog(
-                                        context,
-                                        snapshot.data?.incomeByCurrency ?? {},
-                                        snapshot.data?.expensesByCurrency ?? {},
-                                        currencyProvider,
-                                        vacationProvider.isVacationMode,
-                                        totalBudget,
-                                        vacationAccountCurrency,
-                                      ),
-                                      child: Icon(
-                                        Icons.keyboard_arrow_down,
-                                        color: Colors.black54,
-                                        size: 20,
+                                    Showcase(
+                                      key: _currencyKey,
+                                      title: 'Currency',
+                                      description: 'Tap here to view currency breakdown and manage your currencies.',
+                                      child: GestureDetector(
+                                        onTap: () => _showCurrencyBreakdownDialog(
+                                          context,
+                                          snapshot.data?.incomeByCurrency ?? {},
+                                          snapshot.data?.expensesByCurrency ?? {},
+                                          currencyProvider,
+                                          vacationProvider.isVacationMode,
+                                          totalBudget,
+                                          vacationAccountCurrency,
+                                        ),
+                                        child: Icon(
+                                          Icons.keyboard_arrow_down,
+                                          color: Colors.black54,
+                                          size: 20,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -2763,9 +2821,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildAppBarButton(
-                          HugeIcons.strokeRoundedAirplaneMode,
-                          onPressed: () async {
+                        Showcase(
+                          key: _vacationModeKey,
+                          title: 'Vacation Mode',
+                          description: 'Toggle vacation mode to track expenses during your trips separately.',
+                          child: _buildAppBarButton(
+                            HugeIcons.strokeRoundedAirplaneMode,
+                            onPressed: () async {
                             final vacationProvider =
                                 Provider.of<VacationProvider>(
                                   context,
@@ -2933,6 +2995,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             }
                           },
                           isActive: vacationProvider.isVacationMode,
+                          ),
                         ),
                         // _buildAppBarButton(
                         //   HugeIcons.strokeRoundedAnalytics02,
@@ -2948,7 +3011,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         // ),
                         // Only show 3-dot menu in normal mode
                         if (!vacationProvider.isVacationMode)
-                          _build3DotMenuButton(context, homeScreenProvider),
+                          Showcase(
+                            key: _sideMenuKey,
+                            title: 'Side Menu',
+                            description: 'Access additional options and filters from here.',
+                            child: _build3DotMenuButton(context, homeScreenProvider),
+                          ),
                       ],
                     ),
                   ],
