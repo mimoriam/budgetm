@@ -64,6 +64,7 @@ dependencies:
   sign_in_button: ^4.0.1
   scrollable_clean_calendar: ^1.5.0
   shimmer: ^3.0.0
+  showcaseview: ^5.0.1
   tap_debouncer: ^2.2.0
   url_launcher: ^6.3.2
   sticky_headers: ^0.3.0+2

@@ -1,11 +1,16 @@
 // onboarding_screen.dart
+import 'dart:async';
+import 'dart:io';
+
 import 'package:budgetm/auth_gate.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
+import 'package:budgetm/screens/auth/login/login_screen.dart';
 import 'package:budgetm/services/analytics_service.dart';
+import 'package:budgetm/services/firebase_auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sign_in_button/sign_in_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,91 +22,270 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  Timer? _autoScrollTimer;
+  bool _isUserScrolling = false;
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  bool _isLoadingGoogle = false;
+  bool _isLoadingApple = false;
 
-  List<Map<String, String>> _getOnboardingData(BuildContext context) => [
-    {
-      'imagePath': 'images/backgrounds/onboarding1.png',
-      'title': AppLocalizations.of(context)!.onboardingPage1Title,
-      'description': AppLocalizations.of(context)!.onboardingPage1Description,
-    },
-    {
-      'imagePath': 'images/backgrounds/onboarding2.png',
-      'title': AppLocalizations.of(context)!.onboardingPage2Title,
-      'description': AppLocalizations.of(context)!.onboardingPage2Description,
-    },
-    {
-      'imagePath': 'images/backgrounds/onboarding3.png',
-      'title': AppLocalizations.of(context)!.onboardingPage3Title,
-      'description': AppLocalizations.of(context)!.onboardingPage3Description,
-    },
+  List<String> _getOnboardingImages() => [
+    'images/backgrounds/onboarding1.png',
+    'images/backgrounds/onboarding2.png',
+    'images/backgrounds/onboarding3.png',
   ];
 
   @override
   void initState() {
     super.initState();
-    // Log analytics event when onboarding screen is opened
     AnalyticsService().logEvent('onboarding_opened');
-    _pageController.addListener(() {
-      if (_pageController.page != null) {
-        setState(() {
-          _currentPage = _pageController.page!.round();
-        });
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!_isUserScrolling && mounted) {
+        final nextPage = (_currentPage + 1) % _getOnboardingImages().length;
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
       }
+    });
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentPage = index;
     });
   }
 
   @override
   void dispose() {
+    _stopAutoScroll();
     _pageController.dispose();
     super.dispose();
   }
 
-  void _onOnboardingDone() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboardingDone', true);
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthGate()),
-      );
+  void _showAuthBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _AuthBottomSheet(
+        onEmailLogin: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        },
+        onGoogleSignIn: _handleGoogleSignIn,
+        onAppleSignIn: _handleAppleSignIn,
+        isLoadingGoogle: _isLoadingGoogle,
+        isLoadingApple: _isLoadingApple,
+      ),
+    );
+  }
+
+  void _handleGoogleSignIn() async {
+    if (!mounted) return;
+    AnalyticsService().logEvent('google_sign_up_opened');
+
+    setState(() {
+      _isLoadingGoogle = true;
+    });
+
+    try {
+      final user = await _authService.signInWithGoogle();
+
+      if (user != null) {
+        final isFirstTime = await _authService.isFirstTimeUser(user.uid);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setBool('onboardingDone', true);
+        await prefs.setBool('isFirstTimeUser', isFirstTime);
+
+        if (prefs.getString('firstLoginDate') == null) {
+          await prefs.setString(
+            'firstLoginDate',
+            DateTime.now().toIso8601String(),
+          );
+        }
+
+        if (mounted) {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthGate()),
+            (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingGoogle = false;
+        });
+      }
+    }
+  }
+
+  void _handleAppleSignIn() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingApple = true;
+    });
+
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Apple Sign-In is not yet implemented'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingApple = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final onboardingData = _getOnboardingData(context);
+    final onboardingImages = _getOnboardingImages();
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: onboardingData.length,
-              itemBuilder: (context, index) {
-                return OnboardingPageContent(
-                  imagePath: onboardingData[index]['imagePath']!,
-                  title: onboardingData[index]['title']!,
-                  description: onboardingData[index]['description']!,
-                );
-              },
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. The Carousel Section - Now takes ALL available remaining space
+            Expanded(
+              child: GestureDetector(
+                onPanStart: (_) {
+                  _isUserScrolling = true;
+                  _stopAutoScroll();
+                },
+                onPanEnd: (_) {
+                  Future.delayed(const Duration(seconds: 3), () {
+                    if (mounted) {
+                      _isUserScrolling = false;
+                      _startAutoScroll();
+                    }
+                  });
+                },
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: onboardingImages.length,
+                  onPageChanged: _onPageChanged,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Container(
+                        width: double.infinity,
+                        // decoration: BoxDecoration(
+                        //   color: Colors.red.withOpacity(0.1), // Uncomment to debug layout bounds
+                        // ),
+                        child: Image.asset(
+                          onboardingImages[index],
+                          // fitWidth ensures it fills the width, but isn't cropped vertically
+                          // switch to BoxFit.contain if you want to ensure the whole image is ALWAYS seen without cropping
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(40.0, 0, 40.0, 40.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: List.generate(
-                    onboardingData.length,
-                    (index) => _buildIndicator(index),
+
+            // 2. Indicators Section - Now sits directly under the expanded carousel
+            Padding(
+              padding: const EdgeInsets.only(top: 20.0, bottom: 30.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  onboardingImages.length,
+                  (index) => _buildIndicator(index),
+                ),
+              ),
+            ),
+
+            // 3. Continue Button Section - Anchored at the bottom
+            Padding(
+              padding: const EdgeInsets.fromLTRB(40.0, 0, 40.0, 40.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _showAuthBottomSheet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppColors.gradientStart,
+                          AppColors.gradientEnd,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Center(
+                      child: Text(
+                        AppLocalizations.of(context)!.continueButton,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                _buildProceedButton(),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -121,77 +305,137 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
-
-  Widget _buildProceedButton() {
-    return GestureDetector(
-      onTap: () {
-        final onboardingData = _getOnboardingData(context);
-        if (_currentPage == onboardingData.length - 1) {
-          _onOnboardingDone();
-        } else {
-          _pageController.nextPage(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
-          );
-        }
-      },
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [AppColors.gradientStart, AppColors.gradientEnd],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: const HugeIcon(
-          icon: HugeIcons.strokeRoundedArrowRight01,
-          color: Colors.white,
-          size: 20,
-        ),
-      ),
-    );
-  }
 }
 
-class OnboardingPageContent extends StatelessWidget {
-  final String imagePath;
-  final String title;
-  final String description;
+// Keeping your exact Logic for the Bottom Sheet
+class _AuthBottomSheet extends StatelessWidget {
+  final VoidCallback onEmailLogin;
+  final VoidCallback onGoogleSignIn;
+  final VoidCallback onAppleSignIn;
+  final bool isLoadingGoogle;
+  final bool isLoadingApple;
 
-  const OnboardingPageContent({
-    super.key,
-    required this.imagePath,
-    required this.title,
-    required this.description,
+  const _AuthBottomSheet({
+    required this.onEmailLogin,
+    required this.onGoogleSignIn,
+    required this.onAppleSignIn,
+    required this.isLoadingGoogle,
+    required this.isLoadingApple,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 40.0),
-      color: Theme.of(context).scaffoldBackgroundColor,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30.0),
+          topRight: Radius.circular(30.0),
+        ),
+      ),
+      padding: const EdgeInsets.all(24.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Spacer(flex: 2),
-          Center(child: Image.asset(imagePath, height: 460)),
-          const Spacer(flex: 1),
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.lightGreyBackground,
+                borderRadius: BorderRadius.circular(2.0),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           Text(
-            title,
+            AppLocalizations.of(context)!.loginTitle,
             style: Theme.of(context).textTheme.displayLarge,
-            textAlign: TextAlign.left,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            AppLocalizations.of(context)!.loginSubtitle,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.secondaryTextColorLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 30),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+              ),
+              onPressed: onEmailLogin,
+              child: Text(
+                AppLocalizations.of(context)!.loginTitle,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
-          Text(
-            description,
-            style: Theme.of(context).textTheme.bodyLarge,
-            textAlign: TextAlign.left,
+          Row(
+            children: [
+              Expanded(child: Divider(color: AppColors.lightGreyBackground)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  AppLocalizations.of(context)!.orContinueWith,
+                  style: TextStyle(color: AppColors.secondaryTextColorLight),
+                ),
+              ),
+              Expanded(child: Divider(color: AppColors.lightGreyBackground)),
+            ],
           ),
-          const Spacer(flex: 3),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 45,
+            child: isLoadingGoogle
+                ? const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : SignInButton(
+                    Buttons.google,
+                    onPressed: onGoogleSignIn,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+          ),
+          if (Platform.isIOS) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 45,
+              child: isLoadingApple
+                  ? const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : SignInButton(
+                      Buttons.apple,
+                      onPressed: onAppleSignIn,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                    ),
+            ),
+          ],
+          const SizedBox(height: 16),
         ],
       ),
     );
