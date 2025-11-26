@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
@@ -26,9 +27,22 @@ class _PaywallScreenState extends State<PaywallScreen> {
   bool _isPurchasing = false;
   bool _isBlockingUi = false;
 
-  // Product IDs - must match Google Play Console and Cloud Functions
-  final String _monthlyProductID = 'android_monthly_subs';
-  final String _yearlyProductID = 'android_yearly_subs';
+  // Get platform-specific product IDs at runtime
+  String get _monthlyProductID {
+    if (Platform.isIOS) {
+      return SubscriptionProvider.iosMonthlyId;
+    } else {
+      return SubscriptionProvider.androidMonthlyId;
+    }
+  }
+
+  String get _yearlyProductID {
+    if (Platform.isIOS) {
+      return SubscriptionProvider.iosYearlyId;
+    } else {
+      return SubscriptionProvider.androidYearlyId;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +195,21 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 color: AppColors.secondaryTextColorLight,
               ),
             ),
+            // Show detailed error message if available
+            if (provider.error != null) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Text(
+                  provider.error!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.orange.shade700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             TextButton(
               onPressed: provider.isLoading

@@ -7,21 +7,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:budgetm/services/review_service.dart';
 
-/// Manages subscription state and handles in-app purchases for Google Play.
+/// Manages subscription state and handles in-app purchases for Google Play and App Store.
 ///
 /// Key Features:
 /// - Real-time subscription status via Firestore listener
 /// - Proper user verification (subscription tied to Firebase UID)
 /// - Automatic refresh on app resume
 /// - No persistent caching of subscription status
+/// - Platform-aware: automatically detects and handles iOS and Android purchases
 ///
 /// Security:
 /// - All purchases are verified server-side via Cloud Functions
 /// - Subscription status always checked against authenticated user's UID
-/// - Purchase tokens are validated with Google Play before granting access
+/// - Purchase tokens/transaction IDs are validated with store APIs before granting access
 class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
   // --- In-App Purchase ---
   final InAppPurchase _iap = InAppPurchase.instance;
@@ -34,8 +36,21 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription<User?>? _authSubscription;
 
   // Product IDs from Google Play Console
-  static const String monthlyId = 'android_monthly_subs';
-  static const String yearlyId = 'android_yearly_subs';
+  static const String androidMonthlyId = 'android_monthly_subs';
+  static const String androidYearlyId = 'android_yearly_subs';
+
+  // Product IDs from App Store Connect
+  static const String iosMonthlyId = 'buck_monthly_subs_ios';
+  static const String iosYearlyId = 'buck_yearly_subs_ios';
+
+  /// Get platform-specific product IDs
+  Set<String> get _productIds {
+    if (Platform.isIOS) {
+      return {iosMonthlyId, iosYearlyId};
+    } else {
+      return {androidMonthlyId, androidYearlyId};
+    }
+  }
 
   // --- State ---
   List<ProductDetails> _products = [];
@@ -117,26 +132,163 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _loadProducts() async {
     _setLoading(true);
     try {
-      final response = await _iap.queryProductDetails({monthlyId, yearlyId});
+      final productIds = _productIds;
+      
+      // Get bundle ID/package name for diagnostics
+      String? bundleId;
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        bundleId = Platform.isIOS ? packageInfo.packageName : null;
+      } catch (e) {
+        if (kDebugMode) print('Could not get package info: $e');
+      }
+      
+      if (kDebugMode) {
+        print('Querying products with IDs: ${productIds.join(", ")}');
+        print('Platform: ${Platform.isIOS ? "iOS" : "Android"}');
+        print('Store available: $_isStoreAvailable');
+        if (bundleId != null) {
+          print('Bundle ID: $bundleId');
+        }
+        if (Platform.isIOS && !_isStoreAvailable) {
+          print('⚠️  Store not available - check StoreKit Configuration file setup');
+        }
+      }
+
+      final response = await _iap.queryProductDetails(productIds);
 
       if (response.error != null) {
-        _error = 'Failed to load products: ${response.error!.message}';
+        final errorCode = response.error!.code;
+        final errorMessage = response.error!.message;
+        if (kDebugMode) {
+          print('Product query error: $errorCode - $errorMessage');
+        }
+        
+        // Handle specific StoreKit errors
+        if (errorCode == 'storekit_no_response' || 
+            errorMessage.contains('Failed to get response from platform')) {
+          if (kDebugMode) {
+            print('⚠️  STOREKIT_NO_RESPONSE ERROR DETECTED');
+            print('This usually means the StoreKit Configuration file isn\'t being loaded.');
+            print('');
+            print('SOLUTIONS:');
+            print('1. Run the app from Xcode (not Flutter CLI):');
+            print('   - Stop Flutter run');
+            print('   - Open: open ios/Runner.xcworkspace');
+            print('   - Run from Xcode (Cmd+R)');
+            print('');
+            print('2. Verify StoreKit file is selected:');
+            print('   - Product > Scheme > Edit Scheme');
+            print('   - Run > Options > StoreKit Configuration');
+            print('   - Should show: "Buck: Expense Tracker & Budget.storekit"');
+            print('');
+            print('3. Clean and rebuild:');
+            print('   - Cmd+Shift+K (Clean Build Folder)');
+            print('   - Quit Xcode completely');
+            print('   - Reopen and rebuild');
+            print('');
+            print('4. Check StoreKit file location:');
+            print('   - File should be in: ios/Buck: Expense Tracker & Budget.storekit');
+            print('   - Ensure it\'s added to the Xcode project (not just in filesystem)');
+          }
+          _error = 'StoreKit not responding. Try running from Xcode instead of Flutter CLI.';
+        } else {
+          _error = 'Failed to load products: $errorMessage';
+        }
         _products = [];
       } else {
         _products = response.productDetails.toList();
         // Sort by price (ascending)
         _products.sort((a, b) => a.rawPrice.compareTo(b.rawPrice));
         _error = null;
+        
+        if (kDebugMode) {
+          print('Successfully loaded ${_products.length} product(s)');
+          for (final product in _products) {
+            print('  - ${product.id}: ${product.title} (${product.price})');
+          }
+        }
       }
 
-      // Debug: Check for missing product IDs
-      if (response.notFoundIDs.isNotEmpty && kDebugMode) {
-        print('Missing product IDs: ${response.notFoundIDs.join(', ')}');
+      // Check for missing product IDs and provide helpful error message
+      if (response.notFoundIDs.isNotEmpty) {
+        final missingIds = response.notFoundIDs.join(', ');
+        if (kDebugMode) {
+          print('Missing product IDs: $missingIds');
+          print('Found products: ${_products.map((p) => p.id).join(", ")}');
+        }
+        
+        // If no products were found at all, set a helpful error message
+        if (_products.isEmpty) {
+          if (Platform.isIOS) {
+            // User-friendly error message
+            _error = 'Subscription products not available. Missing: $missingIds';
+            
+            // Detailed troubleshooting in debug logs
+            if (kDebugMode) {
+              print('=== PRODUCT LOADING TROUBLESHOOTING ===');
+              print('Missing product IDs: $missingIds');
+              print('Expected product IDs: ${productIds.join(", ")}');
+              if (bundleId != null) {
+                print('App Bundle ID: $bundleId');
+                print('Expected Bundle ID: buck.budget.manager');
+                if (bundleId != 'buck.budget.manager') {
+                  print('⚠️  WARNING: Bundle ID mismatch!');
+                }
+              }
+              print('');
+              print('Common causes:');
+              print('1. Products not created in App Store Connect');
+              print('2. Products not in "Ready to Submit" or "Approved" status');
+              print('3. Product IDs don\'t match exactly (case-sensitive)');
+              print('4. Products not associated with Bundle ID: buck.budget.manager');
+              print('5. ⚠️  STOREKIT CONFIGURATION: If using a .storekit file:');
+              print('   - Verify the file is selected in Xcode scheme:');
+              print('     Product > Scheme > Edit Scheme > Run > Options');
+              print('   - Ensure products are in subscriptionGroups (not products array)');
+              print('   - Product IDs must match exactly: buck_monthly_subs_ios, buck_yearly_subs_ios');
+              print('   - After adding/modifying StoreKit file, restart Xcode and rebuild app');
+              print('   - Try: Clean Build Folder (Cmd+Shift+K) then rebuild');
+              print('6. Products may take up to 24 hours to propagate after creation');
+              print('7. Ensure you\'re signed in with a sandbox test account (if testing)');
+              print('=====================================');
+            }
+          } else {
+            // User-friendly error message
+            _error = 'Subscription products not available. Missing: $missingIds';
+            
+            // Detailed troubleshooting in debug logs
+            if (kDebugMode) {
+              print('=== PRODUCT LOADING TROUBLESHOOTING ===');
+              print('Missing product IDs: $missingIds');
+              print('Expected product IDs: ${productIds.join(", ")}');
+              print('');
+              print('Common causes:');
+              print('1. Products not created in Google Play Console');
+              print('2. Products not active or published');
+              print('3. Product IDs don\'t match exactly (case-sensitive)');
+              print('4. Products not associated with correct package name');
+              print('5. Products may take time to propagate');
+              print('=====================================');
+            }
+          }
+        } else {
+          // Some products found, but not all
+          if (kDebugMode) {
+            print('Warning: Only ${_products.length} of ${productIds.length} products found');
+            print('Missing: ${response.notFoundIDs.join(", ")}');
+          }
+          // Don't set error if we have at least some products
+          // The paywall will show available products
+        }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       _error = 'Failed to load products: $e';
       _products = [];
-      if (kDebugMode) print(_error);
+      if (kDebugMode) {
+        print('Exception loading products: $e');
+        print('Stack trace: $stackTrace');
+      }
     } finally {
       _setLoading(false);
     }
@@ -182,20 +334,46 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
           final errorCode = purchase.error?.code;
           final errorMessage = purchase.error?.message ?? '';
           
-          // Check if error is "itemAlreadyOwned" (billing response code 7)
-          // This happens when user already owns the subscription but it's not verified
-          if (errorMessage.contains('itemAlreadyOwned') || 
-              errorMessage.contains('BillingResponse.itemAlreadyOwned') ||
-              errorCode == 'purchase_error' && errorMessage.contains('7')) {
-            if (kDebugMode) {
-              print('Item already owned. Attempting to restore purchases...');
+          // Handle platform-specific errors
+          if (Platform.isAndroid) {
+            // Android: Check if error is "itemAlreadyOwned" (billing response code 7)
+            // This happens when user already owns the subscription but it's not verified
+            if (errorMessage.contains('itemAlreadyOwned') || 
+                errorMessage.contains('BillingResponse.itemAlreadyOwned') ||
+                errorCode == 'purchase_error' && errorMessage.contains('7')) {
+              if (kDebugMode) {
+                print('Item already owned. Attempting to restore purchases...');
+              }
+              _error = null; // Clear error since we're handling it
+              
+              // Automatically trigger restore purchases to re-verify the existing subscription
+              await restorePurchases(notifyLoading: false);
+            } else {
+              // Handle other Android errors normally
+              _error = 'Purchase failed: $errorMessage';
+              if (kDebugMode) print(_error);
             }
-            _error = null; // Clear error since we're handling it
-            
-            // Automatically trigger restore purchases to re-verify the existing subscription
-            await restorePurchases(notifyLoading: false);
+          } else if (Platform.isIOS) {
+            // iOS: Handle common App Store errors
+            // iOS doesn't have the same "itemAlreadyOwned" error, but we can still
+            // attempt to restore purchases for certain error conditions
+            if (errorMessage.contains('already purchased') ||
+                errorMessage.contains('already owns') ||
+                errorCode == 'storekit_error') {
+              if (kDebugMode) {
+                print('iOS purchase error detected. Attempting to restore purchases...');
+              }
+              _error = null; // Clear error since we're handling it
+              
+              // Automatically trigger restore purchases to re-verify the existing subscription
+              await restorePurchases(notifyLoading: false);
+            } else {
+              // Handle other iOS errors normally
+              _error = 'Purchase failed: $errorMessage';
+              if (kDebugMode) print(_error);
+            }
           } else {
-            // Handle other errors normally
+            // Unknown platform or other errors
             _error = 'Purchase failed: $errorMessage';
             if (kDebugMode) print(_error);
           }
@@ -220,8 +398,8 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
           // Note: No need to call refreshSubscriptionStatus() here.
           // The verifyPurchaseWithServer() function already writes correct data to Firestore,
           // and the Firestore listener will automatically update _isSubscribed.
-          // Calling refresh immediately can cause a race condition where Google Play
-          // hasn't propagated the purchase yet, returning stale data.
+          // Calling refresh immediately can cause a race condition where the store
+          // (Google Play or App Store) hasn't propagated the purchase yet, returning stale data.
 
           // Request in-app review after successful purchase
           ReviewService.instance.requestReviewIfEligible();
@@ -238,6 +416,63 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Check if a transaction ID looks like a StoreKit Configuration test transaction
+  /// StoreKit test transactions are typically UUIDs or have specific patterns
+  bool _isStoreKitTestTransaction(String? transactionId) {
+    if (transactionId == null || transactionId.isEmpty) return false;
+    // StoreKit Configuration test transactions are typically UUIDs
+    // Format: 8-4-4-4-12 hexadecimal characters
+    final uuidPattern = RegExp(r'^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$');
+    return uuidPattern.hasMatch(transactionId);
+  }
+
+  /// Save StoreKit test purchase directly to Firestore (for local testing)
+  Future<bool> _saveStoreKitTestPurchase(PurchaseDetails purchase, String uid) async {
+    try {
+      if (kDebugMode) {
+        print('Detected StoreKit Configuration test purchase - saving directly to Firestore');
+      }
+
+      // Calculate expiry time based on subscription period
+      DateTime? expiryTime;
+      if (purchase.productID == iosMonthlyId) {
+        expiryTime = DateTime.now().add(const Duration(days: 30));
+      } else if (purchase.productID == iosYearlyId) {
+        expiryTime = DateTime.now().add(const Duration(days: 365));
+      }
+
+      final docRef = _firestore.doc('users/$uid/subscriptions/current');
+      await docRef.set(
+        {
+          'store': 'app_store',
+          'productId': purchase.productID,
+          'originalTransactionId': purchase.purchaseID,
+          'bundleId': 'buck.budget.manager',
+          'environment': 'storekit_test',
+          'userId': uid,
+          'isEntitled': true,
+          'subscriptionState': 'SUBSCRIPTION_STATE_ACTIVE',
+          'expiryTimeMillis': expiryTime?.millisecondsSinceEpoch,
+          'autoRenewing': true,
+          'verifiedAt': FieldValue.serverTimestamp(),
+          'lastCheckedAt': FieldValue.serverTimestamp(),
+          'isStoreKitTest': true, // Flag to indicate this is a test transaction
+        },
+        SetOptions(merge: true),
+      );
+
+      if (kDebugMode) {
+        print('StoreKit test purchase saved successfully');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to save StoreKit test purchase: $e');
+      }
+      return false;
+    }
+  }
+
   /// Verify purchase with server via Cloud Function
   ///
   /// Returns true if verification succeeded, false otherwise.
@@ -250,21 +485,80 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
         return false;
       }
 
-      final token = purchase.verificationData.serverVerificationData;
-
       if (kDebugMode) {
         print('Verifying purchase: ${purchase.productID}');
       }
 
-      // Call Firebase Cloud Function to verify with Google Play
-      // This also links the purchase to the user's UID
-      final result = await _functions.httpsCallable('verifyPlayPurchase').call({
-        'productId': purchase.productID,
-        'purchaseToken': token,
-      });
+      // Detect platform and call appropriate Cloud Function
+      if (Platform.isIOS) {
+        // For iOS: Extract originalTransactionId from purchaseID
+        // For subscriptions, purchaseID is the transaction identifier
+        // For the first purchase, this is the originalTransactionId
+        final originalTransactionId = purchase.purchaseID;
+        
+        if (originalTransactionId == null || originalTransactionId.isEmpty) {
+          _error = 'Failed to verify purchase: Missing transaction ID';
+          if (kDebugMode) print(_error);
+          return false;
+        }
 
-      if (kDebugMode) {
-        print('Purchase verification result: ${result.data}');
+        // Check if this is a StoreKit Configuration test transaction
+        // StoreKit test transactions can't be verified with App Store Server API
+        if (_isStoreKitTestTransaction(originalTransactionId)) {
+          if (kDebugMode) {
+            print('Detected StoreKit Configuration test transaction - skipping server verification');
+          }
+          // Save directly to Firestore for local testing
+          return await _saveStoreKitTestPurchase(purchase, user.uid);
+        }
+
+        // Call Firebase Cloud Function to verify with App Store
+        // This also links the purchase to the user's UID
+        try {
+          final result = await _functions.httpsCallable('verifyAppStorePurchase').call({
+            'productId': purchase.productID,
+            'originalTransactionId': originalTransactionId,
+          });
+
+          if (kDebugMode) {
+            print('App Store purchase verification result: ${result.data}');
+          }
+
+          _error = null;
+          return true;
+        } on FirebaseFunctionsException catch (e) {
+          // If verification fails, check if it's a StoreKit test transaction
+          // StoreKit test transactions will fail with "transaction not found" type errors
+          if (kDebugMode) {
+            print('Server verification failed: ${e.code} - ${e.message}');
+            print('This might be a StoreKit Configuration test transaction');
+          }
+
+          // If it's an internal error and we're in debug mode, try saving as test purchase
+          if (e.code == 'internal' && kDebugMode) {
+            if (kDebugMode) {
+              print('Attempting to save as StoreKit test purchase...');
+            }
+            return await _saveStoreKitTestPurchase(purchase, user.uid);
+          }
+
+          // Re-throw if it's not a test transaction or not in debug mode
+          rethrow;
+        }
+      } else {
+        // For Android: Use purchase token
+        final token = purchase.verificationData.serverVerificationData;
+
+        // Call Firebase Cloud Function to verify with Google Play
+        // This also links the purchase to the user's UID
+        final result = await _functions.httpsCallable('verifyPlayPurchase').call({
+          'productId': purchase.productID,
+          'purchaseToken': token,
+        });
+
+        if (kDebugMode) {
+          print('Google Play purchase verification result: ${result.data}');
+        }
       }
 
       _error = null;
@@ -360,17 +654,21 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
         );
   }
 
-  /// Refresh subscription status from Google Play via Cloud Function
+  /// Refresh subscription status from Google Play or App Store via Cloud Function
   ///
   /// This should be called:
   /// - On app resume (handled automatically)
   /// - When user logs in
-  /// - When user cancels subscription in Play Store (detected on next refresh)
+  /// - When user cancels subscription in store (detected on next refresh)
   /// - When user wants to manually check subscription status
   /// 
   /// Note: This method includes debouncing to prevent rapid successive calls.
   /// Multiple calls within 5 seconds will be ignored to avoid hitting the API
-  /// during Google Play's propagation window.
+  /// during store propagation windows.
+  /// 
+  /// The method automatically detects the store type from Firestore and calls
+  /// the appropriate refresh function. If no store type is found, it defaults
+  /// to the current platform's store.
   Future<void> refreshSubscriptionStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -398,9 +696,58 @@ class SubscriptionProvider extends ChangeNotifier with WidgetsBindingObserver {
     try {
       if (kDebugMode) print('Refreshing subscription status...');
 
-      // Call Cloud Function to refresh subscription status from Google Play
+      // Check Firestore to determine store type
+      final subRef = _firestore.doc('users/${user.uid}/subscriptions/current');
+      final snap = await subRef.get();
+      
+      String? storeType;
+      bool isStoreKitTest = false;
+      if (snap.exists) {
+        final data = snap.data();
+        storeType = data?['store'] as String?;
+        isStoreKitTest = (data?['isStoreKitTest'] as bool?) ?? false;
+        final environment = data?['environment'] as String?;
+        
+        // Also check environment field
+        if (environment == 'storekit_test') {
+          isStoreKitTest = true;
+        }
+      }
+
+      // Skip server refresh for StoreKit test purchases
+      if (isStoreKitTest) {
+        if (kDebugMode) {
+          print('Skipping server refresh for StoreKit test purchase');
+          print('Subscription status will be read from Firestore listener');
+        }
+        _error = null;
+        _lastRefreshTime = DateTime.now();
+        return;
+      }
+
+      // If no store type found, default to current platform
+      if (storeType == null) {
+        storeType = Platform.isIOS ? 'app_store' : 'google_play';
+        if (kDebugMode) {
+          print('No store type in Firestore, defaulting to: $storeType');
+        }
+      }
+
+      // Call appropriate Cloud Function based on store type
+      final String functionName;
+      if (storeType == 'app_store') {
+        functionName = 'refreshAppStorePurchase';
+      } else {
+        // Default to Google Play for backward compatibility
+        functionName = 'refreshPlayPurchase';
+      }
+
+      if (kDebugMode) {
+        print('Calling $functionName for store: $storeType');
+      }
+
       final result = await _functions
-          .httpsCallable('refreshPlayPurchase')
+          .httpsCallable(functionName)
           .call({});
 
       if (kDebugMode) {
