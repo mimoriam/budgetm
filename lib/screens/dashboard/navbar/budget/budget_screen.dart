@@ -15,8 +15,6 @@ import 'package:budgetm/screens/dashboard/navbar/budget/budget_detail_screen.dar
 import 'package:budgetm/screens/dashboard/navbar/budget/add_budget_screen.dart';
 import 'package:budgetm/utils/currency_formatter.dart';
 import 'dart:ui';
-import 'package:showcaseview/showcaseview.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -31,13 +29,6 @@ class _BudgetScreenState extends State<BudgetScreen>
 
   VacationProvider? _vacationProvider;
   String? _selectedChartCurrency; // For chart currency selection
-  
-  // GlobalKeys for showcase views
-  final GlobalKey _addBudgetKey = GlobalKey();
-  final GlobalKey _typeSelectorKey = GlobalKey();
-  final GlobalKey _periodSelectorKey = GlobalKey();
-  final GlobalKey _pieChartKey = GlobalKey();
-  final GlobalKey _categoryListKey = GlobalKey();
 
   @override
   void initState() {
@@ -49,76 +40,7 @@ class _BudgetScreenState extends State<BudgetScreen>
     // Initialize budget provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<BudgetProvider>(context, listen: false).initialize();
-      // Start showcase for new users
-      _startShowcaseIfNeeded();
     });
-  }
-  
-  Future<void> _startShowcaseIfNeeded() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasSeenShowcase = prefs.getBool('hasSeenBudgetShowcase') ?? false;
-    
-    if (!hasSeenShowcase && mounted) {
-      // Wait for UI to render and budget provider to initialize
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Wait for budget provider to finish loading
-      final budgetProvider = Provider.of<BudgetProvider>(context, listen: false);
-      int attempts = 0;
-      while (budgetProvider.isLoading && attempts < 20 && mounted) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        attempts++;
-      }
-      
-      if (mounted) {
-        final List<GlobalKey> showcaseKeys = [];
-        
-        // Check state conditions to determine which widgets are rendered
-        final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
-        final isVacationMode = vacationProvider.isVacationMode;
-        
-        // Add Budget button - only if not in vacation mode
-        if (!isVacationMode) {
-          showcaseKeys.add(_addBudgetKey);
-        }
-        
-        // Type selector and Period selector - only if not in vacation mode
-        if (!isVacationMode) {
-          showcaseKeys.add(_typeSelectorKey);
-          showcaseKeys.add(_periodSelectorKey);
-        }
-        
-        // Pie chart - only if there's data (not showing empty state)
-        final hasData = budgetProvider.categoryBudgetData.isNotEmpty;
-        if (hasData) {
-          showcaseKeys.add(_pieChartKey);
-        }
-        
-        // Category list - only if there's data
-        final categoryData = budgetProvider.categoryBudgetData
-            .where((d) => d.spentAmount > 0 || d.limit > 0 || d.budget.isVacation == true)
-            .toList();
-        if (categoryData.isNotEmpty) {
-          showcaseKeys.add(_categoryListKey);
-        }
-        
-        // Only start showcase if we have at least one valid key
-        if (showcaseKeys.isNotEmpty) {
-          // Wait a bit more for widgets to be fully rendered
-          await Future.delayed(const Duration(milliseconds: 300));
-          if (mounted) {
-            // Set flag to indicate budget showcase is starting
-            await prefs.setString('currentShowcase', 'budget');
-            
-            // Start showcase
-            ShowCaseWidget.of(context).startShowCase(showcaseKeys);
-          }
-        } else {
-          // If no widgets are available, mark showcase as seen to avoid retrying
-          await prefs.setBool('hasSeenBudgetShowcase', true);
-        }
-      }
-    }
   }
 
   void _vacationListener() {
@@ -250,11 +172,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                 builder: (context, vacationProvider, child) {
                   return Visibility(
                     visible: !vacationProvider.isVacationMode,
-                    child: Showcase(
-                      key: _addBudgetKey,
-                      title: AppLocalizations.of(context)!.budgetShowcaseAddBudget,
-                      description: AppLocalizations.of(context)!.budgetShowcaseAddBudgetDesc,
-                      child: Container(
+                    child: Container(
                         // height: 20,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
@@ -326,7 +244,6 @@ class _BudgetScreenState extends State<BudgetScreen>
                         },
                       ),
                     ),
-                      ),
                     );
                 },
               ),
@@ -398,11 +315,7 @@ class _BudgetScreenState extends State<BudgetScreen>
                           'BudgetScreen: building selectors type=${provider.selectedBudgetType} period=${provider.currentPeriodDisplay}',
                         );
                       });
-                      return Showcase(
-                        key: _typeSelectorKey,
-                        title: AppLocalizations.of(context)!.budgetShowcaseTypeSelector,
-                        description: AppLocalizations.of(context)!.budgetShowcaseTypeSelectorDesc,
-                        child: Row(
+                      return Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _buildTypeChip(
@@ -429,7 +342,6 @@ class _BudgetScreenState extends State<BudgetScreen>
                             () => provider.changeBudgetType(BudgetType.monthly),
                           ),
                         ],
-                        ),
                       );
                     },
                   );
@@ -442,17 +354,12 @@ class _BudgetScreenState extends State<BudgetScreen>
                   if (vacationProvider.isVacationMode) {
                     return const SizedBox.shrink();
                   }
-                  return Showcase(
-                    key: _periodSelectorKey,
-                    title: AppLocalizations.of(context)!.budgetShowcasePeriodSelector,
-                    description: AppLocalizations.of(context)!.budgetShowcasePeriodSelectorDesc,
-                    child: PeriodSelector(
+                  return PeriodSelector(
                       periodText: provider.currentPeriodDisplay,
                       onPrevious: onPrevious,
                       onNext: onNext,
                       onQuickJump: onQuickJump,
-                    ),
-                  );
+                    );
                 },
               ),
             ],
@@ -740,11 +647,7 @@ class _BudgetScreenState extends State<BudgetScreen>
       }
     }
 
-    return Showcase(
-      key: _pieChartKey,
-      title: AppLocalizations.of(context)!.budgetShowcasePieChart,
-      description: AppLocalizations.of(context)!.budgetShowcasePieChartDesc,
-      child: Container(
+    return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -813,7 +716,6 @@ class _BudgetScreenState extends State<BudgetScreen>
           const SizedBox(height: 16),
           _buildPieChartLegend(displayData),
         ],
-      ),
       ),
     );
   }
@@ -912,11 +814,7 @@ class _BudgetScreenState extends State<BudgetScreen>
       return const SizedBox.shrink();
     }
 
-    return Showcase(
-      key: _categoryListKey,
-      title: AppLocalizations.of(context)!.budgetShowcaseCategoryList,
-      description: AppLocalizations.of(context)!.budgetShowcaseCategoryListDesc,
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -971,7 +869,6 @@ class _BudgetScreenState extends State<BudgetScreen>
         const SizedBox(height: 4),
         ...data.map((item) => _buildCategoryCard(context, item, provider)),
       ],
-      ),
     );
   }
 

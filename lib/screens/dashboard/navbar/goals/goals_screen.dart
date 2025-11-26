@@ -13,8 +13,6 @@ import 'package:flutter/rendering.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
-import 'package:showcaseview/showcaseview.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'goals_detailed/goals_detailed_screen.dart';
 import 'create_goal/create_goal_screen.dart';
@@ -31,11 +29,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
   late ScrollController _scrollController;
   List<FirestoreGoal> _cachedGoals = [];
   bool _isLoading = true;
-  
-  // GlobalKeys for showcase views
-  final GlobalKey _addGoalKey = GlobalKey();
-  final GlobalKey _toggleKey = GlobalKey();
-  final GlobalKey _goalItemKey = GlobalKey();
 
   @override
   void initState() {
@@ -63,40 +56,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final goalsProvider = Provider.of<GoalsProvider>(context, listen: false);
       goalsProvider.addListener(_onGoalsProviderChanged);
-      // Start showcase for new users
-      _startShowcaseIfNeeded();
     });
-  }
-  
-  Future<void> _startShowcaseIfNeeded() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasSeenShowcase = prefs.getBool('hasSeenGoalsShowcase') ?? false;
-    
-    if (!hasSeenShowcase && mounted) {
-      // Wait for goals to load and UI to fully render
-      await Future.delayed(const Duration(milliseconds: 500));
-      // Wait until goals are loaded
-      while (_isLoading && mounted) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-      if (mounted) {
-        final List<GlobalKey> showcaseKeys = [
-          _addGoalKey,
-          _toggleKey,
-        ];
-        
-        // Only add goal item key if there are goals to show
-        if (_cachedGoals.isNotEmpty) {
-          showcaseKeys.add(_goalItemKey);
-        }
-        
-        // Set flag to indicate goals showcase is starting
-        await prefs.setString('currentShowcase', 'goals');
-        
-        // Start showcase
-        ShowCaseWidget.of(context).startShowCase(showcaseKeys);
-      }
-    }
   }
 
   Future<void> _loadGoals() async {
@@ -251,11 +211,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   fontSize: 20,
                 ),
               ),
-              Showcase(
-                key: _addGoalKey,
-                title: AppLocalizations.of(context)!.goalsShowcaseAddGoal,
-                description: AppLocalizations.of(context)!.goalsShowcaseAddGoalDesc,
-                child: Container(
+              Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     shape: BoxShape.rectangle,
@@ -290,7 +246,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   },
                 ),
                   ),
-                ),
             ],
           ),
         ),
@@ -299,11 +254,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Widget _buildToggleChips() {
-    return Showcase(
-      key: _toggleKey,
-      title: AppLocalizations.of(context)!.goalsShowcaseToggle,
-      description: AppLocalizations.of(context)!.goalsShowcaseToggleDesc,
-      child: Container(
+    return Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
@@ -365,7 +316,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
             },
           ),
         ),
-      ),
       ),
     );
   }
@@ -509,11 +459,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
         ? hexToColor(goal.color) 
         : (goal.isCompleted ? Colors.green : AppColors.gradientEnd);
     final Color iconForegroundColor = getContrastingColor(iconBackgroundColor);
-    
-    // Show showcase only on first goal item
-    final isFirstGoal = _cachedGoals.indexOf(goal) == 0;
 
-    final goalItem = GestureDetector(
+    return GestureDetector(
       onTap: () async {
         print('GoalsScreen: Navigating to goal detail for goal: ${goal.name}');
         final result = await PersistentNavBarNavigator.pushNewScreen(
@@ -633,17 +580,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
         ),
       ),
     );
-    
-    // Wrap first goal item with showcase
-    if (isFirstGoal) {
-      return Showcase(
-        key: _goalItemKey,
-        title: AppLocalizations.of(context)!.goalsShowcaseGoalItem,
-        description: AppLocalizations.of(context)!.goalsShowcaseGoalItemDesc,
-        child: goalItem,
-      );
-    }
-    return goalItem;
   }
 
   Widget _buildEmptyState() {

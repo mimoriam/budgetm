@@ -29,9 +29,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isLoadingApple = false;
 
   List<String> _getOnboardingImages() => [
-    'images/backgrounds/onboarding1.png',
-    'images/backgrounds/onboarding2.png',
-    'images/backgrounds/onboarding3.png',
+    'images/backgrounds/splash_1.png',
+    'images/backgrounds/splash_2.png',
+    'images/backgrounds/splash_3.png',
+    'images/backgrounds/splash_4.png',
+    'images/backgrounds/splash_5.png',
+    'images/backgrounds/splash_6.png',
   ];
 
   @override
@@ -42,12 +45,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _startAutoScroll() {
-    _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (!_isUserScrolling && mounted) {
         final nextPage = (_currentPage + 1) % _getOnboardingImages().length;
         _pageController.animateToPage(
           nextPage,
-          duration: const Duration(milliseconds: 500),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
       }
@@ -181,14 +184,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _navigateToLogin() {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final onboardingImages = _getOnboardingImages();
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('images/backgrounds/splash_bg.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
             // 1. The Carousel Section - Now takes ALL available remaining space
             Expanded(
               child: GestureDetector(
@@ -231,7 +249,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // 2. Indicators Section - Now sits directly under the expanded carousel
             Padding(
-              padding: const EdgeInsets.only(top: 20.0, bottom: 30.0),
+              padding: const EdgeInsets.only(top: 20.0, bottom: 20.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
@@ -243,7 +261,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // 3. Continue Button Section - Anchored at the bottom
             Padding(
-              padding: const EdgeInsets.fromLTRB(40.0, 0, 40.0, 40.0),
+              padding: const EdgeInsets.fromLTRB(40.0, 0, 40.0, 1.0),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -269,7 +287,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       borderRadius: BorderRadius.circular(30.0),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    padding: const EdgeInsets.symmetric(vertical: 14.0),
                     child: Center(
                       child: Text(
                         AppLocalizations.of(context)!.continueButton,
@@ -284,9 +302,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
+
+            // 4. "I am already registered" link
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10.0),
+              child: TextButton(
+                onPressed: _navigateToLogin,
+                child: const Text(
+                  'I am already registered',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
+      )),
     );
   }
 
