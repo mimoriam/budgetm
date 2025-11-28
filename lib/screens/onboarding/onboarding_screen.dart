@@ -37,6 +37,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'images/backgrounds/splash_6.png',
   ];
 
+  List<String> _getOnboardingTexts() => [
+    'Manage All Finance at One Place',
+    'Plan & Track Budgets',
+    'Track Vacation Spendings',
+    'Multiple Accounts & Currencies',
+    'Reminders for Subscriptions',
+    'Achieve Your Goals',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -215,7 +224,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _stopAutoScroll();
                 },
                 onPanEnd: (_) {
-                  Future.delayed(const Duration(seconds: 3), () {
+                  Future.delayed(const Duration(seconds: 2), () {
                     if (mounted) {
                       _isUserScrolling = false;
                       _startAutoScroll();
@@ -244,6 +253,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     );
                   },
                 ),
+              ),
+            ),
+
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                _getOnboardingTexts()[_currentPage],
+                key: ValueKey(_currentPage),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
 
@@ -290,7 +313,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14.0),
                     child: Center(
                       child: Text(
-                        AppLocalizations.of(context)!.continueButton,
+                        // AppLocalizations.of(context)!.continueButton
+                        "Sign in to Continue",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -398,37 +422,6 @@ class _AuthBottomSheet extends StatelessWidget {
           const SizedBox(height: 30),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-              ),
-              onPressed: onEmailLogin,
-              child: Text(
-                AppLocalizations.of(context)!.loginTitle,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: Divider(color: AppColors.lightGreyBackground)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text(
-                  AppLocalizations.of(context)!.orContinueWith,
-                  style: TextStyle(color: AppColors.secondaryTextColorLight),
-                ),
-              ),
-              Expanded(child: Divider(color: AppColors.lightGreyBackground)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
             height: 45,
             child: isLoadingGoogle
                 ? const Center(
@@ -468,6 +461,38 @@ class _AuthBottomSheet extends StatelessWidget {
                     ),
             ),
           ],
+          
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: Divider(color: AppColors.lightGreyBackground)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  AppLocalizations.of(context)!.orContinueWith,
+                  style: TextStyle(color: AppColors.secondaryTextColorLight),
+                ),
+              ),
+              Expanded(child: Divider(color: AppColors.lightGreyBackground)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+              ),
+              onPressed: onEmailLogin,
+              child: Text(
+                AppLocalizations.of(context)!.loginTitle,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
         ],
       ),
