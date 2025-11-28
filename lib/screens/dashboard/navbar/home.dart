@@ -191,27 +191,33 @@ class MonthPageProvider extends ChangeNotifier {
       print('DEBUG: MonthPageProvider.initialize - logging error: $e');
     }
 
-    // Always reset state if this is the first initialization or if data has changed
-    if (!_isInitialized || currentDataHash != _lastDataHash) {
+    // Early return if data hash hasn't changed and provider is already initialized
+    // This prevents unnecessary state changes and notifyListeners() calls
+    if (_isInitialized && currentDataHash == _lastDataHash) {
       print(
-        'DEBUG: MonthPageProvider.initialize - RESETTING STATE: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}',
+        'DEBUG: MonthPageProvider.initialize - SKIPPING (data unchanged): isInitialized=$_isInitialized, hash=$currentDataHash',
       );
-      _allTransactions = data.transactionsWithAccounts;
-      _paginatedTransactions = [];
-      _currentPage = 0;
-      _hasReachedEnd = false;
-      _error = '';
-      _lastDataHash = currentDataHash;
-      _isInitialized = true;
+      return; // No state changes needed, skip notifyListeners()
+    }
 
-      // Load first page only if we have transactions
-      if (_allTransactions.isNotEmpty) {
-        fetchNextPage();
-      }
+    // Reset state if this is the first initialization or if data has changed
+    print(
+      'DEBUG: MonthPageProvider.initialize - RESETTING STATE: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}',
+    );
+    _allTransactions = data.transactionsWithAccounts;
+    _paginatedTransactions = [];
+    _currentPage = 0;
+    _hasReachedEnd = false;
+    _error = '';
+    _lastDataHash = currentDataHash;
+    _isInitialized = true;
+
+    // Load first page only if we have transactions
+    if (_allTransactions.isNotEmpty) {
+      fetchNextPage();
     } else {
-      print(
-        'DEBUG: MonthPageProvider.initialize - SKIPPING RESET: isInitialized=$_isInitialized, hashChanged=${currentDataHash != _lastDataHash}',
-      );
+      // If no transactions, notify listeners to update UI (show empty state)
+      notifyListeners();
     }
   }
 
@@ -736,6 +742,14 @@ class _MonthPageViewState extends State<MonthPageView> {
               if (snapshot.hasData &&
                   !snapshot.data!.isLoading &&
                   snapshot.data!.error == null) {
+                // Only call initialize if provider is not initialized
+                // The provider's initialize() method will check the hash internally
+                // and skip reset if data hasn't changed
+                final shouldInitialize = !provider.isInitialized ||
+                    // Also initialize if transaction count changed (quick check before hash)
+                    provider.allTransactions.length !=
+                        snapshot.data!.transactionsWithAccounts.length;
+                
                 // DEBUG: log incoming snapshot before provider.initialize to trace refresh
                 try {
                   final txCount =
@@ -744,38 +758,22 @@ class _MonthPageViewState extends State<MonthPageView> {
                       .where((t) => t.linkedTransactionId != null)
                       .length;
                   print(
-                    'DEBUG: MonthPageView.StreamBuilder - monthIndex=${widget.monthIndex}, isVacation=${widget.isVacation}, txCount=$txCount, linkedCount=$linkedCount, providerInitialized=${provider.isInitialized}, paginatedCount=${provider.paginatedTransactions.length}',
+                    'DEBUG: MonthPageView.StreamBuilder - monthIndex=${widget.monthIndex}, isVacation=${widget.isVacation}, txCount=$txCount, linkedCount=$linkedCount, providerInitialized=${provider.isInitialized}, paginatedCount=${provider.paginatedTransactions.length}, shouldInitialize=$shouldInitialize',
                   );
                 } catch (e) {
                   print(
                     'DEBUG: MonthPageView.StreamBuilder - logging error: $e',
                   );
                 }
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  provider.initialize(snapshot.data!);
-                });
+                
+                if (shouldInitialize) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    provider.initialize(snapshot.data!);
+                  });
+                }
               }
 
-              // Show loading state - unified logic to prevent double shimmer
-              // Only show shimmer if the stream is still waiting OR if provider is loading pagination
-              if (snapshot.connectionState == ConnectionState.waiting ||
-                  !snapshot.hasData ||
-                  (snapshot.hasData &&
-                      snapshot.data!.isLoading &&
-                      !provider.isInitialized)) {
-                return _buildLoadingState();
-              }
-
-              // Show pagination loading indicator separately
-              if (provider.isLoading && provider.isInitialized) {
-                return _buildContentWithData(
-                  snapshot.data!,
-                  provider,
-                  currencyProvider,
-                );
-              }
-
-              // Show error state
+              // Show error state first (highest priority)
               if (snapshot.hasError ||
                   (snapshot.hasData && snapshot.data!.error != null)) {
                 return _buildErrorState(
@@ -783,9 +781,88 @@ class _MonthPageViewState extends State<MonthPageView> {
                 );
               }
 
-              // Show content with pagination
-              final data = snapshot.data!;
-              return _buildContentWithData(data, provider, currencyProvider);
+              // Show loading state ONLY if provider is NOT initialized
+              // If provider is initialized, show cached content even if stream is loading
+              if (!provider.isInitialized &&
+                  (snapshot.connectionState == ConnectionState.waiting ||
+                      !snapshot.hasData ||
+                      (snapshot.hasData && snapshot.data!.isLoading))) {
+                return _buildLoadingState();
+              }
+
+              // If provider is initialized and has data, show it immediately
+              // This prevents flickering when stream emits loading state during background updates
+              // Show cached content if provider has allTransactions (even if pagination not started yet)
+              if (provider.isInitialized &&
+                  provider.allTransactions.isNotEmpty) {
+                // Use snapshot data if available (for latest totals), otherwise construct from provider
+                final data = snapshot.hasData &&
+                        !snapshot.data!.isLoading &&
+                        snapshot.data!.error == null
+                    ? snapshot.data!
+                    : MonthPageData(
+                        transactions: provider.allTransactions
+                            .map((twa) => twa.transaction)
+                            .toList(),
+                        totalIncome: 0.0,
+                        totalExpenses: 0.0,
+                        transactionsWithAccounts: provider.allTransactions,
+                        upcomingTasks: const [],
+                        incomeByCurrency: {},
+                        expensesByCurrency: {},
+                      );
+                return _buildContentWithData(data, provider, currencyProvider);
+              }
+              
+              // If provider is initialized but has no transactions, show empty state
+              // (don't show loading shimmer as data is already loaded, just empty)
+              if (provider.isInitialized && provider.allTransactions.isEmpty) {
+                final data = snapshot.hasData &&
+                        !snapshot.data!.isLoading &&
+                        snapshot.data!.error == null
+                    ? snapshot.data!
+                    : MonthPageData(
+                        transactions: const [],
+                        totalIncome: 0.0,
+                        totalExpenses: 0.0,
+                        transactionsWithAccounts: const [],
+                        upcomingTasks: const [],
+                        incomeByCurrency: {},
+                        expensesByCurrency: {},
+                      );
+                return _buildContentWithData(data, provider, currencyProvider);
+              }
+
+              // Show pagination loading indicator separately (provider loading more pages)
+              if (provider.isLoading && provider.isInitialized) {
+                final data = snapshot.hasData &&
+                        !snapshot.data!.isLoading &&
+                        snapshot.data!.error == null
+                    ? snapshot.data!
+                    : MonthPageData(
+                        transactions: provider.allTransactions
+                            .map((twa) => twa.transaction)
+                            .toList(),
+                        totalIncome: 0.0,
+                        totalExpenses: 0.0,
+                        transactionsWithAccounts: provider.allTransactions,
+                        upcomingTasks: const [],
+                        incomeByCurrency: {},
+                        expensesByCurrency: {},
+                      );
+                return _buildContentWithData(data, provider, currencyProvider);
+              }
+
+              // Show content with pagination (normal case)
+              if (snapshot.hasData &&
+                  !snapshot.data!.isLoading &&
+                  snapshot.data!.error == null) {
+                final data = snapshot.data!;
+                return _buildContentWithData(data, provider, currencyProvider);
+              }
+
+              // Fallback: show loading if we reach here (shouldn't happen often)
+              return _buildLoadingState();
             },
           );
         },
@@ -1946,7 +2023,6 @@ Future<void> _showVacationCurrencyDialog(
                 Navigator.of(ctx).pop();
                 // Show currency picker
                 showCurrencyPicker(
-                  context: context,
                   showFlag: true,
                   showSearchField: true,
                   onSelect: (Currency currency) async {
@@ -1955,7 +2031,7 @@ Future<void> _showVacationCurrencyDialog(
                       listen: false,
                     );
                     await currencyProvider.setCurrency(currency, 1.0);
-                  },
+                  }, context: ctx,
                 );
               },
               child: Text(AppLocalizations.of(context)!.changeCurrency),
@@ -2635,9 +2711,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (snapshot.hasData &&
             !snapshot.data!.isLoading &&
             snapshot.data!.error == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            provider.initialize(snapshot.data!);
-          });
+          // Only initialize if provider is not initialized or transaction count changed
+          // MonthPageView's StreamBuilder will also handle initialization, but this ensures
+          // provider is ready before MonthPageView renders
+          final shouldInitialize = !provider.isInitialized ||
+              provider.allTransactions.length !=
+                  snapshot.data!.transactionsWithAccounts.length;
+          
+          if (shouldInitialize) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              provider.initialize(snapshot.data!);
+            });
+          }
         }
 
         return MonthPageView(
