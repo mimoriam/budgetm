@@ -3,6 +3,7 @@ import 'package:budgetm/constants/transaction_type_enum.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/screens/dashboard/navbar/balance/balance_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_screen.dart';
+import 'package:budgetm/screens/dashboard/navbar/budget/budget_revamped/budget_revamped_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/goals/goals_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/home.dart';
 import 'package:budgetm/screens/dashboard/navbar/home/transaction/add_transaction_screen.dart';
@@ -208,9 +209,11 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   List<Widget> _buildScreens() {
+    final vacationProvider = Provider.of<VacationProvider>(context, listen: false);
     return [
       const HomeScreen(),
-      const BudgetScreen(),
+      // Show BudgetRevampedScreen in normal mode, BudgetScreen in vacation mode
+      vacationProvider.isVacationMode ? const BudgetScreen() : const BudgetRevampedScreen(),
       const BalanceScreen(),
       const GoalsScreen(),
       const PersonalScreen(),

@@ -7,6 +7,7 @@ import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
 import 'package:budgetm/viewmodels/budget_provider.dart';
+import 'package:budgetm/viewmodels/revamped_budget_provider.dart';
 import 'package:budgetm/viewmodels/goals_provider.dart';
 import 'package:budgetm/viewmodels/subscription_provider.dart';
 import 'package:budgetm/viewmodels/user_provider.dart';
@@ -116,6 +117,34 @@ Future<void> main() async {
                     BudgetProvider(
                       currencyProvider: currencyProvider,
                       vacationProvider: vacationProvider,
+                      homeScreenProvider: homeScreenProvider,
+                    ),
+          ),
+          ChangeNotifierProxyProvider2<
+            CurrencyProvider,
+            HomeScreenProvider,
+            RevampedBudgetProvider
+          >(
+            create: (context) => RevampedBudgetProvider(
+              currencyProvider: Provider.of<CurrencyProvider>(
+                context,
+                listen: false,
+              ),
+              homeScreenProvider: Provider.of<HomeScreenProvider>(
+                context,
+                listen: false,
+              ),
+            ),
+            update:
+                (
+                  context,
+                  currencyProvider,
+                  homeScreenProvider,
+                  revampedBudgetProvider,
+                ) =>
+                    revampedBudgetProvider ??
+                    RevampedBudgetProvider(
+                      currencyProvider: currencyProvider,
                       homeScreenProvider: homeScreenProvider,
                     ),
           ),
