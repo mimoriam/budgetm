@@ -2044,15 +2044,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         // Access the static FAB key from main_screen
         final fabKey = MainScreenShowcaseKeys.fabKey;
-        final List<GlobalKey> showcaseKeys = [
-          _profileIconKey,
-          _currencyKey,
-          _sideMenuKey,
-          _vacationModeKey,
-        ];
+        final List<GlobalKey> showcaseKeys = [];
+        
+        // Add FAB first (if available)
         if (fabKey != null) {
           showcaseKeys.add(fabKey);
         }
+        
+        // Then vacation mode, menu, and profile
+        showcaseKeys.addAll([
+          _vacationModeKey,
+          _sideMenuKey,
+          _profileIconKey,
+        ]);
         
         // Start showcase
         // Completion will be handled by the onFinish callback in ShowCaseWidget (main.dart)
