@@ -1108,8 +1108,8 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               ),
             ),
             Text(
-              isVacationAccount 
-                ? formatCurrency(account.initialBalance, account.currency)
+              isVacationAccount
+                ? (account.currency ?? '')
                 : formatCurrency(amount, account.currency),
               style: Theme.of(
                 context,

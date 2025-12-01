@@ -1019,6 +1019,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           try {
                             await _authService.deleteAccount();
                             if (context.mounted) {
+                              // Capture the ScaffoldMessengerState before navigation so we can show a SnackBar
+                              final messenger = ScaffoldMessenger.of(context);
                               Navigator.of(context).pop();
                               Navigator.pushAndRemoveUntil(
                                 context,
@@ -1027,7 +1029,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 (route) => false,
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     AppLocalizations.of(context)!

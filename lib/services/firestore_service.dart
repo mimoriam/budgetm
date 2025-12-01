@@ -10,6 +10,7 @@ import 'package:budgetm/models/personal/borrowed.dart';
 import 'package:budgetm/models/personal/lent.dart';
 import 'package:budgetm/models/personal/subscription.dart';
 import 'package:budgetm/data/local/category_initializer.dart';
+import 'package:budgetm/models/revamped_budget.dart';
 
 class FirestoreService {
   static FirestoreService? _instance;
@@ -149,6 +150,18 @@ class FirestoreService {
         .withConverter<FirestoreGoal>(
           fromFirestore: (snapshot, _) => FirestoreGoal.fromFirestore(snapshot),
           toFirestore: (goal, _) => goal.toJson(),
+        );
+  }
+
+  CollectionReference<RevampedBudget> get _revampedBudgetsCollection {
+    if (_userId == null) throw Exception('User not authenticated');
+    return _firestore
+        .collection('users')
+        .doc(_userId!)
+        .collection('revamped_budgets')
+        .withConverter<RevampedBudget>(
+          fromFirestore: (snapshot, _) => RevampedBudget.fromFirestore(snapshot),
+          toFirestore: (budget, _) => budget.toJson(),
         );
   }
 
@@ -527,6 +540,63 @@ class FirestoreService {
       print('Budget $id deleted successfully');
     } catch (e) {
       print('Error deleting budget: $e');
+      rethrow;
+    }
+  }
+
+  // ================ REVAMPED BUDGET OPERATIONS ================
+
+  // Add a revamped budget with a specific ID
+  Future<void> addRevampedBudget(RevampedBudget budget) async {
+    try {
+      print('FirestoreService.addRevampedBudget: adding revamped budget id=${budget.id} categoryIds=${budget.categoryIds} type=${budget.type} year=${budget.year} period=${budget.period} limit=${budget.limit}');
+      await _revampedBudgetsCollection.doc(budget.id).set(budget);
+      print('FirestoreService.addRevampedBudget: successfully wrote revamped budget id=${budget.id}');
+    } catch (e) {
+      print('Error adding revamped budget with id: $e');
+      rethrow;
+    }
+  }
+
+  // Get all revamped budgets
+  Future<List<RevampedBudget>> getAllRevampedBudgets() async {
+    try {
+      final querySnapshot = await _revampedBudgetsCollection.get();
+      return querySnapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('Error getting all revamped budgets: $e');
+      return [];
+    }
+  }
+
+  // Get revamped budget by ID
+  Future<RevampedBudget?> getRevampedBudgetById(String id) async {
+    try {
+      final doc = await _revampedBudgetsCollection.doc(id).get();
+      return doc.data();
+    } catch (e) {
+      print('Error getting revamped budget: $e');
+      return null;
+    }
+  }
+
+  // Update revamped budget
+  Future<void> updateRevampedBudget(String id, RevampedBudget budget) async {
+    try {
+      await _revampedBudgetsCollection.doc(id).update(budget.toJson());
+    } catch (e) {
+      print('Error updating revamped budget: $e');
+      rethrow;
+    }
+  }
+
+  // Delete revamped budget
+  Future<void> deleteRevampedBudget(String id) async {
+    try {
+      await _revampedBudgetsCollection.doc(id).delete();
+      print('Revamped budget $id deleted successfully');
+    } catch (e) {
+      print('Error deleting revamped budget: $e');
       rethrow;
     }
   }

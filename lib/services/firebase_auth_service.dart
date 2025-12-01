@@ -170,7 +170,48 @@ class FirebaseAuthService {
     } on FirebaseAuthException catch (e) {
       // Handle specific FirebaseAuthException errors
       if (e.code == 'requires-recent-login') {
-        throw Exception('Please log in again to delete your account');
+        // Try to reauthenticate automatically for supported providers (e.g. Google)
+        final user = _auth.currentUser;
+        if (user == null) {
+          throw Exception('Please log in again to delete your account');
+        }
+
+        final hasGoogle =
+            user.providerData.any((p) => p.providerId == 'google.com');
+
+        if (hasGoogle) {
+          try {
+            // Attempt Google reauthentication flow
+            final googleUser = await _googleSignIn.signIn();
+            if (googleUser == null) {
+              // User canceled Google sign-in — require explicit re-login
+              throw Exception('Please log in again to delete your account');
+            }
+            final googleAuth = await googleUser.authentication;
+            final credential = GoogleAuthProvider.credential(
+              accessToken: googleAuth.accessToken,
+              idToken: googleAuth.idToken,
+            );
+
+            await user.reauthenticateWithCredential(credential);
+
+            // Retry deletion after successful reauthentication
+            final uid = user.uid;
+            await _firestoreService.deleteUserAccount(uid);
+            await user.delete();
+            await _auth.signOut();
+            await _googleSignIn.signOut();
+            return;
+          } on FirebaseAuthException catch (e2) {
+            throw Exception('Failed to reauthenticate: ${e2.message}');
+          } catch (e2) {
+            throw Exception('Failed to reauthenticate: $e2');
+          }
+        } else {
+          // For email/password users we cannot reauthenticate here without prompting for credentials.
+          // Let the caller/UI handle asking the user to re-login, so we provide a clear message.
+          throw Exception('Please log in again to delete your account');
+        }
       } else {
         throw Exception('Failed to delete account: ${e.message}');
       }

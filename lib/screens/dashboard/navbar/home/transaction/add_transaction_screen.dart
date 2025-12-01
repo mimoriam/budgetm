@@ -989,7 +989,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ).getGoals(),
                           builder: (context, snapshot) {
                             final allPendingGoals = (snapshot.data ?? [])
-                                .where((g) => !g.isCompleted)
+                                .where((g) => !g.isCompleted && g.currentAmount == 0)
                                 .toList();
                             
                             // Get the selected transaction currency

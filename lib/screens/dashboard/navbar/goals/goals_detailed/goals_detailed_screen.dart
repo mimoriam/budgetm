@@ -124,6 +124,98 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     ? _buildEmptyState()
                     : _buildTransactionsList(),
           ),
+          if (!_isLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final result = await showDialog<Map<String, bool>>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) {
+                            if (_detailedTransactions.isNotEmpty) {
+                              return AlertDialog(
+                                title: Text('Delete Goal'),
+                                content: Text('This goal has associated transactions. What would you like to do?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
+                                    child: Text(AppLocalizations.of(context)!.cancel),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
+                                    child: Text('Delete Goal Only'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': true}),
+                                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                    child: Text('Delete Goal & Transactions'),
+                                  ),
+                                ],
+                              );
+                            } else {
+                              return AlertDialog(
+                                title: Text(AppLocalizations.of(context)!.goalsDelete),
+                                content: Text(AppLocalizations.of(context)!.goalsDeleteConfirm),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
+                                    child: Text(AppLocalizations.of(context)!.cancel),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                    ),
+                                    child: Text(AppLocalizations.of(context)!.delete),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
+                        );
+
+                        if (result != null && result['confirmed'] == true) {
+                          final cascadeDelete = result['cascadeDelete'] == true;
+                          try {
+                            await context.read<GoalsProvider>().deleteGoal(widget.goal.id, cascadeDelete: cascadeDelete);
+                            
+                            // Trigger a refresh of transactions if cascade delete was performed
+                            if (cascadeDelete) {
+                              Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
+                            }
+                            
+                            if (mounted) {
+                              Navigator.of(context).pop(true);
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(AppLocalizations.of(context)!.failedToDeleteGoal)),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                      ),
+                      child: Text(
+                        'Delete',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -232,73 +324,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               itemCount: _detailedTransactions.length,
               itemBuilder: (context, index) => _buildTransactionItem(context, _detailedTransactions[index]),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final result = await showDialog<Map<String, bool>>(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (ctx) {
-                        return AlertDialog(
-                          title: Text(AppLocalizations.of(context)!.goalsDelete),
-                          content: Text(AppLocalizations.of(context)!.goalsDeleteConfirm),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop({'confirmed': false, 'cascadeDelete': false}),
-                              child: Text(AppLocalizations.of(context)!.cancel),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop({'confirmed': true, 'cascadeDelete': false}),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.red,
-                              ),
-                              child: Text(AppLocalizations.of(context)!.delete),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-
-                    if (result != null && result['confirmed'] == true) {
-                      final cascadeDelete = result['cascadeDelete'] == true;
-                      try {
-                        await context.read<GoalsProvider>().deleteGoal(widget.goal.id, cascadeDelete: cascadeDelete);
-                        
-                        // Trigger a refresh of transactions if cascade delete was performed
-                        if (cascadeDelete) {
-                          Provider.of<HomeScreenProvider>(context, listen: false).triggerTransactionsRefresh();
-                        }
-                        
-                        if (mounted) {
-                          Navigator.of(context).pop(true);
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(AppLocalizations.of(context)!.failedToDeleteGoal)),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                  ),
-                  child: Text(
-                    'Delete',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white, fontSize: 14),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
