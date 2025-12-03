@@ -29,12 +29,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isLoadingApple = false;
 
   List<String> _getOnboardingImages() => [
-    'images/backgrounds/splash_1.png',
-    'images/backgrounds/splash_2.png',
-    'images/backgrounds/splash_3.png',
-    'images/backgrounds/splash_4.png',
-    'images/backgrounds/splash_5.png',
-    'images/backgrounds/splash_6.png',
+    'images/backgrounds/onboarding_r_1.png',
+    'images/backgrounds/onboarding_r_2.png',
+    'images/backgrounds/onboarding_r_3.png',
+    'images/backgrounds/onboarding_r_4.png',
+    'images/backgrounds/onboarding_r_5.png',
+    'images/backgrounds/onboarding_r_6.png',
   ];
 
   List<String> _getOnboardingTexts() => [

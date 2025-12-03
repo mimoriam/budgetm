@@ -119,6 +119,7 @@ class RevampedBudgetProvider with ChangeNotifier {
         spentAmount: spentAmount,
         limit: budget.limit,
         firstCategory: firstCategory,
+        budgetName: budget.name,
       ));
     }
     
@@ -149,11 +150,36 @@ class RevampedBudgetProvider with ChangeNotifier {
              t.isVacation == false &&
              budget.categoryIds.contains(t.categoryId) &&
              t.currency == budget.currency &&
-             t.date.isAfter(startDate.subtract(const Duration(days: 1))) &&
-             t.date.isBefore(endDate.add(const Duration(days: 1)));
+             t.currency == budget.currency &&
+             !t.date.isBefore(startDate) &&
+             !t.date.isAfter(endDate);
     }).toList();
     
     return transactions.fold(0.0, (sum, transaction) => sum + transaction.amount);
+  }
+
+  // Get transactions for a revamped budget
+  // CRITICAL: Uses SELECTED period date range, not budget's original period
+  // This allows filtering transactions by the currently selected month/week/day
+  List<FirestoreTransaction> getTransactionsForBudget(RevampedBudget budget) {
+    // Get selected period date range (not budget's date range)
+    final periodRange = _getSelectedPeriodRange();
+    final startDate = periodRange['start'];
+    final endDate = periodRange['end'];
+
+    if (startDate == null || endDate == null) {
+      return [];
+    }
+
+    // Filter transactions by selected period date range
+    return _allTransactions.where((t) {
+      return t.type == 'expense' &&
+             t.isVacation == false &&
+             budget.categoryIds.contains(t.categoryId) &&
+             t.currency == budget.currency &&
+             !t.date.isBefore(startDate) &&
+             !t.date.isAfter(endDate);
+    }).toList();
   }
   
   // Get current period display text
@@ -566,8 +592,9 @@ class RevampedBudgetProvider with ChangeNotifier {
     double limit,
     BudgetType type,
     DateTime dateTime,
-    String currency,
-  ) async {
+    String currency, {
+    String? name,
+  }) async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
       if (userId.isEmpty) {
@@ -627,6 +654,7 @@ class RevampedBudgetProvider with ChangeNotifier {
         userId: userId,
         currency: currency,
         spentAmount: 0.0,
+        name: name,
       );
       
       await _firestoreService.addRevampedBudget(revampedBudget);
@@ -707,6 +735,7 @@ class RevampedCategoryBudgetData {
   final double spentAmount;
   final double limit;
   final Category firstCategory; // For display purposes (icon, color)
+  final String? budgetName;
   
   RevampedCategoryBudgetData({
     required this.categoryIds,
@@ -715,9 +744,12 @@ class RevampedCategoryBudgetData {
     required this.spentAmount,
     required this.limit,
     required this.firstCategory,
+    this.budgetName,
   });
   
-  String get displayName => categoryNames.join(', ');
+  String get displayName => budgetName != null && budgetName!.isNotEmpty 
+      ? budgetName! 
+      : categoryNames.join(', ');
   String get categoryIcon => firstCategory.icon ?? 'category';
   String get categoryColor => firstCategory.color ?? 'grey';
 }

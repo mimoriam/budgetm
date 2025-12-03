@@ -9,6 +9,7 @@ import 'package:budgetm/screens/dashboard/navbar/home/expense_detail/expense_det
 import 'package:budgetm/services/firestore_service.dart';
 import 'package:budgetm/viewmodels/home_screen_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
@@ -59,6 +60,9 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
   RevampedBudgetProvider? _budgetProvider;
   
   late String _budgetCurrencyCode;
+  Set<String> _visibleCategoryIds = {};
+  Map<String, double> _categorySpending = {};
+  bool _showAllLegend = false;
 
   @override
   void initState() {
@@ -84,40 +88,29 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
 
     try {
       final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
-      final start = provider.selectedPeriodStart ?? widget.revampedBudget.startDate;
-      final end = provider.selectedPeriodEnd ?? widget.revampedBudget.endDate;
-
-      // Get all transactions for the date range (non-vacation only)
-      final allTransactions = await _firestoreService
-          .getTransactionsForDateRange(start, end, isVacation: false);
-
-      print('BudgetDetailRevamped: Total transactions found: ${allTransactions.length}');
       
-      // Filter transactions on client side:
-      // 1. categoryId must be in revampedBudget.categoryIds
-      // 2. currency must match
-      // 3. type must be 'expense'
-      // 4. isVacation must be false
-      final filteredTransactions = allTransactions
-          .where(
-            (t) => t.type == 'expense' &&
-                   t.isVacation == false &&
-                   widget.revampedBudget.categoryIds.contains(t.categoryId) &&
-                   t.currency == widget.revampedBudget.currency,
-          )
-          .toList();
+      // Get filtered transactions directly from provider (uses same logic as budget card)
+      final filteredTransactions = provider.getTransactionsForBudget(widget.revampedBudget);
       
-      print('BudgetDetailRevamped: Filtered transactions matching categories and currency: ${filteredTransactions.length}');
+      print('BudgetDetailRevamped: Found ${filteredTransactions.length} transactions from provider');
 
-      // Create a list of futures to fetch account names and types
-      final detailedTransactionsFutures = filteredTransactions.map((t) async {
+      // Fetch all accounts once to avoid N+1 queries
+      final allAccounts = await _firestoreService.getAllAccounts();
+      final accountMap = {for (var a in allAccounts) a.id: a};
+
+      // Map transactions to include account details
+      _detailedTransactions = filteredTransactions.map((t) {
         String accountName = 'Unknown';
         String accountType = '';
+        
         if (t.accountId != null && t.accountId!.isNotEmpty) {
-          final account = await _firestoreService.getAccountById(t.accountId!);
-          accountName = account?.name ?? 'Unknown';
-          accountType = account?.accountType ?? '';
+          final account = accountMap[t.accountId];
+          if (account != null) {
+            accountName = account.name;
+            accountType = account.accountType;
+          }
         }
+        
         return _TransactionWithAccount(
           transaction: t,
           accountName: accountName,
@@ -125,13 +118,22 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
         );
       }).toList();
 
-      // Wait for all futures to complete
-      _detailedTransactions = await Future.wait(detailedTransactionsFutures);
-
       // Sort by date descending
       _detailedTransactions.sort(
         (a, b) => b.transaction.date.compareTo(a.transaction.date),
       );
+
+      // Calculate category spending
+      _categorySpending.clear();
+      for (var t in _detailedTransactions) {
+        _categorySpending[t.transaction.categoryId] = 
+            (_categorySpending[t.transaction.categoryId] ?? 0) + t.transaction.amount;
+      }
+
+      // Initialize visible categories if empty (first load)
+      if (_visibleCategoryIds.isEmpty) {
+        _visibleCategoryIds = widget.revampedBudget.categoryIds.toSet();
+      }
     } catch (e) {
       print('Error loading transactions: $e');
     } finally {
@@ -197,7 +199,7 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          widget.categoryNames.join(', '),
+                          widget.revampedBudget.name ?? widget.categoryNames.join(', '),
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -206,7 +208,7 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '${widget.revampedBudget.currency} • ${widget.revampedBudget.type.toString().split('.').last}',
+                          '${widget.revampedBudget.type.toString().split('.').last.capitalize()} • ${widget.revampedBudget.currency}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.white70,
                             fontSize: 12,
@@ -279,7 +281,15 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
           ? const Center(child: CircularProgressIndicator())
           : _detailedTransactions.isEmpty
           ? _buildEmptyState()
-          : _buildTransactionsList(),
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildCategorySpendingCard(),
+                  _buildPieChartSection(),
+                  _buildTransactionsList(),
+                ],
+              ),
+            ),
     );
   }
 
@@ -311,12 +321,278 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
     );
   }
 
+  Widget _buildCategorySpendingCard() {
+    final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
+    
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.budgetCategorySpending ?? 'Category Breakdown',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...widget.revampedBudget.categoryIds.map((categoryId) {
+            final category = provider.expenseCategories.firstWhere(
+              (c) => c.id == categoryId,
+              orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+            );
+            final spent = _categorySpending[categoryId] ?? 0.0;
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: hexToColor(category.color).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: HugeIcon(
+                      icon: getIcon(category.icon),
+                      color: hexToColor(category.color),
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      category.name ?? 'Unknown',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Text(
+                    formatCurrency(spent, _budgetCurrencyCode),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPieChartSection() {
+    final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
+    final visibleCategories = widget.revampedBudget.categoryIds
+        .where((id) => _visibleCategoryIds.contains(id))
+        .toList();
+        
+    if (visibleCategories.isEmpty) return const SizedBox.shrink();
+
+    final totalVisibleSpent = visibleCategories.fold(0.0, (sum, id) => sum + (_categorySpending[id] ?? 0));
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Spending Analysis',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              // Filter Button
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.filter_list),
+                onSelected: (value) {
+                  setState(() {
+                    if (_visibleCategoryIds.contains(value)) {
+                      if (_visibleCategoryIds.length > 1) {
+                        _visibleCategoryIds.remove(value);
+                      }
+                    } else {
+                      _visibleCategoryIds.add(value);
+                    }
+                  });
+                },
+                itemBuilder: (context) {
+                  return widget.revampedBudget.categoryIds.map((id) {
+                    final category = provider.expenseCategories.firstWhere(
+                      (c) => c.id == id,
+                      orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+                    );
+                    return CheckedPopupMenuItem<String>(
+                      value: id,
+                      checked: _visibleCategoryIds.contains(id),
+                      child: Text(category.name ?? 'Unknown'),
+                    );
+                  }).toList();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (totalVisibleSpent > 0)
+            SizedBox(
+              height: 200,
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
+                  sections: visibleCategories.map((id) {
+                    final category = provider.expenseCategories.firstWhere(
+                      (c) => c.id == id,
+                      orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+                    );
+                    final spent = _categorySpending[id] ?? 0.0;
+                    final percentage = (spent / totalVisibleSpent) * 100;
+                    
+                    return PieChartSectionData(
+                      color: hexToColor(category.color),
+                      value: spent,
+                      title: '${percentage.toStringAsFixed(0)}%',
+                      radius: 50,
+                      titleStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            )
+          else
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text('No spending data for selected categories'),
+              ),
+            ),
+          const SizedBox(height: 20),
+          _buildLegend(provider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegend(RevampedBudgetProvider provider) {
+    final categories = widget.revampedBudget.categoryIds;
+    final showCount = _showAllLegend ? categories.length : 3;
+    final displayCategories = categories.take(showCount).toList();
+    final hasMore = categories.length > 3;
+
+    return Column(
+      children: [
+        ...displayCategories.map((id) {
+          final category = provider.expenseCategories.firstWhere(
+            (c) => c.id == id,
+            orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+          );
+          final spent = _categorySpending[id] ?? 0.0;
+          final isVisible = _visibleCategoryIds.contains(id);
+
+          return InkWell(
+            onTap: () {
+              setState(() {
+                if (isVisible) {
+                  if (_visibleCategoryIds.length > 1) {
+                    _visibleCategoryIds.remove(id);
+                  }
+                } else {
+                  _visibleCategoryIds.add(id);
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: isVisible ? hexToColor(category.color) : Colors.grey.shade300,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      category.name ?? 'Unknown',
+                      style: TextStyle(
+                        color: isVisible ? Colors.black : Colors.grey,
+                        decoration: isVisible ? null : TextDecoration.lineThrough,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    formatCurrency(spent, _budgetCurrencyCode),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isVisible ? Colors.black : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (hasMore)
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _showAllLegend = !_showAllLegend;
+              });
+            },
+            child: Text(_showAllLegend ? 'Show Less' : 'Show More'),
+          ),
+      ],
+    );
+  }
+
   Widget _buildTransactionsList() {
+    final filteredTransactions = _detailedTransactions
+        .where((t) => _visibleCategoryIds.contains(t.transaction.categoryId))
+        .toList();
+
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      itemCount: _detailedTransactions.length,
+      itemCount: filteredTransactions.length,
       itemBuilder: (context, index) {
-        final detailedTransaction = _detailedTransactions[index];
+        final detailedTransaction = filteredTransactions[index];
         return _buildTransactionCard(detailedTransaction);
       },
     );

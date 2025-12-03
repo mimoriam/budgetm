@@ -101,11 +101,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final filteredAccounts = <FirestoreAccount>[];
       for (final account in normalModeAccounts) {
         // Always include default cash account regardless of currency
-        if (account.isDefault == true) {
-          filteredAccounts.add(account);
-        }
-        // Include other accounts only if they match the selected currency
-        else if (account.currency == selectedCurrencyCode) {
+        // if (account.isDefault == true) {
+        //   filteredAccounts.add(account);
+        // }
+        // // Include other accounts only if they match the selected currency
+        // else 
+        if (account.currency == selectedCurrencyCode) {
           filteredAccounts.add(account);
         }
       }
@@ -855,9 +856,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           FormBuilderField<String>(
                             name: 'account',
                             initialValue: _selectedAccountId,
-                            validator: FormBuilderValidators.required(
-                              errorText: AppLocalizations.of(context)!.pleaseSelectAccount,
-                            ),
+                            validator: null,
                           builder: (FormFieldState<String?> field) {
                             final selectedAccount = _accounts
                                 .firstWhere(
@@ -953,35 +952,35 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ),
                         ),
                       // Show helpful message when no accounts are available for selected currency
-                      if (_accounts.isEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(top: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: Colors.orange.shade600,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'No accounts available for the selected currency. Please create an account with this currency or select a different currency.',
-                                  style: TextStyle(
-                                    color: Colors.orange.shade700,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // if (_accounts.isEmpty)
+                      //   Container(
+                      //     margin: const EdgeInsets.only(top: 8),
+                      //     padding: const EdgeInsets.all(12),
+                      //     decoration: BoxDecoration(
+                      //       color: Colors.orange.shade50,
+                      //       borderRadius: BorderRadius.circular(8),
+                      //       border: Border.all(color: Colors.orange.shade200),
+                      //     ),
+                      //     child: Row(
+                      //       children: [
+                      //         Icon(
+                      //           Icons.info_outline,
+                      //           color: Colors.orange.shade600,
+                      //           size: 16,
+                      //         ),
+                      //         const SizedBox(width: 8),
+                      //         Expanded(
+                      //           child: Text(
+                      //             'No accounts available for the selected currency. Please create an account with this currency or select a different currency.',
+                      //             style: TextStyle(
+                      //               color: Colors.orange.shade700,
+                      //               fontSize: 12,
+                      //             ),
+                      //           ),
+                      //         ),
+                      //       ],
+                      //     ),
+                      //   ),
                         StreamBuilder<List<FirestoreGoal>>(
                           stream: Provider.of<GoalsProvider>(
                             context,
@@ -1744,29 +1743,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       // Get the selected account - need to fetch all accounts if _accounts is empty (default account case)
-      FirestoreAccount selectedAccount;
-      if (_accounts.isNotEmpty) {
-        selectedAccount = _accounts.firstWhere(
-          (account) => account.id == _selectedAccountId,
-        );
-      } else {
-        // Fetch the account from Firestore if not in the list (default account case)
-        if (_selectedAccountId == null) {
-          throw Exception(
-            'No account available. Please create an account first.',
+      FirestoreAccount? selectedAccount;
+      if (_selectedAccountId != null) {
+        if (_accounts.isNotEmpty) {
+          selectedAccount = _accounts.firstWhere(
+            (account) => account.id == _selectedAccountId,
           );
+        } else {
+          // Fetch the account from Firestore if not in the list (default account case)
+          final fetchedAccount = await _firestoreService.getAccountById(
+            _selectedAccountId!,
+          );
+          if (fetchedAccount == null) {
+            throw Exception('Selected account not found');
+          }
+          selectedAccount = fetchedAccount;
         }
-        final fetchedAccount = await _firestoreService.getAccountById(
-          _selectedAccountId!,
-        );
-        if (fetchedAccount == null) {
-          throw Exception('Selected account not found');
-        }
-        selectedAccount = fetchedAccount;
       }
 
       // Enforce account transaction limit if present
-      if (selectedAccount.transactionLimit != null) {
+      if (selectedAccount != null && selectedAccount.transactionLimit != null) {
         final limit = selectedAccount.transactionLimit!;
         if (amount > limit) {
           // Reset saving state and show error, do not proceed
@@ -1790,7 +1786,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       // Check for credit limit on credit accounts
       // Skip credit limit check for vacation accounts (unlimited credit)
-      if (selectedAccount.creditLimit != null &&
+      if (selectedAccount != null &&
+          selectedAccount.creditLimit != null &&
           widget.transactionType == TransactionType.expense &&
           selectedAccount.isVacationAccount != true) {
         final newBalance = selectedAccount.balance - amount;
@@ -1828,7 +1825,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
        categoryId: _selectedCategoryId,
        budgetId: null,
        goalId: selectedGoalId,
-       accountId: _selectedAccountId,
+       accountId: _selectedAccountId ?? '',
        time: (formData['time'] as DateTime?)?.toIso8601String(),
        repeat: formData['repeat'] as String?,
        remind: formData['remind'] as String?,
@@ -1857,15 +1854,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ReviewService.instance.incrementTransactionCount();
       }
 
-      // Update account balance
-      final newBalance = widget.transactionType == TransactionType.income
-          ? selectedAccount.balance + amount
-          : selectedAccount.balance - amount;
+      // Update account balance if account is selected
+      if (selectedAccount != null) {
+        final newBalance = widget.transactionType == TransactionType.income
+            ? selectedAccount.balance + amount
+            : selectedAccount.balance - amount;
 
-      print(newBalance);
+        print(newBalance);
 
-      final updatedAccount = selectedAccount.copyWith(balance: newBalance);
-      await _firestoreService.updateAccount(updatedAccount.id, updatedAccount);
+        final updatedAccount = selectedAccount.copyWith(balance: newBalance);
+        await _firestoreService.updateAccount(updatedAccount.id, updatedAccount);
+      }
 
       // If transaction linked to a goal, notify that goal data needs refresh
       if (selectedGoalId != null) {

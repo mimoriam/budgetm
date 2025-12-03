@@ -68,7 +68,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   VacationProvider? _vacationProvider;
   VoidCallback? _vacationListener;
   String? _selectedChartCurrency; // For chart currency selection
-  
+
   // Add HomeScreenProvider listener for transaction updates
   HomeScreenProvider? _homeScreenProvider;
   VoidCallback? _homeScreenListener;
@@ -104,13 +104,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       _tryEmitCombined();
     };
     _vacationProvider?.addListener(_vacationListener!);
-    
+
     // Subscribe to HomeScreenProvider changes for transaction updates
-    _homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+    _homeScreenProvider = Provider.of<HomeScreenProvider>(
+      context,
+      listen: false,
+    );
     _homeScreenListener = () {
       if (!mounted) return;
       // Force recomputation when transactions are updated
-      if (_homeScreenProvider!.shouldRefreshTransactions || _homeScreenProvider!.shouldRefresh) {
+      if (_homeScreenProvider!.shouldRefreshTransactions ||
+          _homeScreenProvider!.shouldRefresh) {
         _tryEmitCombined();
         _homeScreenProvider!.completeRefresh();
       }
@@ -142,8 +146,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     if (_latestAccounts == null || _latestTransactions == null) return;
 
     // Check if HomeScreenProvider has refresh flags set and trigger refresh if needed
-    final homeScreenProvider = Provider.of<HomeScreenProvider>(context, listen: false);
-    if (homeScreenProvider.shouldRefreshTransactions || homeScreenProvider.shouldRefresh) {
+    final homeScreenProvider = Provider.of<HomeScreenProvider>(
+      context,
+      listen: false,
+    );
+    if (homeScreenProvider.shouldRefreshTransactions ||
+        homeScreenProvider.shouldRefresh) {
       homeScreenProvider.completeRefresh();
       // Force a fresh data fetch by re-emitting
       _tryEmitCombined();
@@ -152,10 +160,10 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
     final transactions = _latestTransactions!;
     final allAccounts = _latestAccounts!;
-    final defaultAccountIds = allAccounts
-        .where((acc) => acc.isDefault ?? false)
-        .map((acc) => acc.id)
-        .toSet();
+    // final defaultAccountIds = allAccounts
+    //     .where((acc) => acc.isDefault ?? false)
+    //     .map((acc) => acc.id)
+    //     .toSet();
 
     // Read vacation mode state
     final vacationProvider = Provider.of<VacationProvider>(
@@ -169,21 +177,20 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     final transactionCounts = <String, int>{};
     for (var transaction in transactions) {
       final accId = transaction.accountId;
-      if (accId == null || defaultAccountIds.contains(accId)) continue;
+      if (accId == null) continue;
+      // In normal mode, we now include default accounts, so we don't skip them here.
+      // if (defaultAccountIds.contains(accId)) continue; 
       if (transaction.paid == true) {
-        final isIncome =
-            transaction.type.toString().toLowerCase().contains('income');
+        final isIncome = transaction.type.toString().toLowerCase().contains(
+          'income',
+        );
         final txnAmount = isIncome ? transaction.amount : -transaction.amount;
         transactionAmounts.update(
           accId,
           (v) => v + txnAmount,
           ifAbsent: () => txnAmount,
         );
-        transactionCounts.update(
-          accId,
-          (v) => v + 1,
-          ifAbsent: () => 1,
-        );
+        transactionCounts.update(accId, (v) => v + 1, ifAbsent: () => 1);
       }
     }
 
@@ -193,20 +200,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     for (var transaction in transactions) {
       final accId = transaction.accountId;
       if (accId == null) continue;
-      
-      final isExpense =
-          transaction.type.toString().toLowerCase().contains('expense');
-      
+
+      final isExpense = transaction.type.toString().toLowerCase().contains(
+        'expense',
+      );
+
       // For vacation mode, we need to process ALL transactions, including those on default accounts
       // if they are linked to vacation accounts
-      
+
       // Count all transactions (paid and unpaid) for transaction count
-      vacationTransactionCounts.update(
-        accId,
-        (v) => v + 1,
-        ifAbsent: () => 1,
-      );
-      
+      vacationTransactionCounts.update(accId, (v) => v + 1, ifAbsent: () => 1);
+
       // Only count paid expenses for balance calculation
       if (isExpense && transaction.paid == true) {
         // For vacation transactions, count expenses for both normal and vacation accounts (only paid)
@@ -242,35 +246,41 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final normalAccounts = nonDefaultAccounts
           .where((account) => (account.isVacationAccount != true))
           .map((account) {
-        final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-        // Calculate balance from initial balance + paid transactions
-        final finalBalance = account.initialBalance + transactionsAmount;
-        return {
-          'account': account,
-          'transactionsAmount': transactionsAmount,
-          'finalBalance': finalBalance,
-          'transactionCount': transactionCounts[account.id] ?? 0,
-        };
-      }).toList();
+            final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
+            // Calculate balance from initial balance + paid transactions
+            final finalBalance = account.initialBalance + transactionsAmount;
+            return {
+              'account': account,
+              'transactionsAmount': transactionsAmount,
+              'finalBalance': finalBalance,
+              'transactionCount': transactionCounts[account.id] ?? 0,
+            };
+          })
+          .toList();
 
       final vacationAccounts = nonDefaultAccounts
           .where((account) => (account.isVacationAccount == true))
           .map((account) {
-        final totalExpenses = expenseSums[account.id] ?? 0.0;
-        final finalBalance = max(0.0, account.initialBalance - totalExpenses);
-        // Diagnostics to confirm all values are doubles at runtime
-        print(
-            'DEBUG BalanceScreen: vacationMode vacation finalBalance accountId=${account.id} '
-            'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
-            'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
-            'final=$finalBalance(${finalBalance.runtimeType})');
-        return {
-          'account': account,
-          'transactionsAmount': finalBalance,
-          'finalBalance': finalBalance,
-          'transactionCount': vacationTransactionCounts[account.id] ?? 0,
-        };
-      }).toList();
+            final totalExpenses = expenseSums[account.id] ?? 0.0;
+            final finalBalance = max(
+              0.0,
+              account.initialBalance - totalExpenses,
+            );
+            // Diagnostics to confirm all values are doubles at runtime
+            print(
+              'DEBUG BalanceScreen: vacationMode vacation finalBalance accountId=${account.id} '
+              'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
+              'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
+              'final=$finalBalance(${finalBalance.runtimeType})',
+            );
+            return {
+              'account': account,
+              'transactionsAmount': finalBalance,
+              'finalBalance': finalBalance,
+              'transactionCount': vacationTransactionCounts[account.id] ?? 0,
+            };
+          })
+          .toList();
 
       // Emit a Map with both lists (same structure as normal mode)
       _accountsWithTransactionsController?.add({
@@ -281,42 +291,46 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     }
 
     // In normal mode, separate normal and vacation accounts
-    final nonDefaultAccounts = allAccounts
-        .where((account) => !(account.isDefault ?? false))
-        .toList();
+    // In normal mode, we now include default accounts
+    final nonDefaultAccounts = allAccounts;
+        // .where((account) => !(account.isDefault ?? false))
+        // .toList();
 
     final normalAccounts = nonDefaultAccounts
         .where((account) => (account.isVacationAccount != true))
         .map((account) {
-      final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
-      // Calculate balance from initial balance + paid transactions
-      final finalBalance = account.initialBalance + transactionsAmount;
-      return {
-        'account': account,
-        'transactionsAmount': transactionsAmount,
-        'finalBalance': finalBalance,
-        'transactionCount': transactionCounts[account.id] ?? 0,
-      };
-    }).toList();
+          final transactionsAmount = transactionAmounts[account.id] ?? 0.0;
+          // Calculate balance from initial balance + paid transactions
+          final finalBalance = account.initialBalance + transactionsAmount;
+          return {
+            'account': account,
+            'transactionsAmount': transactionsAmount,
+            'finalBalance': finalBalance,
+            'transactionCount': transactionCounts[account.id] ?? 0,
+          };
+        })
+        .toList();
 
     final vacationAccounts = nonDefaultAccounts
         .where((account) => (account.isVacationAccount == true))
         .map((account) {
-      final totalExpenses = expenseSums[account.id] ?? 0.0;
-      final finalBalance = max(0.0, account.initialBalance - totalExpenses);
-      // Diagnostics to confirm all values are doubles at runtime
-      print(
-          'DEBUG BalanceScreen: normalMode vacation finalBalance accountId=${account.id} '
-          'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
-          'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
-          'final=$finalBalance(${finalBalance.runtimeType})');
-      return {
-        'account': account,
-        'transactionsAmount': finalBalance,
-        'finalBalance': finalBalance,
-        'transactionCount': vacationTransactionCounts[account.id] ?? 0,
-      };
-    }).toList();
+          final totalExpenses = expenseSums[account.id] ?? 0.0;
+          final finalBalance = max(0.0, account.initialBalance - totalExpenses);
+          // Diagnostics to confirm all values are doubles at runtime
+          print(
+            'DEBUG BalanceScreen: normalMode vacation finalBalance accountId=${account.id} '
+            'initial=${account.initialBalance}(${account.initialBalance.runtimeType}) '
+            'totalExpenses=$totalExpenses(${totalExpenses.runtimeType}) '
+            'final=$finalBalance(${finalBalance.runtimeType})',
+          );
+          return {
+            'account': account,
+            'transactionsAmount': finalBalance,
+            'finalBalance': finalBalance,
+            'transactionCount': vacationTransactionCounts[account.id] ?? 0,
+          };
+        })
+        .toList();
 
     // Emit a Map with both lists
     _accountsWithTransactionsController?.add({
@@ -331,7 +345,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     if (_vacationProvider != null && _vacationListener != null) {
       _vacationProvider!.removeListener(_vacationListener!);
     }
-    
+
     // Remove home screen listener if attached
     if (_homeScreenProvider != null && _homeScreenListener != null) {
       _homeScreenProvider!.removeListener(_homeScreenListener!);
@@ -365,7 +379,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               }
               // If there's no data at all, fall back to a simple message
               if (!snapshot.hasData) {
-                return Center(child: Text(AppLocalizations.of(context)!.balanceNoAccountsFound));
+                return Center(
+                  child: Text(
+                    AppLocalizations.of(context)!.balanceNoAccountsFound,
+                  ),
+                );
               }
 
               final vacationProvider = Provider.of<VacationProvider>(
@@ -409,6 +427,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
               // Check if we should show charts (2+ accounts for same currency)
               final allAccounts = [...normalAccounts, ...vacationAccounts];
+              print("allAccounts: ${allAccounts}");
               final shouldShowCharts = _shouldShowCharts(allAccounts);
 
               return Column(
@@ -439,16 +458,26 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             AppLocalizations.of(context)!.balanceMyAccounts,
                             () async {
                               // Check subscription status before allowing normal account creation
-                              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-                              final firestoreService = FirestoreService.instance;
-                              
+                              final subscriptionProvider =
+                                  Provider.of<SubscriptionProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                              final firestoreService =
+                                  FirestoreService.instance;
+
                               // Check normal account limit: only 1 normal account for unsubscribed users
                               if (!subscriptionProvider.isSubscribed) {
-                                final allAccounts = await firestoreService.getAllAccounts();
-                                final normalAccounts = allAccounts.where((a) => 
-                                  a.isVacationAccount != true && (a.isDefault != true)
-                                ).toList();
-                                
+                                final allAccounts = await firestoreService
+                                    .getAllAccounts();
+                                final normalAccounts = allAccounts
+                                    .where(
+                                      (a) => a.isVacationAccount != true,
+                                      // &&
+                                      // (a.isDefault != true),
+                                    )
+                                    .toList();
+
                                 if (normalAccounts.length >= 1) {
                                   // Show paywall if user is not subscribed and already has a normal account
                                   PersistentNavBarNavigator.pushNewScreen(
@@ -461,24 +490,24 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                   return;
                                 }
                               }
-                              
+
                               final vacationProvider =
                                   Provider.of<VacationProvider>(
-                                context,
-                                listen: false,
-                              );
+                                    context,
+                                    listen: false,
+                                  );
                               final isVacationMode =
                                   vacationProvider.isVacationMode;
                               final result =
                                   await PersistentNavBarNavigator.pushNewScreen(
-                                context,
-                                screen: AddAccountScreen(
-                                    isCreatingVacationAccount:
-                                        isVacationMode),
-                                withNavBar: false,
-                                pageTransitionAnimation:
-                                    PageTransitionAnimation.cupertino,
-                              );
+                                    context,
+                                    screen: AddAccountScreen(
+                                      isCreatingVacationAccount: isVacationMode,
+                                    ),
+                                    withNavBar: false,
+                                    pageTransitionAnimation:
+                                        PageTransitionAnimation.cupertino,
+                                  );
                               if (result == true) {
                                 if (mounted) setState(() {});
                               }
@@ -489,50 +518,47 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             _buildMyAccountsEmptyCard()
                           else
                             ...normalAccounts.asMap().entries.map(
-                                  (entry) => Column(
-                                    children: [
-                                      Builder(
-                                        builder: (context) {
-                                          final index = entry.key;
-                                          final accountData = entry.value;
-                                          final account =
-                                              accountData['account']
-                                                  as FirestoreAccount;
-                                          final finalBalance =
-                                              accountData['finalBalance']
-                                                  as double;
-                                          final isHighlighted =
-                                              index == touchedIndex;
-                                          return _buildAccountCard(
-                                            context: context,
-                                            account: account,
-                                            icon: getAccountIcon(
-                                              account.accountType,
-                                            )[0][0],
-                                            iconColor: Colors.black,
-                                            iconBackgroundColor:
-                                                Colors.grey.shade200,
-                                            accountName: account.name,
-                                            amount: finalBalance,
-                                            accountType: account.accountType,
-                                            creditLimit: account.creditLimit,
-                                            balanceLimit: account.balanceLimit,
-                                            currencySymbol:
-                                                _getAccountCurrencySymbol(
-                                                    account),
-                                            isHighlighted: isHighlighted,
-                                            accountsCount:
-                                                normalAccounts.length,
-                                            transactionCount:
-                                                accountData['transactionCount']
-                                                    as int,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: 6),
-                                    ],
+                              (entry) => Column(
+                                children: [
+                                  Builder(
+                                    builder: (context) {
+                                      final index = entry.key;
+                                      final accountData = entry.value;
+                                      final account =
+                                          accountData['account']
+                                              as FirestoreAccount;
+                                      final finalBalance =
+                                          accountData['finalBalance'] as double;
+                                      final isHighlighted =
+                                          index == touchedIndex;
+                                      return _buildAccountCard(
+                                        context: context,
+                                        account: account,
+                                        icon: getAccountIcon(
+                                          account.accountType,
+                                        )[0][0],
+                                        iconColor: Colors.black,
+                                        iconBackgroundColor:
+                                            Colors.grey.shade200,
+                                        accountName: account.name,
+                                        amount: finalBalance,
+                                        accountType: account.accountType,
+                                        creditLimit: account.creditLimit,
+                                        balanceLimit: account.balanceLimit,
+                                        currencySymbol:
+                                            _getAccountCurrencySymbol(account),
+                                        isHighlighted: isHighlighted,
+                                        accountsCount: normalAccounts.length,
+                                        transactionCount:
+                                            accountData['transactionCount']
+                                                as int,
+                                      );
+                                    },
                                   ),
-                                ),
+                                  const SizedBox(height: 6),
+                                ],
+                              ),
+                            ),
 
                           // Vacation Accounts section (always shown)
                           const SizedBox(height: 24),
@@ -540,8 +566,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                             AppLocalizations.of(context)!.balanceVacation,
                             () async {
                               // Check subscription status before allowing vacation account creation
-                              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-                              
+                              final subscriptionProvider =
+                                  Provider.of<SubscriptionProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+
                               // Prevent ANY vacation account creation if unsubscribed
                               if (!subscriptionProvider.isSubscribed) {
                                 // Show paywall if user is not subscribed
@@ -554,16 +584,17 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                 );
                                 return;
                               }
-                              
+
                               final result =
                                   await PersistentNavBarNavigator.pushNewScreen(
-                                context,
-                                screen: const AddAccountScreen(
-                                    isCreatingVacationAccount: true),
-                                withNavBar: false,
-                                pageTransitionAnimation:
-                                    PageTransitionAnimation.cupertino,
-                              );
+                                    context,
+                                    screen: const AddAccountScreen(
+                                      isCreatingVacationAccount: true,
+                                    ),
+                                    withNavBar: false,
+                                    pageTransitionAnimation:
+                                        PageTransitionAnimation.cupertino,
+                                  );
                               if (result == true) {
                                 if (mounted) setState(() {});
                               }
@@ -578,8 +609,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                 children: [
                                   _buildAccountCard(
                                     context: context,
-                                    account: accountData['account']
-                                        as FirestoreAccount,
+                                    account:
+                                        accountData['account']
+                                            as FirestoreAccount,
                                     icon: getAccountIcon(
                                       (accountData['account']
                                               as FirestoreAccount)
@@ -587,23 +619,28 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                     )[0][0],
                                     iconColor: Colors.black,
                                     iconBackgroundColor: Colors.grey.shade200,
-                                    accountName: (accountData['account']
-                                            as FirestoreAccount)
-                                        .name,
+                                    accountName:
+                                        (accountData['account']
+                                                as FirestoreAccount)
+                                            .name,
                                     amount:
                                         accountData['finalBalance'] as double,
-                                    accountType: (accountData['account']
-                                            as FirestoreAccount)
-                                        .accountType,
-                                    creditLimit: (accountData['account']
-                                            as FirestoreAccount)
-                                        .creditLimit,
-                                    balanceLimit: (accountData['account']
-                                            as FirestoreAccount)
-                                        .balanceLimit,
+                                    accountType:
+                                        (accountData['account']
+                                                as FirestoreAccount)
+                                            .accountType,
+                                    creditLimit:
+                                        (accountData['account']
+                                                as FirestoreAccount)
+                                            .creditLimit,
+                                    balanceLimit:
+                                        (accountData['account']
+                                                as FirestoreAccount)
+                                            .balanceLimit,
                                     currencySymbol: _getAccountCurrencySymbol(
-                                        accountData['account']
-                                            as FirestoreAccount),
+                                      accountData['account']
+                                          as FirestoreAccount,
+                                    ),
                                     isHighlighted: false,
                                     accountsCount: vacationAccounts.length,
                                     transactionCount:
@@ -653,26 +690,26 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   Text(
                     AppLocalizations.of(context)!.balanceTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
                   ),
                   // Add Account button - only visible in normal mode
                   if (!vacationProvider.isVacationMode)
                     Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          shape: BoxShape.rectangle,
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.gradientStart,
-                              AppColors.gradientEnd,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        shape: BoxShape.rectangle,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.gradientStart,
+                            AppColors.gradientEnd,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: TextButton(
+                      ),
+                      child: TextButton(
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -700,16 +737,26 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                         ),
                         onPressed: () async {
                           // Check subscription status before allowing normal account creation
-                          final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                          final subscriptionProvider =
+                              Provider.of<SubscriptionProvider>(
+                                context,
+                                listen: false,
+                              );
                           final firestoreService = FirestoreService.instance;
-                          
+
                           // Check normal account limit: only 1 normal account for unsubscribed users
                           if (!subscriptionProvider.isSubscribed) {
-                            final allAccounts = await firestoreService.getAllAccounts();
-                            final normalAccounts = allAccounts.where((a) => 
-                              a.isVacationAccount != true && (a.isDefault != true)
-                            ).toList();
-                            
+                            final allAccounts = await firestoreService
+                                .getAllAccounts();
+                            final normalAccounts = allAccounts
+                                .where(
+                                  (a) =>
+                                      a.isVacationAccount != true 
+                                      // &&
+                                      // (a.isDefault != true),
+                                )
+                                .toList();
+
                             if (normalAccounts.length >= 1) {
                               // Show paywall if user is not subscribed and already has a normal account
                               PersistentNavBarNavigator.pushNewScreen(
@@ -722,21 +769,21 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                               return;
                             }
                           }
-                          
+
                           final result =
                               await PersistentNavBarNavigator.pushNewScreen(
-                            context,
-                            screen: const AddAccountScreen(),
-                            withNavBar: false,
-                            pageTransitionAnimation:
-                                PageTransitionAnimation.cupertino,
-                          );
+                                context,
+                                screen: const AddAccountScreen(),
+                                withNavBar: false,
+                                pageTransitionAnimation:
+                                    PageTransitionAnimation.cupertino,
+                              );
                           if (result == true) {
                             if (mounted) setState(() {});
                           }
                         },
                       ),
-                        ),
+                    ),
                 ],
               ),
             ),
@@ -781,19 +828,19 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     }
 
     return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -867,9 +914,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
       final radius = isTouched ? 120.0 : 100.0;
       final accountData = accountsWithData[i];
       final account = accountData['account'] as FirestoreAccount;
-      final value = account.isVacationAccount == true 
-        ? account.initialBalance 
-        : accountData['finalBalance'] as double;
+      final value = account.isVacationAccount == true
+          ? account.initialBalance
+          : accountData['finalBalance'] as double;
 
       return PieChartSectionData(
         color: colors[i % colors.length],
@@ -880,9 +927,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     });
   }
 
-  Widget _buildLegend(
-    List<Map<String, dynamic>> accountsWithData,
-  ) {
+  Widget _buildLegend(List<Map<String, dynamic>> accountsWithData) {
     if (accountsWithData.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -921,11 +966,12 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               _buildLegendItem(
                 colors[index % colors.length],
                 account.name,
-                account.isVacationAccount == true ? account.initialBalance : finalBalance,
+                account.isVacationAccount == true
+                    ? account.initialBalance
+                    : finalBalance,
                 _getAccountCurrencySymbol(account),
               ),
-              if (index < filteredData.length - 1)
-                const SizedBox(height: 12),
+              if (index < filteredData.length - 1) const SizedBox(height: 12),
             ],
           );
         }),
@@ -953,7 +999,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         Text(label, style: Theme.of(context).textTheme.bodyLarge),
         const Spacer(),
         Text(
-          currencySymbol.isEmpty 
+          currencySymbol.isEmpty
               ? formatCurrencyAmount(amount)
               : formatCurrency(amount, currencySymbol),
           style: Theme.of(
@@ -971,9 +1017,9 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         Text(
           title,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.secondaryTextColorLight,
-                fontWeight: FontWeight.bold,
-              ),
+            color: AppColors.secondaryTextColorLight,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         Semantics(
           button: true,
@@ -1010,23 +1056,28 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     // Use vacation-specific icon and styling for vacation accounts
     final vacationIcon = HugeIcons.strokeRoundedAirplaneMode;
     final displayIcon = isVacationAccount ? vacationIcon : icon;
-    final displayIconColor =
-        isVacationAccount ? Colors.blue.shade600 : iconColor;
-    final displayIconBackgroundColor =
-        isVacationAccount ? Colors.blue.shade50 : iconBackgroundColor;
+    final displayIconColor = isVacationAccount
+        ? Colors.blue.shade600
+        : iconColor;
+    final displayIconBackgroundColor = isVacationAccount
+        ? Colors.blue.shade50
+        : iconBackgroundColor;
     // Apply vacation styling similar to home.dart
     final cardBackgroundColor = isVacationAccount
-        ? Colors.blue.shade50 // Light blue background for vacation accounts
+        ? Colors
+              .blue
+              .shade50 // Light blue background for vacation accounts
         : (isHighlighted
-            ? AppColors.gradientStart.withOpacity(0.08)
-            : Colors.white);
+              ? AppColors.gradientStart.withOpacity(0.08)
+              : Colors.white);
     final cardBorderColor = isVacationAccount
-        ? Colors.blue.shade300 // Blue border for vacation accounts
-        : (isHighlighted
-            ? AppColors.gradientStart
-            : Colors.grey.shade200);
-    final cardBorderWidth =
-        isVacationAccount ? 1.5 : (isHighlighted ? 2.0 : 1.0);
+        ? Colors
+              .blue
+              .shade300 // Blue border for vacation accounts
+        : (isHighlighted ? AppColors.gradientStart : Colors.grey.shade200);
+    final cardBorderWidth = isVacationAccount
+        ? 1.5
+        : (isHighlighted ? 2.0 : 1.0);
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
@@ -1044,10 +1095,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
         decoration: BoxDecoration(
           color: cardBackgroundColor,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: cardBorderColor,
-            width: cardBorderWidth,
-          ),
+          border: Border.all(color: cardBorderColor, width: cardBorderWidth),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(isHighlighted ? 0.12 : 0.08),
@@ -1064,8 +1112,11 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                 color: displayIconBackgroundColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child:
-                  HugeIcon(icon: displayIcon, size: 24, color: displayIconColor),
+              child: HugeIcon(
+                icon: displayIcon,
+                size: 24,
+                color: displayIconColor,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1075,14 +1126,14 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   Text(
                     accountName,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     accountType,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryTextColorLight,
-                        ),
+                      color: AppColors.secondaryTextColorLight,
+                    ),
                   ),
                   // Text(
                   //   '$transactionCount transactions',
@@ -1092,25 +1143,29 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   // ),
                   if (creditLimit != null)
                     Text(
-                      AppLocalizations.of(context)!.balanceCreditLimit(formatCurrency(creditLimit, account.currency)),
+                      AppLocalizations.of(context)!.balanceCreditLimit(
+                        formatCurrency(creditLimit, account.currency),
+                      ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.secondaryTextColorLight,
-                          ),
+                        color: AppColors.secondaryTextColorLight,
+                      ),
                     )
                   else if (balanceLimit != null)
                     Text(
-                      AppLocalizations.of(context)!.balanceBalanceLimit(formatCurrency(balanceLimit, account.currency)),
+                      AppLocalizations.of(context)!.balanceBalanceLimit(
+                        formatCurrency(balanceLimit, account.currency),
+                      ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.secondaryTextColorLight,
-                          ),
+                        color: AppColors.secondaryTextColorLight,
+                      ),
                     ),
                 ],
               ),
             ),
             Text(
               isVacationAccount
-                ? (account.currency ?? '')
-                : formatCurrency(amount, account.currency),
+                  ? (account.currency ?? '')
+                  : formatCurrency(amount, account.currency),
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -1130,65 +1185,63 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     return account.currency;
   }
 
-
   Widget _buildNewEmptyState() {
     return SingleChildScrollView(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20.0,
-        vertical: 12.0,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Account Balance card with currency selector
           // _buildEmptyAccountBalanceCard(),
           // const SizedBox(height: 24),
-          
+
           // MY ACCOUNTS section
           _buildSectionHeaderWithButton(
             AppLocalizations.of(context)!.balanceMyAccounts,
             () async {
               // Check subscription status before allowing normal account creation
-              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+              final subscriptionProvider = Provider.of<SubscriptionProvider>(
+                context,
+                listen: false,
+              );
               final firestoreService = FirestoreService.instance;
-              
+
               // Check normal account limit: only 1 normal account for unsubscribed users
               if (!subscriptionProvider.isSubscribed) {
                 final allAccounts = await firestoreService.getAllAccounts();
-                final normalAccounts = allAccounts.where((a) => 
-                  a.isVacationAccount != true && (a.isDefault != true)
-                ).toList();
-                
+                final normalAccounts = allAccounts
+                    .where(
+                      (a) =>
+                          a.isVacationAccount != true 
+                          //&& (a.isDefault != true),
+                    )
+                    .toList();
+
                 if (normalAccounts.length >= 1) {
                   // Show paywall if user is not subscribed and already has a normal account
                   PersistentNavBarNavigator.pushNewScreen(
                     context,
                     screen: const PaywallScreen(),
                     withNavBar: false,
-                    pageTransitionAnimation:
-                        PageTransitionAnimation.cupertino,
+                    pageTransitionAnimation: PageTransitionAnimation.cupertino,
                   );
                   return;
                 }
               }
-              
-              final vacationProvider =
-                  Provider.of<VacationProvider>(
+
+              final vacationProvider = Provider.of<VacationProvider>(
                 context,
                 listen: false,
               );
-              final isVacationMode =
-                  vacationProvider.isVacationMode;
-              final result =
-                  await PersistentNavBarNavigator.pushNewScreen(
+              final isVacationMode = vacationProvider.isVacationMode;
+              final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
                 screen: AddAccountScreen(
-                    isCreatingVacationAccount:
-                        isVacationMode),
+                  isCreatingVacationAccount: isVacationMode,
+                ),
                 withNavBar: false,
-                pageTransitionAnimation:
-                    PageTransitionAnimation.cupertino,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
               if (result == true) {
                 if (mounted) setState(() {});
@@ -1197,15 +1250,18 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           ),
           const SizedBox(height: 6),
           _buildMyAccountsEmptyCard(),
-          
+
           // VACATION section
           const SizedBox(height: 24),
           _buildSectionHeaderWithButton(
             AppLocalizations.of(context)!.balanceVacation,
             () async {
               // Check subscription status before allowing vacation account creation
-              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-              
+              final subscriptionProvider = Provider.of<SubscriptionProvider>(
+                context,
+                listen: false,
+              );
+
               // Prevent ANY vacation account creation if unsubscribed
               if (!subscriptionProvider.isSubscribed) {
                 // Show paywall if user is not subscribed
@@ -1213,20 +1269,16 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                   context,
                   screen: const PaywallScreen(),
                   withNavBar: false,
-                  pageTransitionAnimation:
-                      PageTransitionAnimation.cupertino,
+                  pageTransitionAnimation: PageTransitionAnimation.cupertino,
                 );
                 return;
               }
-              
-              final result =
-                  await PersistentNavBarNavigator.pushNewScreen(
+
+              final result = await PersistentNavBarNavigator.pushNewScreen(
                 context,
-                screen: const AddAccountScreen(
-                    isCreatingVacationAccount: true),
+                screen: const AddAccountScreen(isCreatingVacationAccount: true),
                 withNavBar: false,
-                pageTransitionAnimation:
-                    PageTransitionAnimation.cupertino,
+                pageTransitionAnimation: PageTransitionAnimation.cupertino,
               );
               if (result == true) {
                 if (mounted) setState(() {});
@@ -1303,10 +1355,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           const SizedBox(height: 8),
           Text(
             AppLocalizations.of(context)!.balanceCreateFirstAccount,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
           ),
         ],
       ),
@@ -1347,10 +1396,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           Text(
             AppLocalizations.of(context)!.balanceCreateFirstAccountFinances,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
           ),
         ],
       ),
@@ -1390,10 +1436,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           Text(
             AppLocalizations.of(context)!.balanceCreateFirstVacation,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
           ),
         ],
       ),
@@ -1402,14 +1445,19 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
 
   // Helper method to get available currencies from account data
   List<String> _getAvailableCurrencies(
-      List<Map<String, dynamic>> accountsWithData) {
-    final currencies = accountsWithData.map((accountData) {
-      final account = accountData['account'] as FirestoreAccount;
-      return account.currency;
-    }).toSet().toList();
+    List<Map<String, dynamic>> accountsWithData,
+  ) {
+    final currencies = accountsWithData
+        .map((accountData) {
+          final account = accountData['account'] as FirestoreAccount;
+          return account.currency;
+        })
+        .toSet()
+        .toList();
     // Filter out "MULTI" currencies to prevent showing "MULTI MULTI" in vacation mode
-    currencies
-        .removeWhere((currency) => currency.toUpperCase().contains('MULTI'));
+    currencies.removeWhere(
+      (currency) => currency.toUpperCase().contains('MULTI'),
+    );
     currencies.sort(); // Sort for consistent ordering
     return currencies;
   }
@@ -1454,22 +1502,22 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
   // Helper method to determine if charts should be shown
   bool _shouldShowCharts(List<Map<String, dynamic>> accountsWithData) {
     if (accountsWithData.isEmpty) return false;
-    
+
     // Get available currencies from the data
     final availableCurrencies = _getAvailableCurrencies(accountsWithData);
-    
+
     // Check if any currency has 2+ accounts
     for (final currency in availableCurrencies) {
       final accountsForCurrency = accountsWithData.where((accountData) {
         final account = accountData['account'] as FirestoreAccount;
         return account.currency == currency;
       }).toList();
-      
+
       if (accountsForCurrency.length >= 2) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -1535,10 +1583,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
           const SizedBox(height: 8),
           Text(
             AppLocalizations.of(context)!.balanceAddMoreAccounts,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
           ),
         ],
       ),

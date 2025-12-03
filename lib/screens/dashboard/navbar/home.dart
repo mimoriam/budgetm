@@ -339,6 +339,9 @@ class MonthPageProvider extends ChangeNotifier {
 class MonthPageDataManager {
   final FirestoreService _firestoreService = FirestoreService.instance;
   final VacationProvider _vacationProvider;
+  
+  // Cache for storing the latest data for each month/view
+  final Map<String, MonthPageData> _dataCache = {};
 
   MonthPageDataManager(this._vacationProvider);
 
@@ -518,14 +521,21 @@ class MonthPageDataManager {
                 );
               },
             )
-            .startWith(
-              MonthPageData.loading(),
-            ) // Immediately emit a loading state.
-            .handleError((error) {
-              return MonthPageData.error(error.toString());
+            .doOnData((data) {
+              // Update cache with latest data
+              if (!data.isLoading && data.error == null) {
+                final cacheKey = '${monthIndex}_${isVacation}_$includeVacationTransactions';
+                _dataCache[cacheKey] = data;
+              }
             });
 
-    return stream;
+    // Start with cached data if available, otherwise loading
+    final cacheKey = '${monthIndex}_${isVacation}_$includeVacationTransactions';
+    if (_dataCache.containsKey(cacheKey)) {
+      return stream.startWith(_dataCache[cacheKey]!);
+    } else {
+      return stream.startWith(MonthPageData.loading());
+    }
   }
 
   // Vacation mode: all currencies across all time, ignoring months
@@ -615,9 +625,21 @@ class MonthPageDataManager {
           expensesByCurrency: expensesByCurrency,
         );
       },
-    ).startWith(MonthPageData.loading());
+    ).doOnData((data) {
+      // Update cache with latest data
+      if (!data.isLoading && data.error == null) {
+        final cacheKey = 'vacation_all_$activeVacationAccountId';
+        _dataCache[cacheKey] = data;
+      }
+    });
 
-    return stream;
+    // Start with cached data if available, otherwise loading
+    final cacheKey = 'vacation_all_$activeVacationAccountId';
+    if (_dataCache.containsKey(cacheKey)) {
+      return stream.startWith(_dataCache[cacheKey]!);
+    } else {
+      return stream.startWith(MonthPageData.loading());
+    }
   }
 
   // Method to invalidate cache for a specific month and vacation mode combination
@@ -632,8 +654,8 @@ class MonthPageDataManager {
   // Method to clear the cache if a full refresh is needed (e.g., on user logout/login).
   // No-op: Streams are now always fresh, no cache to clear
   void clearCache() {
-    print('DEBUG: clearCache called (no-op) - streams are always fresh');
-    // Streams are now always fresh, no cache to clear
+    print('DEBUG: clearCache called - clearing in-memory data cache');
+    _dataCache.clear();
   }
 }
 
@@ -989,181 +1011,10 @@ class _MonthPageViewState extends State<MonthPageView> {
           topRight: Radius.circular(30),
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: Column(
-          children: [
-            // Shimmer for date header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-              child: Shimmer.fromColors(
-                baseColor: Colors.grey.shade300,
-                highlightColor: Colors.grey.shade100,
-                child: Container(
-                  height: 12,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-            // Shimmer for transaction items
-            ...List.generate(5, (index) => _buildTransactionShimmer()),
-            const SizedBox(height: 16),
-            // Shimmer for upcoming tasks section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
-                    child: Container(
-                      height: 18,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildTaskShimmer(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTransactionShimmer() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
-        ),
-        child: Row(
-          children: [
-            // Icon placeholder
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Text placeholders
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 15,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Container(
-                    height: 12,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Amount placeholder
-            Container(
-              height: 15,
-              width: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTaskShimmer() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
-        ),
-        child: Row(
-          children: [
-            // Icon placeholder
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Text placeholders
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 15,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Container(
-                    height: 12,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Amount placeholder
-            Container(
-              height: 15,
-              width: 60,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ],
+      child: const Center(
+        child: CircularProgressIndicator(
+          color: Colors.grey,
+          strokeWidth: 2.0,
         ),
       ),
     );
@@ -1378,7 +1229,7 @@ class _MonthPageViewState extends State<MonthPageView> {
                     ],
                   ),
                   const SizedBox(height: 2),
-                  if (account != null && (account.isDefault != true))
+                  if (account != null)
                     Text(
                       [
                         account.name,
@@ -3282,12 +3133,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           final isSelected = index == _selectedMonthIndex;
           return GestureDetector(
             onTap: () {
-              // Animate PageController to selected month; actual data loads after scroll settles
-              _pageController.animateToPage(
-                index,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
+              // Jump to selected month to avoid loading intermediate months
+              _pageController.jumpToPage(index);
             },
             child: Container(
               width: 85,

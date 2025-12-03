@@ -8,7 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:budgetm/viewmodels/navbar_visibility_provider.dart';
-import 'package:fl_chart/fl_chart.dart';
+
 import 'package:table_calendar/table_calendar.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_revamped/budget_detail_revamped_screen.dart';
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_revamped/add_budget_revamped_screen.dart';
@@ -25,7 +25,7 @@ class BudgetRevampedScreen extends StatefulWidget {
 class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
     with WidgetsBindingObserver {
   late ScrollController _scrollController;
-  String? _selectedChartCurrency; // For chart currency selection
+
 
   @override
   void initState() {
@@ -96,8 +96,7 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
                   children: [
                     _buildBudgetSelectors(context, provider),
                     const SizedBox(height: 12),
-                    _buildPieChart(context, provider),
-                    const SizedBox(height: 8),
+
                     _buildCategoryList(context, provider),
                     const SizedBox(height: 16),
                   ],
@@ -506,220 +505,7 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
     }
   }
 
-  Widget _buildPieChart(BuildContext context, RevampedBudgetProvider provider) {
-    if (provider.revampedCategoryBudgetData.isEmpty) {
-      return _buildEmptyState(context);
-    }
 
-    final displayData = provider.revampedCategoryBudgetData
-        .where((data) => data.spentAmount > 0 || data.limit > 0)
-        .toList();
-
-    if (displayData.isEmpty) {
-      return _buildEmptyState(context);
-    }
-
-    final availableCurrencies = _getAvailableCurrencies(displayData);
-    
-    if (_selectedChartCurrency == null || !availableCurrencies.contains(_selectedChartCurrency)) {
-      if (availableCurrencies.isNotEmpty) {
-        _selectedChartCurrency = availableCurrencies.first;
-      } else {
-        _selectedChartCurrency = null;
-      }
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                AppLocalizations.of(context)!.budgetTotalSpending,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (availableCurrencies.length > 1)
-                _buildCompactCurrencyDropdown(availableCurrencies),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 120,
-            child: PieChart(
-              PieChartData(
-                sections: _buildPieChartSections(displayData),
-                centerSpaceRadius: 30,
-                sectionsSpace: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Make legend scrollable to prevent overflow with many budgets
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 200),
-            child: SingleChildScrollView(
-              child: _buildPieChartLegend(displayData),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<PieChartSectionData> _buildPieChartSections(
-    List<RevampedCategoryBudgetData> data,
-  ) {
-    final filteredData = _selectedChartCurrency != null
-        ? data.where((item) => item.revampedBudget.currency == _selectedChartCurrency).toList()
-        : data;
-    
-    if (filteredData.isEmpty) {
-      return [];
-    }
-    
-    final total = filteredData.fold(0.0, (sum, item) => sum + item.spentAmount);
-    final useEqualSlices = total <= 0;
-
-    return filteredData.map((item) {
-      final value = useEqualSlices ? 1.0 : item.spentAmount;
-      final percentage = useEqualSlices
-          ? 0.0
-          : (item.spentAmount / total * 100);
-      // Use unique color based on category combination for each budget
-      final uniqueColor = _getUniqueColorForBudget(item.revampedBudget.categoryIds);
-      return PieChartSectionData(
-        value: value,
-        title: '${percentage.toStringAsFixed(1)}%',
-        color: uniqueColor,
-        radius: 50,
-        titleStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-      );
-    }).toList();
-  }
-
-  Widget _buildPieChartLegend(List<RevampedCategoryBudgetData> data) {
-    final filteredData = _selectedChartCurrency != null
-        ? data.where((item) => item.revampedBudget.currency == _selectedChartCurrency).toList()
-        : data;
-    
-    return Column(
-      children: filteredData.map((item) {
-        final uniqueColor = _getUniqueColorForBudget(item.revampedBudget.categoryIds);
-        final spent = item.spentAmount;
-        final limit = item.limit;
-        final remaining = limit > 0 ? (limit - spent) : 0.0;
-        final hasLimit = limit > 0;
-        final isOverBudget = hasLimit && spent > limit;
-        
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: uniqueColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item.displayName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.only(left: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'Spent: ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        Text(
-                          _formatAmountForCard(spent, currencyCode: item.revampedBudget.currency),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isOverBudget ? Colors.red : Colors.grey.shade800,
-                          ),
-                        ),
-                        if (hasLimit) ...[
-                          Text(
-                            ' / ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          Text(
-                            'Limit: ${_formatAmountForCard(limit, currencyCode: item.revampedBudget.currency)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (hasLimit) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'Remaining: ${_formatAmountForCard(remaining, currencyCode: item.revampedBudget.currency)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isOverBudget ? Colors.red : Colors.green,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _buildCategoryList(BuildContext context, RevampedBudgetProvider provider) {
     final data = provider.revampedCategoryBudgetData
@@ -861,20 +647,15 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: data.categoryNames.map((name) {
-                          return Chip(
-                            label: Text(
-                              name,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            padding: EdgeInsets.zero,
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                          );
-                        }).toList(),
+                      Text(
+                        data.displayName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryTextColorLight,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -1030,45 +811,7 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Image.asset(
-            'images/launcher/logo.png',
-            width: 80,
-            height: 80,
-            color: Colors.grey.shade300,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.budgetNoBudgetCreated,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.budgetStartCreatingBudget,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Color _getColorFromString(String colorName) {
     switch (colorName.toLowerCase()) {
@@ -1093,41 +836,7 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
     }
   }
 
-  // Generate unique color for each budget based on category combination
-  // Uses a color palette to ensure distinct, visually appealing colors
-  Color _getUniqueColorForBudget(List<String> categoryIds) {
-    if (categoryIds.isEmpty) {
-      return Colors.grey;
-    }
-    
-    // Sort category IDs for consistent hashing (same categories = same color)
-    final sorted = List<String>.from(categoryIds)..sort();
-    final hash = sorted.join(',').hashCode;
-    
-    // Use a predefined color palette for better visual distinction
-    final colorPalette = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-      Colors.pink,
-      Colors.amber,
-      Colors.indigo,
-      Colors.cyan,
-      Colors.deepOrange,
-      Colors.deepPurple,
-      Colors.lightBlue,
-      Colors.lightGreen,
-      Colors.brown,
-      Colors.grey,
-    ];
-    
-    // Use hash to select from palette, ensuring same categories get same color
-    final index = hash.abs() % colorPalette.length;
-    return colorPalette[index];
-  }
+
 
   IconData _getIconFromString(String iconName) {
     switch (iconName.toLowerCase()) {
@@ -1168,49 +877,9 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
         return Icons.category;
     }
   }
-
-  List<String> _getAvailableCurrencies(List<RevampedCategoryBudgetData> data) {
-    final currencies = data.map((item) => item.revampedBudget.currency).toSet().toList();
-    currencies.sort();
-    return currencies;
-  }
-
-  Widget _buildCompactCurrencyDropdown(List<String> availableCurrencies) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedChartCurrency,
-          isDense: true,
-          isExpanded: false,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
-          items: availableCurrencies.map((String currency) {
-            return DropdownMenuItem<String>(
-              value: currency,
-              child: Text(currency),
-            );
-          }).toList(),
-          onChanged: (String? newValue) {
-            if (newValue != null) {
-              setState(() {
-                _selectedChartCurrency = newValue;
-              });
-            }
-          },
-        ),
-      ),
-    );
-  }
 }
+
+
 
 // Reusable Period Selector Widget
 class PeriodSelector extends StatelessWidget {

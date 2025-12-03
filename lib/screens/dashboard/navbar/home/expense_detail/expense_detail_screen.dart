@@ -294,8 +294,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                   // For vacation transactions, show normal account if available
                                   if (firestoreTransaction?.isVacation ==
                                       true) {
-                                    if (account != null &&
-                                        !(account.isDefault ?? false)) {
+                                    if (account != null) {
                                       // Show normal account for vacation transactions with icon
                                       return Row(
                                         mainAxisAlignment:
@@ -333,9 +332,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                                     }
                                     // If no normal account, show nothing at top (vacation account will be shown below)
                                   }
-                                  // For normal transactions, show normal account (but hide default cash account)
-                                  else if (account != null &&
-                                      !(account.isDefault ?? false)) {
+                                  // For normal transactions, show normal account
+                                  else if (account != null) {
                                     return Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,

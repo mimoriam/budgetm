@@ -64,6 +64,8 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
         return;
       }
 
+      final name = formData['name'] as String?;
+      
       // Check for duplicate budget before attempting to save
       final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
       if (provider.hasDuplicateBudget(_selectedCategoryIds.toList(), _selectedType, _selectedCurrencyCode)) {
@@ -101,6 +103,7 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
               _selectedType,
               _selectedDate,
               _selectedCurrencyCode,
+              name: name,
             );
         
         if (mounted) {
@@ -225,6 +228,7 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                                 _selectedCategoryIds.remove(category.id);
                               }
                             });
+                            setState(() {});
                           },
                         );
                       },
@@ -251,6 +255,7 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
         );
       },
     );
+    setState(() {});
   }
 
   Future<void> _showDatePicker() async {
@@ -374,6 +379,44 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Budget Name Section
+                      Column(
+                        children: [
+                          Center(
+                            child: Text(
+                              'Budget Name',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.secondaryTextColorLight,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          FormBuilderTextField(
+                            name: 'name',
+                            style: const TextStyle(
+                              color: AppColors.primaryTextColorLight,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                            decoration: _inputDecoration(hintText: 'e.g., Monthly Groceries').copyWith(
+                              hintStyle: const TextStyle(
+                                fontSize: 18,
+                                color: AppColors.lightGreyBackground,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 10,
+                              ),
+                            ),
+                            validator: FormBuilderValidators.required(
+                              errorText: 'Budget name is required',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
                       // Amount Section
                       Column(
                         children: [

@@ -3,6 +3,7 @@ import 'package:budgetm/models/budget.dart';
 
 class RevampedBudget {
   final String id; // Composite key: {userId}_{categoryIds.join('_')}_{type}_{year}_{period}
+  final String? name; // User-defined name for the budget
   final List<String> categoryIds; // Multiple categories
   final double limit;
   final BudgetType type;
@@ -15,6 +16,7 @@ class RevampedBudget {
 
   RevampedBudget({
     required this.id,
+    this.name,
     required this.categoryIds,
     required this.limit,
     required this.type,
@@ -141,6 +143,7 @@ class RevampedBudget {
 
   Map<String, dynamic> toJson() {
     return {
+      'name': name,
       'categoryIds': categoryIds,
       'limit': limit,
       'type': type.toString().split('.').last,
@@ -156,6 +159,7 @@ class RevampedBudget {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return RevampedBudget(
       id: doc.id,
+      name: data['name'] as String?,
       categoryIds: List<String>.from(data['categoryIds'] ?? []),
       limit: (data['limit'] as num?)?.toDouble() ?? 0.0,
       type: _budgetTypeFromString(data['type']),
@@ -171,6 +175,7 @@ class RevampedBudget {
   factory RevampedBudget.fromJson(Map<String, dynamic> json, String id) {
     return RevampedBudget(
       id: id,
+      name: json['name'] as String?,
       categoryIds: List<String>.from(json['categoryIds'] ?? []),
       limit: (json['limit'] as num?)?.toDouble() ?? 0.0,
       type: _budgetTypeFromString(json['type']),
@@ -198,6 +203,7 @@ class RevampedBudget {
 
   RevampedBudget copyWith({
     String? id,
+    String? name,
     List<String>? categoryIds,
     double? limit,
     BudgetType? type,
@@ -210,6 +216,7 @@ class RevampedBudget {
   }) {
     return RevampedBudget(
       id: id ?? this.id,
+      name: name ?? this.name,
       categoryIds: categoryIds ?? this.categoryIds,
       limit: limit ?? this.limit,
       type: type ?? this.type,
@@ -224,7 +231,7 @@ class RevampedBudget {
 
   @override
   String toString() {
-    return 'RevampedBudget(id: $id, categoryIds: $categoryIds, type: $type, year: $year, period: $period, limit: $limit, spentAmount: $spentAmount, userId: $userId, currency: $currency)';
+    return 'RevampedBudget(id: $id, name: $name, categoryIds: $categoryIds, type: $type, year: $year, period: $period, limit: $limit, spentAmount: $spentAmount, userId: $userId, currency: $currency)';
   }
 
   @override
@@ -232,6 +239,7 @@ class RevampedBudget {
     if (identical(this, other)) return true;
     return other is RevampedBudget &&
         other.id == id &&
+        other.name == name &&
         other.categoryIds.length == categoryIds.length &&
         other.categoryIds.every((id) => categoryIds.contains(id)) &&
         other.type == type &&
@@ -246,6 +254,7 @@ class RevampedBudget {
   int get hashCode {
     return Object.hash(
       id,
+      name,
       categoryIds.join(','),
       type,
       year,
