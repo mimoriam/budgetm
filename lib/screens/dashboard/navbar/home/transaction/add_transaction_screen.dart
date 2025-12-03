@@ -1628,47 +1628,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Handle vacation mode transactions
       if (isVacationMode) {
         // Validate required fields for vacation transaction
-        if (_selectedAccountId == null) {
-          throw Exception('No account selected');
-        }
+        // Account is optional in vacation mode
 
-        // Get the selected normal account
-        final selectedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
-        if (selectedAccount == null) {
-          throw Exception('Selected account not found');
-        }
-
-        // Validate currency matching (default cash account accepts any currency)
-        if (selectedAccount.isDefault != true && selectedAccount.currency != selectedCurrencyCode) {
-          if (mounted) {
-            setState(() {
-              _isSaving = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Currency mismatch: The selected account\'s currency (${selectedAccount.currency}) does not match the transaction currency ($selectedCurrencyCode).',
-                ),
-              ),
-            );
-          } else {
-            _isSaving = false;
+        // Get the selected normal account if one is selected
+        FirestoreAccount? selectedAccount;
+        if (_selectedAccountId != null) {
+          selectedAccount = await _firestoreService.getAccountById(_selectedAccountId!);
+          if (selectedAccount == null) {
+            throw Exception('Selected account not found');
           }
-          return;
-        }
 
-        // Check credit limit on normal account (not vacation account which has unlimited credit)
-        if (selectedAccount.creditLimit != null && widget.transactionType == TransactionType.expense) {
-          final newBalance = selectedAccount.balance - amount;
-          if (newBalance.abs() > selectedAccount.creditLimit!) {
+          // Validate currency matching (default cash account accepts any currency)
+          if (selectedAccount.isDefault != true && selectedAccount.currency != selectedCurrencyCode) {
             if (mounted) {
               setState(() {
                 _isSaving = false;
               });
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text(
-                    'This transaction exceeds the credit limit for the selected account.',
+                    'Currency mismatch: The selected account\'s currency (${selectedAccount.currency}) does not match the transaction currency ($selectedCurrencyCode).',
                   ),
                 ),
               );
@@ -1676,6 +1655,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               _isSaving = false;
             }
             return;
+          }
+
+          // Check credit limit on normal account (not vacation account which has unlimited credit)
+          if (selectedAccount.creditLimit != null && widget.transactionType == TransactionType.expense) {
+            final newBalance = selectedAccount.balance - amount;
+            if (newBalance.abs() > selectedAccount.creditLimit!) {
+              if (mounted) {
+                setState(() {
+                  _isSaving = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'This transaction exceeds the credit limit for the selected account.',
+                    ),
+                  ),
+                );
+              } else {
+                _isSaving = false;
+              }
+              return;
+            }
           }
         }
 
@@ -1698,7 +1699,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           categoryId: _selectedCategoryId,
           budgetId: null,
           goalId: selectedGoalId,
-          accountId: _selectedAccountId, // Normal account
+          accountId: _selectedAccountId ?? '', // Normal account
           time: (formData['time'] as DateTime?)?.toIso8601String(),
           repeat: formData['repeat'] as String?,
           remind: formData['remind'] as String?,

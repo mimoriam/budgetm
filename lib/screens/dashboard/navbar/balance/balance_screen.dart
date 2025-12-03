@@ -806,12 +806,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     }
 
     // Filter data to only include accounts with the selected currency
-    final filteredData = _selectedChartCurrency != null
-        ? accountsWithData.where((accountData) {
-            final account = accountData['account'] as FirestoreAccount;
-            return account.currency == _selectedChartCurrency;
-          }).toList()
-        : accountsWithData;
+    // Filter data to only include accounts with the selected currency and exclude default accounts
+    final filteredData = accountsWithData.where((accountData) {
+      final account = accountData['account'] as FirestoreAccount;
+      final matchesCurrency = _selectedChartCurrency == null || account.currency == _selectedChartCurrency;
+      final isNotDefault = account.isDefault != true;
+      return matchesCurrency && isNotDefault;
+    }).toList();
 
     if (filteredData.isEmpty) {
       return Column(
@@ -933,12 +934,13 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
     }
 
     // Filter data to only include accounts with the selected currency
-    final filteredData = _selectedChartCurrency != null
-        ? accountsWithData.where((accountData) {
-            final account = accountData['account'] as FirestoreAccount;
-            return account.currency == _selectedChartCurrency;
-          }).toList()
-        : accountsWithData;
+    // Filter data to only include accounts with the selected currency and exclude default accounts
+    final filteredData = accountsWithData.where((accountData) {
+      final account = accountData['account'] as FirestoreAccount;
+      final matchesCurrency = _selectedChartCurrency == null || account.currency == _selectedChartCurrency;
+      final isNotDefault = account.isDefault != true;
+      return matchesCurrency && isNotDefault;
+    }).toList();
 
     if (filteredData.isEmpty) {
       return const SizedBox.shrink();
@@ -1163,7 +1165,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
               ),
             ),
             Text(
-              isVacationAccount
+              (isVacationAccount || (account.isDefault == true))
                   ? (account.currency ?? '')
                   : formatCurrency(amount, account.currency),
               style: Theme.of(

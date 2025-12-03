@@ -198,6 +198,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildProfileMenuItem(
                       Icons.lock_outline,
                       'Change Password',
+                      onTap: () async {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user != null && user.email != null) {
+                          try {
+                            await _authService.sendPasswordResetEmail(user.email!);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Password reset email sent to ${user.email}',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Failed to send reset email: ${e.toString()}',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
                     ),
                   _buildProfileMenuItem(
                     Icons.category_outlined,
@@ -583,7 +612,179 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(Icons.edit, size: 18, color: Colors.black54),
+                    GestureDetector(
+                      onTap: () {
+                        final TextEditingController _controller =
+                            TextEditingController(text: displayName);
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            bool isSaving = false;
+                            return StatefulBuilder(
+                              builder: (context, setState) {
+                                return AlertDialog(
+                                  title: Center(
+                                    child: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.profileEditDisplayName,
+                                    ),
+                                  ),
+                                  content: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: TextField(
+                                      controller: _controller,
+                                      autofocus: true,
+                                      textAlign: TextAlign.start,
+                                      decoration: InputDecoration(
+                                        hintText: AppLocalizations.of(
+                                          context,
+                                        )!.hintEnterDisplayName,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8.0,
+                                          ),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16.0,
+                                              vertical: 12.0,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.profileCancel,
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: isSaving
+                                          ? null
+                                          : () async {
+                                              final newName = _controller.text
+                                                  .trim();
+                                              if (newName.isEmpty) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Display name cannot be empty',
+                                                    ),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                                return;
+                                              }
+                                              setState(() {
+                                                isSaving = true;
+                                              });
+                                              try {
+                                                final user = FirebaseAuth
+                                                    .instance
+                                                    .currentUser;
+                                                if (user != null) {
+                                                  await user.updateDisplayName(
+                                                    newName,
+                                                  );
+                                                  await user.reload();
+                                                  try {
+                                                    // Update Firestore with 'name' field (consistent with registration)
+                                                    await FirestoreService
+                                                        .instance
+                                                        .updateUserData(
+                                                          user.uid,
+                                                          {
+                                                            'name': newName,
+                                                          },
+                                                        );
+                                                    // Refresh UserProvider to get updated name from Firestore
+                                                    if (context.mounted) {
+                                                      await Provider.of<UserProvider>(
+                                                        context,
+                                                        listen: false,
+                                                      ).refreshUserData();
+                                                    }
+                                                  } catch (e) {
+                                                    debugPrint(
+                                                      'Failed to update Firestore user document: $e',
+                                                    );
+                                                  }
+                                                }
+                                                if (context.mounted) {
+                                                  Navigator.of(context).pop();
+                                                }
+                                              } on FirebaseAuthException catch (
+                                                e
+                                              ) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        e.message ??
+                                                            'Failed to update display name.',
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              } catch (e) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'Error: $e',
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              } finally {
+                                                if (context.mounted) {
+                                                  setState(() {
+                                                    isSaving = false;
+                                                  });
+                                                }
+                                              }
+                                            },
+                                      child: isSaving
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.profileSave,
+                                            ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                      child: const Icon(Icons.edit, size: 18, color: Colors.black54),
+                    ),
                   ],
                 );
               },

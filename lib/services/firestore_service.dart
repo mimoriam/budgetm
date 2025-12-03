@@ -822,30 +822,33 @@ class FirestoreService {
         final finalTransaction = transaction.copyWith(id: transactionRef.id);
         print('DEBUG createLinkedVacationTransaction: finalTransaction - id=${finalTransaction.id}, isVacation=${finalTransaction.isVacation}, linkedVacationAccountId=${finalTransaction.linkedVacationAccountId}, accountId=${finalTransaction.accountId}');
 
-        // 3. READS: Fetch both account documents BEFORE any writes
-        final normalAccountRef = _accountsCollection.doc(finalTransaction.accountId!);
-        final vacationAccountRef = _accountsCollection.doc(finalTransaction.linkedVacationAccountId!);
+        // 3. READS: Fetch account documents BEFORE any writes
+        DocumentReference<FirestoreAccount>? normalAccountRef;
+        DocumentSnapshot<FirestoreAccount>? normalAccountSnapshot;
+        
+        // Only fetch normal account if accountId is provided and not empty
+        if (finalTransaction.accountId != null && finalTransaction.accountId!.isNotEmpty) {
+          normalAccountRef = _accountsCollection.doc(finalTransaction.accountId!);
+          normalAccountSnapshot = await firestoreTransaction.get(normalAccountRef);
+          
+          if (!normalAccountSnapshot.exists) {
+            throw Exception('Normal account does not exist');
+          }
+        }
 
-        final normalAccountSnapshot = await firestoreTransaction.get(normalAccountRef);
+        final vacationAccountRef = _accountsCollection.doc(finalTransaction.linkedVacationAccountId!);
         final vacationAccountSnapshot = await firestoreTransaction.get(vacationAccountRef);
 
-        if (!normalAccountSnapshot.exists) {
-          throw Exception('Normal account does not exist');
-        }
         if (!vacationAccountSnapshot.exists) {
           throw Exception('Vacation account does not exist');
         }
 
         // 4. Compute new balances
-        final normalAccount = normalAccountSnapshot.data()!;
         final vacationAccount = vacationAccountSnapshot.data()!;
         final amount = finalTransaction.amount;
 
-        // For expenses, subtract from both account balances
-        // For income, add to both account balances
-        final newNormalBalance = finalTransaction.type == 'income'
-            ? normalAccount.balance + amount
-            : normalAccount.balance - amount;
+        // For expenses, subtract from account balances
+        // For income, add to account balances
         final newVacationBalance = finalTransaction.type == 'income'
             ? vacationAccount.balance + amount
             : vacationAccount.balance - amount;
@@ -854,11 +857,21 @@ class FirestoreService {
         firestoreTransaction.set(transactionRef, finalTransaction);
         print('DEBUG createLinkedVacationTransaction: saved transaction to Firestore - id=${transactionRef.id}, isVacation=${finalTransaction.isVacation}, linkedVacationAccountId=${finalTransaction.linkedVacationAccountId}');
 
-        // 6. WRITES: Update both account balances
-        firestoreTransaction.update(normalAccountRef, {'balance': newNormalBalance});
+        // 6. WRITES: Update account balances
         firestoreTransaction.update(vacationAccountRef, {'balance': newVacationBalance});
+        
+        // Update normal account if it exists
+        if (normalAccountRef != null && normalAccountSnapshot != null) {
+          final normalAccount = normalAccountSnapshot.data()!;
+          final newNormalBalance = finalTransaction.type == 'income'
+              ? normalAccount.balance + amount
+              : normalAccount.balance - amount;
+              
+          firestoreTransaction.update(normalAccountRef, {'balance': newNormalBalance});
+          print('DEBUG: createLinkedVacationTransaction - updated normal account: normalAcc=${normalAccountRef.id} newBalance=$newNormalBalance');
+        }
 
-        print('DEBUG: createLinkedVacationTransaction - created transaction: id=${transactionRef.id}, normalAcc=${normalAccountRef.id} newBalance=$newNormalBalance, vacationAcc=${vacationAccountRef.id} newBalance=$newVacationBalance');
+        print('DEBUG: createLinkedVacationTransaction - created transaction: id=${transactionRef.id}, vacationAcc=${vacationAccountRef.id} newBalance=$newVacationBalance');
 
         return transactionRef.id;
       });
