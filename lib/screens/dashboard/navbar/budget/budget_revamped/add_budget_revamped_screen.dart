@@ -1,6 +1,7 @@
 import 'package:budgetm/constants/appColors.dart';
 import 'package:budgetm/generated/i18n/app_localizations.dart';
 import 'package:budgetm/models/budget.dart';
+import 'package:budgetm/models/revamped_budget.dart';
 import 'package:budgetm/viewmodels/revamped_budget_provider.dart';
 import 'package:budgetm/viewmodels/currency_provider.dart';
 import 'package:flutter/material.dart';
@@ -16,8 +17,13 @@ import 'package:table_calendar/table_calendar.dart';
 
 class AddBudgetRevampedScreen extends StatefulWidget {
   final BudgetType? initialBudgetType;
+  final RevampedBudget? budgetToEdit;
   
-  const AddBudgetRevampedScreen({super.key, this.initialBudgetType});
+  const AddBudgetRevampedScreen({
+    super.key, 
+    this.initialBudgetType,
+    this.budgetToEdit,
+  });
 
   @override
   State<AddBudgetRevampedScreen> createState() => _AddBudgetRevampedScreenState();
@@ -34,14 +40,21 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedType = widget.initialBudgetType ?? BudgetType.monthly;
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
-      setState(() {
-        _selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+    if (widget.budgetToEdit != null) {
+      _selectedType = widget.budgetToEdit!.type;
+      _selectedDate = widget.budgetToEdit!.dateTime;
+      _selectedCategoryIds.addAll(widget.budgetToEdit!.categoryIds);
+      _selectedCurrencyCode = widget.budgetToEdit!.currency;
+    } else {
+      _selectedType = widget.initialBudgetType ?? BudgetType.monthly;
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+        setState(() {
+          _selectedCurrencyCode = currencyProvider.selectedCurrencyCode;
+        });
       });
-    });
+    }
   }
 
   Future<void> _saveBudget() async {
@@ -67,49 +80,74 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
       final name = formData['name'] as String?;
       
       // Check for duplicate budget before attempting to save
-      final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
-      if (provider.hasDuplicateBudget(_selectedCategoryIds.toList(), _selectedType, _selectedCurrencyCode)) {
-        // Get category names for user-friendly error message
-        final categoryNames = _selectedCategoryIds.map((categoryId) {
-          final category = provider.expenseCategories.firstWhere(
-            (c) => c.id == categoryId,
-            orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+      // Check for duplicate budget before attempting to save
+      // Skip check if editing and we're just updating the same budget without changing ID-affecting fields
+      // But since updateRevampedBudget handles ID changes and duplicates internally (mostly), 
+      // we can skip this check here if editing, or make it smarter.
+      // For simplicity, we'll let the provider handle it for updates, or just skip it here if editing.
+      // The provider's updateRevampedBudget has its own duplicate check.
+      
+      if (widget.budgetToEdit == null) {
+        final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
+        if (provider.hasDuplicateBudget(_selectedCategoryIds.toList(), _selectedType, _selectedCurrencyCode)) {
+          // Get category names for user-friendly error message
+          final categoryNames = _selectedCategoryIds.map((categoryId) {
+            final category = provider.expenseCategories.firstWhere(
+              (c) => c.id == categoryId,
+              orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+            );
+            return category.name ?? 'Unknown';
+          }).join(', ');
+          
+          final typeName = _selectedType == BudgetType.daily
+              ? AppLocalizations.of(context)!.daily
+              : _selectedType == BudgetType.weekly
+                  ? AppLocalizations.of(context)!.weekly
+                  : AppLocalizations.of(context)!.monthly;
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('A $typeName budget for $categoryNames already exists'),
+              duration: const Duration(seconds: 3),
+            ),
           );
-          return category.name ?? 'Unknown';
-        }).join(', ');
-        
-        final typeName = _selectedType == BudgetType.daily
-            ? AppLocalizations.of(context)!.daily
-            : _selectedType == BudgetType.weekly
-                ? AppLocalizations.of(context)!.weekly
-                : AppLocalizations.of(context)!.monthly;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('A $typeName budget for $categoryNames already exists'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        return;
+          return;
+        }
       }
 
       setState(() => _isLoading = true);
 
       try {
-        await Provider.of<RevampedBudgetProvider>(context, listen: false)
-            .addRevampedBudget(
-              _selectedCategoryIds.toList(),
-              limit,
-              _selectedType,
-              _selectedDate,
-              _selectedCurrencyCode,
-              name: name,
-            );
+        String newId;
+        if (widget.budgetToEdit != null) {
+          newId = await Provider.of<RevampedBudgetProvider>(context, listen: false)
+              .updateRevampedBudget(
+                widget.budgetToEdit!.id,
+                _selectedCategoryIds.toList(),
+                limit,
+                _selectedType,
+                _selectedDate,
+                _selectedCurrencyCode,
+                name: name,
+              );
+        } else {
+          newId = await Provider.of<RevampedBudgetProvider>(context, listen: false)
+              .addRevampedBudget(
+                _selectedCategoryIds.toList(),
+                limit,
+                _selectedType,
+                _selectedDate,
+                _selectedCurrencyCode,
+                name: name,
+              );
+        }
         
         if (mounted) {
-          Navigator.of(context).pop(true);
+          Navigator.of(context).pop(newId);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.addBudgetCreated)),
+            SnackBar(content: Text(widget.budgetToEdit != null 
+                ? 'Budget updated successfully' 
+                : AppLocalizations.of(context)!.addBudgetCreated)),
           );
         }
       } catch (e) {
@@ -394,6 +432,7 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                           const SizedBox(height: 4),
                           FormBuilderTextField(
                             name: 'name',
+                            initialValue: widget.budgetToEdit?.name,
                             style: const TextStyle(
                               color: AppColors.primaryTextColorLight,
                               fontSize: 18,
@@ -432,6 +471,7 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                           const SizedBox(height: 4),
                           FormBuilderTextField(
                             name: 'amount',
+                            initialValue: widget.budgetToEdit?.limit.toString(),
                             style: const TextStyle(
                               color: AppColors.primaryTextColorLight,
                               fontSize: 26,
@@ -777,7 +817,7 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Add Budget',
+                widget.budgetToEdit != null ? 'Edit Budget' : 'Add Budget',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -889,7 +929,9 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                       ),
                     )
                   : Text(
-                      AppLocalizations.of(context)!.addBudgetSaveBudget,
+                      widget.budgetToEdit != null 
+                          ? 'Update Budget' 
+                          : AppLocalizations.of(context)!.addBudgetSaveBudget,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 14,

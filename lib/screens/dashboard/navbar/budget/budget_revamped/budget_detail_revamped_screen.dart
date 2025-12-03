@@ -18,6 +18,7 @@ import 'package:budgetm/utils/icon_utils.dart';
 import 'package:budgetm/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:budgetm/screens/dashboard/navbar/budget/budget_revamped/add_budget_revamped_screen.dart';
 
 // Helper function to convert Firestore transaction to UI transaction
 model.Transaction _convertToUiTransaction(FirestoreTransaction firestoreTransaction, BuildContext context, String currencyCode) {
@@ -65,6 +66,7 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
   // New state variables for charts and filters
   Map<String, double> _categorySpending = {};
   List<String> _selectedCategoryIds = [];
+  bool _showAllCategories = false;
 
   double _totalSpent = 0.0;
 
@@ -257,6 +259,12 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                       ],
                     ),
                   ),
+                  // Edit button
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    color: Colors.black,
+                    onPressed: _editBudget,
+                  ),
                   // Delete button
                   IconButton(
                     icon: const Icon(Icons.delete_forever),
@@ -317,13 +325,29 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
 
     final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
     final sortedEntries = _categorySpending.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+      ..sort((a, b) {
+        // Prioritize selected categories
+        if (_selectedCategoryIds.isNotEmpty) {
+          final aSelected = _selectedCategoryIds.contains(a.key);
+          final bSelected = _selectedCategoryIds.contains(b.key);
+          if (aSelected && !bSelected) return -1;
+          if (!aSelected && bSelected) return 1;
+        }
+        // Then sort by value descending
+        return b.value.compareTo(a.value);
+      });
 
     // Assign distinct colors to categories
     final Map<String, Color> categoryColors = {};
     for (int i = 0; i < sortedEntries.length; i++) {
       categoryColors[sortedEntries[i].key] = _chartColors[i % _chartColors.length];
     }
+
+    final int maxVisible = 2;
+    final bool hasMore = sortedEntries.length > maxVisible;
+    final List<MapEntry<String, double>> visibleEntries = (_showAllCategories || !hasMore) 
+        ? sortedEntries 
+        : sortedEntries.take(maxVisible).toList();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -406,69 +430,116 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
           ),
           const SizedBox(height: 30),
           // Detailed list below chart
-          ...sortedEntries.map((entry) {
+          ...visibleEntries.map((entry) {
             final category = _getCategory(entry.key, provider);
             final amount = entry.value;
             final percentage = _totalSpent > 0 ? (amount / _totalSpent) : 0.0;
             final color = categoryColors[entry.key]!;
+            final isSelected = _selectedCategoryIds.contains(entry.key);
+            final isAnySelected = _selectedCategoryIds.isNotEmpty;
             
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: HugeIcon(
-                      icon: getIcon(category.icon),
-                      color: color,
-                      size: 16,
-                    ),
+            // Dim unselected items if there is an active filter
+            final double opacity = (isAnySelected && !isSelected) ? 0.4 : 1.0;
+            
+            return GestureDetector(
+              onTap: () => _toggleCategoryFilter(entry.key),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: opacity,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8.0),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? color.withOpacity(0.05) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected ? Border.all(color: color.withOpacity(0.3)) : Border.all(color: Colors.transparent),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: HugeIcon(
+                          icon: getIcon(category.icon),
+                          color: color,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              category.name ?? 'Unknown',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  category.name ?? 'Unknown',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  formatCurrency(amount, widget.revampedBudget.currency),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              formatCurrency(amount, widget.revampedBudget.currency),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: percentage,
+                                backgroundColor: Colors.grey.shade100,
+                                valueColor: AlwaysStoppedAnimation<Color>(color),
+                                minHeight: 4,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: percentage,
-                            backgroundColor: Colors.grey.shade100,
-                            valueColor: AlwaysStoppedAnimation<Color>(color),
-                            minHeight: 4,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           }).toList(),
+          
+          if (hasMore)
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    _showAllCategories = !_showAllCategories;
+                  });
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _showAllCategories ? "Show Less" : "Show More",
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _showAllCategories ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: Theme.of(context).primaryColor,
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -507,8 +578,6 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
       },
     );
   }
-
-
 
   Category _getCategory(String? categoryId, RevampedBudgetProvider provider) {
     if (categoryId == null) return Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999);
@@ -570,6 +639,47 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
         }
       }
     }
+  }
+
+  void _editBudget() {
+    PersistentNavBarNavigator.pushNewScreen(
+      context,
+      screen: AddBudgetRevampedScreen(
+        budgetToEdit: widget.revampedBudget,
+      ),
+      withNavBar: false,
+      pageTransitionAnimation: PageTransitionAnimation.cupertino,
+    ).then((result) {
+      if (result != null && result is String && mounted) {
+        // Fetch the new/updated budget from provider
+        final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
+        try {
+          final newBudget = provider.revampedBudgets.firstWhere((b) => b.id == result);
+          
+          // Get category names
+          final categoryNames = newBudget.categoryIds.map((id) {
+            final category = provider.expenseCategories.firstWhere(
+              (c) => c.id == id,
+              orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
+            );
+            return category.name ?? 'Unknown';
+          }).toList();
+
+          // Replace current screen with updated one to reflect changes (especially if ID changed or immutable fields changed)
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => BudgetDetailRevampedScreen(
+                revampedBudget: newBudget,
+                categoryNames: categoryNames,
+              ),
+            ),
+          );
+        } catch (e) {
+          // Budget not found (maybe deleted or error), pop back
+          Navigator.of(context).pop();
+        }
+      }
+    });
   }
 
   @override

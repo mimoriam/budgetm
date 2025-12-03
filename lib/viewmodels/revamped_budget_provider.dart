@@ -587,7 +587,7 @@ class RevampedBudgetProvider with ChangeNotifier {
   }
 
   // Add a new revamped budget
-  Future<void> addRevampedBudget(
+  Future<String> addRevampedBudget(
     List<String> categoryIds,
     double limit,
     BudgetType type,
@@ -662,6 +662,8 @@ class RevampedBudgetProvider with ChangeNotifier {
       
       await loadData();
       print('RevampedBudgetProvider.addRevampedBudget: loadData completed, revamped budgets count=${_revampedBudgets.length}');
+      
+      return budgetId;
     } catch (e) {
       print('Error adding revamped budget: $e');
       rethrow;
@@ -677,6 +679,111 @@ class RevampedBudgetProvider with ChangeNotifier {
       await loadData();
     } catch (e) {
       print('Error updating revamped budget limit: $e');
+      rethrow;
+    }
+  }
+
+  // Update an existing revamped budget
+  Future<String> updateRevampedBudget(
+    String oldId,
+    List<String> categoryIds,
+    double limit,
+    BudgetType type,
+    DateTime dateTime,
+    String currency, {
+    String? name,
+  }) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (userId.isEmpty) throw Exception('User not authenticated');
+      
+      if (categoryIds.isEmpty) throw Exception('At least one category must be selected');
+
+      int year;
+      int period;
+      
+      switch (type) {
+        case BudgetType.weekly:
+          year = dateTime.year;
+          final weekOfMonth = Budget.getWeekOfMonth(dateTime);
+          period = dateTime.month * 10 + weekOfMonth;
+          break;
+        case BudgetType.monthly:
+          year = dateTime.year;
+          period = dateTime.month;
+          break;
+        case BudgetType.daily:
+          year = dateTime.year;
+          period = dateTime.month * 100 + dateTime.day;
+          break;
+      }
+      
+      final newId = RevampedBudget.generateId(
+        userId,
+        categoryIds,
+        type,
+        year,
+        period,
+        currency: currency,
+      );
+
+      // If ID hasn't changed, just update the existing document
+      if (newId == oldId) {
+        final budget = _revampedBudgets.firstWhere((b) => b.id == oldId);
+        final updated = budget.copyWith(
+          name: name,
+          limit: limit,
+          // other fields are same since ID is same
+        );
+        await _firestoreService.updateRevampedBudget(oldId, updated);
+      } else {
+        // ID changed, check for duplicates (excluding the one we are editing)
+        final isDuplicate = _revampedBudgets.any((b) {
+          if (b.id == oldId) return false; // Ignore the one we are editing
+          
+          if (b.type != type || b.currency != currency) return false;
+          
+          final validExistingCategories = b.categoryIds.where((id) => id.isNotEmpty).toList();
+          if (validExistingCategories.isEmpty) return false;
+          final sortedExistingCategories = List<String>.from(validExistingCategories)..sort();
+          
+          final validNewCategories = categoryIds.where((id) => id.isNotEmpty).toList();
+          final sortedNewCategories = List<String>.from(validNewCategories)..sort();
+          
+          return sortedNewCategories.length == sortedExistingCategories.length &&
+                 sortedNewCategories.every((id) => sortedExistingCategories.contains(id));
+        });
+
+        if (isDuplicate) {
+          final categoryNames = _getCategoryNamesString(categoryIds);
+          final typeName = type.toString().split('.').last;
+          throw Exception('A $typeName budget for $categoryNames already exists');
+        }
+
+        // Create new budget object
+        final revampedBudget = RevampedBudget(
+          id: newId,
+          categoryIds: categoryIds,
+          limit: limit,
+          type: type,
+          year: year,
+          period: period,
+          dateTime: dateTime,
+          userId: userId,
+          currency: currency,
+          spentAmount: 0.0,
+          name: name,
+        );
+        
+        // Add new, delete old
+        await _firestoreService.addRevampedBudget(revampedBudget);
+        await _firestoreService.deleteRevampedBudget(oldId);
+      }
+      
+      await loadData();
+      return newId;
+    } catch (e) {
+      print('Error updating revamped budget: $e');
       rethrow;
     }
   }
