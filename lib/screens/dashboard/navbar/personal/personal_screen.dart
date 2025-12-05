@@ -25,6 +25,7 @@ class _PersonalScreenState extends State<PersonalScreen> {
   bool _isSubscriptionsSelected = true;
   bool _isBorrowedSelected = false;
   bool _isLentSelected = false;
+  String? _filterCurrency; // Null means "All" or default to user's currency if needed
 
   final FirestoreService _firestoreService = FirestoreService.instance;
 
@@ -343,15 +344,52 @@ class _PersonalScreenState extends State<PersonalScreen> {
       stream: _firestoreService.streamSubscriptions(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final total = snapshot.data!.fold(
+          // Filter first
+          final filteredData = _filterCurrency == null
+              ? snapshot.data!
+              : snapshot.data!.where((s) => s.currency == _filterCurrency).toList();
+
+          // If mixed currencies (no filter selected), we can't simply sum them up properly without conversion.
+          // For now, if no filter is selected, we might want to show a message or just sum them (which is technically wrong but common in simple apps).
+          // OR, we can group by currency.
+          // Let's stick to the user request: "Currency selector would then save the currency... subscriptions in personal screen are by a specific currency"
+          // This implies we should probably default to showing the user's main currency or force a filter if multiple exist.
+          // But for a simple "Total" card, if we have mixed currencies and no filter, showing a sum is misleading.
+          
+          // Better approach: If filter is active, show sum in that currency.
+          // If no filter, show sum in user's default currency (converting if possible, but we don't have rates easily here without async).
+          // OR: Just show the sum of the *filtered* list. If "All" is selected, maybe show "Mixed"?
+          
+          // Let's go with: Sum of filtered items. If "All", we sum everything (naive) but show the currency of the first item or user default.
+          // Actually, if "All" is selected and we have multiple currencies, showing a single total is bad.
+          // Let's try to be smart: If multiple currencies exist and filter is "All", show "Multi" or similar.
+          
+          final uniqueCurrencies = filteredData.map((s) => s.currency).toSet();
+          
+          if (uniqueCurrencies.length > 1) {
+             return Expanded(
+              child: _buildInfoCard(
+                context,
+                AppLocalizations.of(context)!.personalScreenTotal,
+                'Mixed', // Or "..."
+              ),
+            );
+          }
+
+          final total = filteredData.fold(
             0.0,
             (sum, item) => sum + item.price,
           );
+          
+          final displayCurrency = uniqueCurrencies.isEmpty 
+              ? 'USD' 
+              : uniqueCurrencies.first;
+
           return Expanded(
             child: _buildInfoCard(
               context,
               AppLocalizations.of(context)!.personalScreenTotal,
-              formatCurrency(total, snapshot.data!.isNotEmpty ? snapshot.data!.first.currency : 'USD'),
+              formatCurrency(total, displayCurrency),
             ),
           );
         }
@@ -411,12 +449,16 @@ class _PersonalScreenState extends State<PersonalScreen> {
       stream: _firestoreService.streamSubscriptions(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final activeCount = snapshot.data!.where((s) => s.isActive).length;
+          final filteredData = _filterCurrency == null
+              ? snapshot.data!
+              : snapshot.data!.where((s) => s.currency == _filterCurrency).toList();
+              
+          final activeCount = filteredData.where((s) => s.isActive).length;
           return Expanded(
             child: _buildInfoCard(
               context,
               AppLocalizations.of(context)!.personalScreenActive,
-              '$activeCount/${snapshot.data!.length}',
+              '$activeCount/${filteredData.length}',
             ),
           );
         }
@@ -513,16 +555,75 @@ class _PersonalScreenState extends State<PersonalScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
-            child: Text(
-              AppLocalizations.of(context)!.personalSubscriptions,
-              style: TextStyle(
-                color: Colors.black54,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                child: Text(
+                  AppLocalizations.of(context)!.personalSubscriptions,
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
               ),
-            ),
+              // Currency Filter
+              StreamBuilder<List<Subscription>>(
+                stream: _firestoreService.streamSubscriptions(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  // Extract unique currencies
+                  final currencies = snapshot.data!
+                      .map((s) => s.currency)
+                      .toSet()
+                      .toList();
+                  
+                  if (currencies.length <= 1) return const SizedBox.shrink();
+
+                  return Container(
+                    height: 30,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButton<String>(
+                      value: _filterCurrency,
+                      hint: Text(
+                        'All',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                      ),
+                      underline: const SizedBox(),
+                      icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _filterCurrency = newValue;
+                        });
+                      },
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('All'),
+                        ),
+                        ...currencies.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           StreamBuilder<List<Subscription>>(
             stream: _firestoreService.streamSubscriptions(),
@@ -543,8 +644,26 @@ class _PersonalScreenState extends State<PersonalScreen> {
                   ),
                 );
               }
+
+              // Filter subscriptions
+              final filteredSubscriptions = _filterCurrency == null
+                  ? snapshot.data!
+                  : snapshot.data!.where((s) => s.currency == _filterCurrency).toList();
+
+              if (filteredSubscriptions.isEmpty) {
+                 return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      'No subscriptions in $_filterCurrency',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                );
+              }
+
               return Column(
-                children: snapshot.data!
+                children: filteredSubscriptions
                     .map((subscription) => _buildSubscriptionItem(subscription))
                     .toList(),
               );

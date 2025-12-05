@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:budgetm/constants/appColors.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:currency_picker/currency_picker.dart';
 
 class AddSubscriptionScreen extends StatefulWidget {
   const AddSubscriptionScreen({super.key});
@@ -22,6 +23,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
   final _priceController = TextEditingController();
   Recurrence _recurrence = Recurrence.monthly;
   DateTime? _startDate;
+  String _selectedCurrency = 'USD'; // Default, will be updated in initState
   bool _isLoading = false;
   bool _isMoreOptionsVisible = false;
   final FirestoreService _firestoreService = FirestoreService.instance;
@@ -31,6 +33,14 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
     super.initState();
     // Pre-fill start date with current date
     _startDate = DateTime.now();
+    
+    // Initialize currency from provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currencyProvider = Provider.of<CurrencyProvider>(context, listen: false);
+      setState(() {
+        _selectedCurrency = currencyProvider.selectedCurrencyCode;
+      });
+    });
   }
 
   @override
@@ -185,36 +195,92 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        TextFormField(
-          controller: _priceController,
-          style: const TextStyle(
-            color: AppColors.primaryTextColorLight,
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          decoration: _inputDecoration(hintText: '0.00').copyWith(
-            hintStyle: const TextStyle(
-              fontSize: 26,
-              color: AppColors.lightGreyBackground,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () {
+                showCurrencyPicker(
+                  context: context,
+                  showFlag: true,
+                  showCurrencyName: true,
+                  showCurrencyCode: true,
+                  onSelect: (Currency currency) {
+                    setState(() {
+                      _selectedCurrency = currency.code;
+                    });
+                  },
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      _selectedCurrency,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryTextColorLight,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16,
+                      color: AppColors.secondaryTextColorLight,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          validator: (value) {
-            final v = value?.trim() ?? '';
-            if (v.isEmpty) {
-              return 'Please enter a price';
-            }
-            final parsed = double.tryParse(v);
-            if (parsed == null) {
-              return 'Please enter a valid number';
-            }
-            if (parsed <= 0) {
-              return 'Price must be greater than zero';
-            }
-            return null;
-          },
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _priceController,
+                style: const TextStyle(
+                  color: AppColors.primaryTextColorLight,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.start, // Changed to start for better alignment
+                decoration: _inputDecoration(hintText: '0.00').copyWith(
+                  hintStyle: const TextStyle(
+                    fontSize: 26,
+                    color: AppColors.lightGreyBackground,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: InputBorder.none, // Remove border to make it look cleaner next to selector
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  filled: false, // Remove background
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  final v = value?.trim() ?? '';
+                  if (v.isEmpty) {
+                    return 'Please enter a price';
+                  }
+                  final parsed = double.tryParse(v);
+                  if (parsed == null) {
+                    return 'Please enter a valid number';
+                  }
+                  if (parsed <= 0) {
+                    return 'Price must be greater than zero';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -562,7 +628,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
         startDate: _startDate!,
         nextBillingDate: nextBillingDate,
         recurrence: _recurrence,
-        currency: currencyProvider.selectedCurrencyCode,
+        currency: _selectedCurrency,
       );
 
       await _firestoreService.createSubscription(subscription);
