@@ -172,8 +172,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
       controller: _scrollController,
       child: Column(
         children: [
-          const SizedBox(height: 20),
-          _buildInfoCards(pendingGoals, fulfilledGoals, _cachedGoals),
+          // const SizedBox(height: 2),
+          // _buildInfoCards removed
+
           _isPendingSelected
               ? _buildPendingGoalsList(pendingGoals)
               : _buildFulfilledGoalsList(fulfilledGoals),
@@ -338,70 +339,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
-  Widget _buildInfoCards(List<FirestoreGoal> pendingGoals, List<FirestoreGoal> fulfilledGoals, List<FirestoreGoal> allGoals) {
-    // Count fulfilled/unfulfilled goals across ALL currencies
-    final int fulfilledCount = fulfilledGoals.length;
-    final int totalCount = allGoals.length;
-    final String fulfilledRatio = '$fulfilledCount / $totalCount';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        children: [
-          // Fulfilled ratio card centered
-          Center(
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.6,
-              child: _buildInfoCard(
-                context,
-                AppLocalizations.of(context)!.goalsScreenFulfilled,
-                fulfilledRatio,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildInfoCard(BuildContext context, String title, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.secondaryTextColorLight,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: AppColors.primaryTextColorLight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildPendingGoalsList(List<FirestoreGoal> goals) {
     return Padding(
