@@ -478,7 +478,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                     )
                                     .toList();
 
-                                if (normalAccounts.length >= 1) {
+                                if (normalAccounts.length >= 2) {
                                   // Show paywall if user is not subscribed and already has a normal account
                                   PersistentNavBarNavigator.pushNewScreen(
                                     context,
@@ -757,7 +757,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                                 )
                                 .toList();
 
-                            if (normalAccounts.length >= 1) {
+                            if (normalAccounts.length >= 2) {
                               // Show paywall if user is not subscribed and already has a normal account
                               PersistentNavBarNavigator.pushNewScreen(
                                 context,
@@ -1220,7 +1220,7 @@ class _BalanceScreenStateInner extends State<_BalanceScreenState> {
                     )
                     .toList();
 
-                if (normalAccounts.length >= 1) {
+                if (normalAccounts.length >= 2) {
                   // Show paywall if user is not subscribed and already has a normal account
                   PersistentNavBarNavigator.pushNewScreen(
                     context,

@@ -206,7 +206,10 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            final allSelected = _selectedCategoryIds.length == provider.expenseCategories.length;
+            
             return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
@@ -241,33 +244,131 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                       ),
                     ),
                   ),
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
+                  
+                  // Add All / Remove All Button
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        setModalState(() {
+                          if (allSelected) {
+                            _selectedCategoryIds.clear();
+                          } else {
+                            _selectedCategoryIds.clear();
+                            _selectedCategoryIds.addAll(
+                              provider.expenseCategories.map((e) => e.id),
+                            );
+                          }
+                        });
+                        setState(() {});
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: allSelected 
+                              ? AppColors.errorColor.withOpacity(0.1) 
+                              : AppColors.buttonBackground.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: allSelected 
+                                ? AppColors.errorColor.withOpacity(0.3) 
+                                : AppColors.buttonBackground,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            allSelected ? 'Remove All Categories' : 'Add All Categories',
+                            style: TextStyle(
+                              color: allSelected ? AppColors.errorColor : Colors.black87,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.only(bottom: 16),
                       itemCount: provider.expenseCategories.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final category = provider.expenseCategories[index];
                         final isSelected = _selectedCategoryIds.contains(category.id);
                         
-                        return CheckboxListTile(
-                          title: Text(category.name ?? 'Unknown'),
-                          subtitle: Text(category.id),
-                          secondary: HugeIcon(
-                            icon: getIcon(category.icon),
-                            color: AppColors.secondaryTextColorLight,
-                            size: 24,
-                          ),
-                          value: isSelected,
-                          onChanged: (bool? value) {
+                        return GestureDetector(
+                          onTap: () {
                             setModalState(() {
-                              if (value == true) {
-                                _selectedCategoryIds.add(category.id);
-                              } else {
+                              if (isSelected) {
                                 _selectedCategoryIds.remove(category.id);
+                              } else {
+                                _selectedCategoryIds.add(category.id);
                               }
                             });
                             setState(() {});
                           },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? AppColors.buttonBackground.withOpacity(0.15) 
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected 
+                                    ? AppColors.buttonBackground 
+                                    : Colors.grey.shade200,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected 
+                                        ? AppColors.buttonBackground.withOpacity(0.3) 
+                                        : Colors.grey.shade100,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: HugeIcon(
+                                    icon: getIcon(category.icon),
+                                    color: isSelected 
+                                        ? Colors.black87 
+                                        : Colors.grey.shade600,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    category.name ?? 'Unknown',
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                      color: isSelected ? Colors.black87 : Colors.grey.shade800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.black87,
+                                    size: 22,
+                                  )
+                                else
+                                  Icon(
+                                    Icons.circle_outlined,
+                                    color: Colors.grey.shade300,
+                                    size: 22,
+                                  ),
+                              ],
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -275,14 +376,42 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Cancel'),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.grey.shade700),
+                          ),
+                        ),
                       ),
-                      const Spacer(),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Done'),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.buttonBackground,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Done',
+                            style: TextStyle(
+                              color: Colors.black, 
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -544,15 +673,15 @@ class _AddBudgetRevampedScreenState extends State<AddBudgetRevampedScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
+                                            spacing: 4,
+                                            runSpacing: 4,
                                             children: _selectedCategoryIds.map((categoryId) {
                                               final category = provider.expenseCategories.firstWhere(
                                                 (c) => c.id == categoryId,
                                                 orElse: () => Category(id: '', name: 'Unknown', icon: '', color: '', displayOrder: 999),
                                               );
                                               return Chip(
-                                                label: Text(category.name ?? 'Unknown'),
+                                                label: Text(category.name ?? 'Unknown', style: const TextStyle(fontSize: 10)),
                                                 onDeleted: () {
                                                   setState(() {
                                                     _selectedCategoryIds.remove(categoryId);
