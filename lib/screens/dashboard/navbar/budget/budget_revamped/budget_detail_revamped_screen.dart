@@ -65,7 +65,7 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
   
   // New state variables for charts and filters
   Map<String, double> _categorySpending = {};
-  List<String> _selectedCategoryIds = [];
+  List<String>? _selectedCategoryIds;
   bool _showAllCategories = false;
 
   double _totalSpent = 0.0;
@@ -166,22 +166,35 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
   }
 
   void _applyFilters() {
-    if (_selectedCategoryIds.isEmpty) {
+    if (_selectedCategoryIds == null) {
       _displayedTransactions = List.from(_allTransactions);
     } else {
       _displayedTransactions = _allTransactions.where((t) {
-        return _selectedCategoryIds.contains(t.transaction.categoryId);
+        return _selectedCategoryIds!.contains(t.transaction.categoryId);
       }).toList();
     }
   }
 
   void _toggleCategoryFilter(String categoryId) {
     setState(() {
-      if (_selectedCategoryIds.contains(categoryId)) {
-        _selectedCategoryIds.remove(categoryId);
+      if (_selectedCategoryIds == null) {
+        // Transition from Implicit All to Explicit All minus one
+        _selectedCategoryIds = _categorySpending.keys.toList();
+        _selectedCategoryIds!.remove(categoryId);
       } else {
-        _selectedCategoryIds.add(categoryId);
+        if (_selectedCategoryIds!.contains(categoryId)) {
+          _selectedCategoryIds!.remove(categoryId);
+        } else {
+          _selectedCategoryIds!.add(categoryId);
+        }
       }
+      
+      // If all are selected, revert to Implicit All (optional, but keeps state clean)
+      if (_selectedCategoryIds != null && _categorySpending.isNotEmpty && 
+          _selectedCategoryIds!.length == _categorySpending.length) {
+        _selectedCategoryIds = null;
+      }
+      
       _applyFilters();
     });
   }
@@ -327,9 +340,9 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
     final sortedEntries = _categorySpending.entries.toList()
       ..sort((a, b) {
         // Prioritize selected categories
-        if (_selectedCategoryIds.isNotEmpty) {
-          final aSelected = _selectedCategoryIds.contains(a.key);
-          final bSelected = _selectedCategoryIds.contains(b.key);
+        if (_selectedCategoryIds != null) {
+          final aSelected = _selectedCategoryIds!.contains(a.key);
+          final bSelected = _selectedCategoryIds!.contains(b.key);
           if (aSelected && !bSelected) return -1;
           if (!aSelected && bSelected) return 1;
         }
@@ -350,10 +363,10 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
         : sortedEntries.take(maxVisible).toList();
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.05),
@@ -374,21 +387,22 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
+                  fontSize: 16,
                 ),
               ),
               _buildFilterDropdown(),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 200,
+            height: 160,
             child: PieChart(
               PieChartData(
                 sectionsSpace: 2,
-                centerSpaceRadius: 40,
+                centerSpaceRadius: 35,
                 sections: sortedEntries.map((entry) {
                   final category = _getCategory(entry.key, provider);
-                  final isSelected = _selectedCategoryIds.contains(entry.key);
+                  final isSelected = _selectedCategoryIds == null || _selectedCategoryIds!.contains(entry.key);
                   final percentage = _totalSpent > 0 ? (entry.value / _totalSpent) * 100 : 0.0;
                   final color = categoryColors[entry.key]!;
                   final textColor = getContrastingColor(color);
@@ -397,16 +411,16 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                     color: color,
                     value: entry.value,
                     title: '${percentage.toStringAsFixed(0)}%',
-                    radius: isSelected ? 60 : 50,
+                    radius: isSelected ? 55 : 45,
                     titleStyle: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: textColor,
                     ),
                     badgeWidget: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withOpacity(0.9),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -419,27 +433,29 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                       child: HugeIcon(
                         icon: getIcon(category.icon),
                         color: color,
-                        size: 14,
+                        size: 12,
                       ),
                     ),
-                    badgePositionPercentageOffset: 1.3,
+                    badgePositionPercentageOffset: 1.4,
                   );
                 }).toList(),
               ),
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 20),
           // Detailed list below chart
           ...visibleEntries.map((entry) {
             final category = _getCategory(entry.key, provider);
             final amount = entry.value;
             final percentage = _totalSpent > 0 ? (amount / _totalSpent) : 0.0;
             final color = categoryColors[entry.key]!;
-            final isSelected = _selectedCategoryIds.contains(entry.key);
-            final isAnySelected = _selectedCategoryIds.isNotEmpty;
+            final isSelected = _selectedCategoryIds == null || _selectedCategoryIds!.contains(entry.key);
+
             
-            // Dim unselected items if there is an active filter
-            final double opacity = (isAnySelected && !isSelected) ? 0.4 : 1.0;
+            // Dim unselected items if there is an active filter (and we are not showing all)
+            // If _selectedCategoryIds is null, all are selected, so no dimming.
+            // If _selectedCategoryIds is not null, dim unselected.
+            final double opacity = (isSelected) ? 1.0 : 0.4;
             
             return GestureDetector(
               onTap: () => _toggleCategoryFilter(entry.key),
@@ -447,28 +463,28 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                 duration: const Duration(milliseconds: 200),
                 opacity: opacity,
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 8.0),
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  margin: const EdgeInsets.only(bottom: 6.0),
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                   decoration: BoxDecoration(
                     color: isSelected ? color.withOpacity(0.05) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: isSelected ? Border.all(color: color.withOpacity(0.3)) : Border.all(color: Colors.transparent),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: HugeIcon(
                           icon: getIcon(category.icon),
                           color: color,
-                          size: 16,
+                          size: 14,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,26 +496,26 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                                   category.name ?? 'Unknown',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                                    fontSize: 13,
                                   ),
                                 ),
                                 Text(
                                   formatCurrency(amount, widget.revampedBudget.currency),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(2),
                               child: LinearProgressIndicator(
                                 value: percentage,
                                 backgroundColor: Colors.grey.shade100,
                                 valueColor: AlwaysStoppedAnimation<Color>(color),
-                                minHeight: 4,
+                                minHeight: 3,
                               ),
                             ),
                           ],
@@ -520,6 +536,11 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                     _showAllCategories = !_showAllCategories;
                   });
                 },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -528,13 +549,14 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Icon(
                       _showAllCategories ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                       color: Theme.of(context).primaryColor,
-                      size: 18,
+                      size: 16,
                     ),
                   ],
                 ),
@@ -548,12 +570,9 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
   Widget _buildFilterDropdown() {
     if (_categorySpending.isEmpty) return const SizedBox.shrink();
 
-    final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
-    final sortedEntries = _categorySpending.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return PopupMenuButton<String>(
-      icon: Container(
+    return GestureDetector(
+      onTap: _showFilterBottomSheet,
+      child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
@@ -561,22 +580,238 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
         ),
         child: const Icon(Icons.filter_list, size: 20, color: Colors.black87),
       ),
-      tooltip: 'Filter by Category',
-      onSelected: _toggleCategoryFilter,
-      itemBuilder: (BuildContext context) {
-        return sortedEntries.map((entry) {
-          final category = _getCategory(entry.key, provider);
-          return CheckedPopupMenuItem<String>(
-            value: entry.key,
-            checked: _selectedCategoryIds.contains(entry.key),
-            child: Text(
-              category.name ?? 'Unknown',
-              style: const TextStyle(fontSize: 14),
-            ),
-          );
-        }).toList();
+    );
+  }
+
+  Future<void> _showFilterBottomSheet() async {
+    final provider = Provider.of<RevampedBudgetProvider>(context, listen: false);
+    final sortedEntries = _categorySpending.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            // If null, all are selected (Implicit All).
+            // If not null, check containment.
+            final effectiveSelectedIds = _selectedCategoryIds ?? sortedEntries.map((e) => e.key).toSet();
+            final allSelected = effectiveSelectedIds.length == sortedEntries.length;
+            
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 8,
+                bottom: 8 + MediaQuery.of(ctx).viewPadding.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 6, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'Filter Categories',
+                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  
+                  // Add All / Remove All Button
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        setModalState(() {
+                          if (allSelected) {
+                            // Remove All -> Explicit None
+                            _selectedCategoryIds = [];
+                          } else {
+                            // Select All -> Implicit All (null)
+                            _selectedCategoryIds = null;
+                          }
+                          _applyFilters();
+                        });
+                        setState(() {});
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: allSelected 
+                              ? AppColors.errorColor.withOpacity(0.1) 
+                              : AppColors.buttonBackground.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: allSelected 
+                                ? AppColors.errorColor.withOpacity(0.3) 
+                                : AppColors.buttonBackground,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            allSelected ? 'Remove All Filters' : 'Select All Categories',
+                            style: TextStyle(
+                              color: allSelected ? AppColors.errorColor : Colors.black87,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      itemCount: sortedEntries.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final entry = sortedEntries[index];
+                        final category = _getCategory(entry.key, provider);
+                        final isSelected = _selectedCategoryIds == null || _selectedCategoryIds!.contains(entry.key);
+                        
+                        return GestureDetector(
+                          onTap: () {
+                            setModalState(() {
+                              if (_selectedCategoryIds == null) {
+                                // Implicit All -> Explicit All minus one
+                                _selectedCategoryIds = sortedEntries.map((e) => e.key).toList();
+                                _selectedCategoryIds!.remove(entry.key);
+                              } else {
+                                if (_selectedCategoryIds!.contains(entry.key)) {
+                                  _selectedCategoryIds!.remove(entry.key);
+                                } else {
+                                  _selectedCategoryIds!.add(entry.key);
+                                }
+                                
+                                // If all selected, revert to Implicit All
+                                if (_selectedCategoryIds!.length == sortedEntries.length) {
+                                  _selectedCategoryIds = null;
+                                }
+                              }
+                              
+                              _applyFilters();
+                            });
+                            setState(() {});
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? AppColors.buttonBackground.withOpacity(0.15) 
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected 
+                                    ? AppColors.buttonBackground 
+                                    : Colors.grey.shade200,
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected 
+                                        ? AppColors.buttonBackground.withOpacity(0.3) 
+                                        : Colors.grey.shade100,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: HugeIcon(
+                                    icon: getIcon(category.icon),
+                                    color: isSelected 
+                                        ? Colors.black87 
+                                        : Colors.grey.shade600,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    category.name ?? 'Unknown',
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                      color: isSelected ? Colors.black87 : Colors.grey.shade800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.black87,
+                                    size: 22,
+                                  )
+                                else
+                                  Icon(
+                                    Icons.circle_outlined,
+                                    color: Colors.grey.shade300,
+                                    size: 22,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.buttonBackground,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Done',
+                            style: TextStyle(
+                              color: Colors.black, 
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
       },
     );
+    setState(() {});
   }
 
   Category _getCategory(String? categoryId, RevampedBudgetProvider provider) {
