@@ -301,9 +301,9 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildPieChartSection(),
-                        const SizedBox(height: 20),
+                        // const SizedBox(height: 10),
 
-                        const SizedBox(height: 20),
+                        // const SizedBox(height: 20),
                         Text(
                           "Transactions",
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -393,9 +393,9 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
               _buildFilterDropdown(),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 36),
           SizedBox(
-            height: 160,
+            height: 180,
             child: PieChart(
               PieChartData(
                 sectionsSpace: 2,
@@ -418,31 +418,37 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
                       color: textColor,
                     ),
                     badgeWidget: Container(
-                      padding: const EdgeInsets.all(3),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: color, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 2,
-                            offset: const Offset(0, 1),
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                      child: HugeIcon(
-                        icon: getIcon(category.icon),
-                        color: color,
-                        size: 12,
+                      child: Text(
+                        category.name ?? 'Unknown',
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    badgePositionPercentageOffset: 1.4,
+                    badgePositionPercentageOffset: 1.5,
                   );
                 }).toList(),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           // Detailed list below chart
           ...visibleEntries.map((entry) {
             final category = _getCategory(entry.key, provider);
@@ -971,7 +977,7 @@ class _BudgetDetailRevampedScreenState extends State<BudgetDetailRevampedScreen>
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.only(top: 10, bottom: 10, left: 12, right: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),

@@ -14,6 +14,9 @@ import 'package:budgetm/screens/dashboard/navbar/budget/budget_revamped/budget_d
 import 'package:budgetm/screens/dashboard/navbar/budget/budget_revamped/add_budget_revamped_screen.dart';
 import 'package:budgetm/utils/currency_formatter.dart';
 import 'dart:ui';
+import 'package:intl/intl.dart';
+import 'package:budgetm/viewmodels/subscription_provider.dart';
+import 'package:budgetm/screens/paywall/paywall_screen.dart';
 
 class BudgetRevampedScreen extends StatefulWidget {
   const BudgetRevampedScreen({super.key});
@@ -216,27 +219,7 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
   }
 
   Widget _buildBudgetSelectors(BuildContext context, RevampedBudgetProvider provider) {
-    VoidCallback onPrevious;
-    VoidCallback onNext;
-    VoidCallback onQuickJump;
 
-    switch (provider.selectedBudgetType) {
-      case BudgetType.weekly:
-        onPrevious = provider.goToPreviousWeek;
-        onNext = provider.goToNextWeek;
-        onQuickJump = () => _showPrettyCalendarPicker(context, provider);
-        break;
-      case BudgetType.monthly:
-        onPrevious = provider.goToPreviousMonth;
-        onNext = provider.goToNextMonth;
-        onQuickJump = () => _showPrettyCalendarPicker(context, provider);
-        break;
-      case BudgetType.daily:
-        onPrevious = provider.goToPreviousDay;
-        onNext = provider.goToNextDay;
-        onQuickJump = () => _showPrettyCalendarPicker(context, provider);
-        break;
-    }
 
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
@@ -282,11 +265,53 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
               ),
             ],
           ),
-          PeriodSelector(
-            periodText: provider.currentPeriodDisplay,
-            onPrevious: onPrevious,
-            onNext: onNext,
-            onQuickJump: onQuickJump,
+          HorizontalDateSelector(
+            budgetType: provider.selectedBudgetType,
+            selectedDate: provider.selectedBudgetType == BudgetType.monthly 
+                ? provider.selectedMonth 
+                : provider.selectedDay,
+            selectedWeek: provider.selectedWeek,
+            selectedWeeklyMonth: provider.selectedWeeklyMonth,
+            onDateSelected: (date) {
+              // Check if user is trying to select a different period than current
+              final now = DateTime.now();
+              bool isDifferentPeriod = false;
+              
+              if (provider.selectedBudgetType == BudgetType.daily) {
+                isDifferentPeriod = !isSameDay(date, now);
+              } else if (provider.selectedBudgetType == BudgetType.weekly) {
+                final currentWeekStart = Budget.getStartOfWeek(now);
+                final selectedWeekStart = Budget.getStartOfWeek(date);
+                isDifferentPeriod = !isSameDay(currentWeekStart, selectedWeekStart);
+              } else if (provider.selectedBudgetType == BudgetType.monthly) {
+                isDifferentPeriod = date.year != now.year || date.month != now.month;
+              }
+              
+              // If selecting a different period, require subscription
+              if (isDifferentPeriod) {
+                final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                if (!subscriptionProvider.canAccessPremiumFeature()) {
+                  // Show paywall
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: const PaywallScreen(),
+                    withNavBar: false,
+                    pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                  );
+                  return;
+                }
+              }
+              
+              // Update the selected date
+              if (provider.selectedBudgetType == BudgetType.weekly) {
+                 provider.setSelectedDate(date);
+              } else if (provider.selectedBudgetType == BudgetType.monthly) {
+                provider.changeSelectedMonth(date);
+              } else {
+                provider.changeSelectedDay(date);
+              }
+            },
+            onCalendarTap: () => _showPrettyCalendarPicker(context, provider),
           ),
         ],
       ),
@@ -483,6 +508,36 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
                         const Spacer(),
                         TextButton(
                           onPressed: () {
+                            // Check if user is selecting a different period than current
+                            final now = DateTime.now();
+                            bool isDifferentPeriod = false;
+                            
+                            if (provider.selectedBudgetType == BudgetType.daily) {
+                              isDifferentPeriod = !isSameDay(tempSelected, now);
+                            } else if (provider.selectedBudgetType == BudgetType.weekly) {
+                              final currentWeekStart = Budget.getStartOfWeek(now);
+                              final selectedWeekStart = Budget.getStartOfWeek(tempSelected);
+                              isDifferentPeriod = !isSameDay(currentWeekStart, selectedWeekStart);
+                            } else if (provider.selectedBudgetType == BudgetType.monthly) {
+                              isDifferentPeriod = tempSelected.year != now.year || tempSelected.month != now.month;
+                            }
+                            
+                            // If selecting a different period, require subscription
+                            if (isDifferentPeriod) {
+                              final subscriptionProvider = Provider.of<SubscriptionProvider>(context, listen: false);
+                              if (!subscriptionProvider.canAccessPremiumFeature()) {
+                                // Close calendar and show paywall
+                                Navigator.of(ctx).pop();
+                                PersistentNavBarNavigator.pushNewScreen(
+                                  context,
+                                  screen: const PaywallScreen(),
+                                  withNavBar: false,
+                                  pageTransitionAnimation: PageTransitionAnimation.cupertino,
+                                );
+                                return;
+                              }
+                            }
+                            
                             provider.setSelectedDate(tempSelected);
                             Navigator.of(ctx).pop();
                           },
@@ -881,62 +936,473 @@ class _BudgetRevampedScreenState extends State<BudgetRevampedScreen>
 
 
 
-// Reusable Period Selector Widget
-class PeriodSelector extends StatelessWidget {
-  final String periodText;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
-  final VoidCallback onQuickJump;
+class HorizontalDateSelector extends StatefulWidget {
+  final BudgetType budgetType;
+  final DateTime selectedDate; // For Daily/Monthly
+  final int selectedWeek; // For Weekly
+  final DateTime selectedWeeklyMonth; // For Weekly
+  final Function(DateTime) onDateSelected;
+  final VoidCallback onCalendarTap;
 
-  const PeriodSelector({
+  const HorizontalDateSelector({
     super.key,
-    required this.periodText,
-    required this.onPrevious,
-    required this.onNext,
-    required this.onQuickJump,
+    required this.budgetType,
+    required this.selectedDate,
+    required this.selectedWeek,
+    required this.selectedWeeklyMonth,
+    required this.onDateSelected,
+    required this.onCalendarTap,
   });
 
   @override
+  State<HorizontalDateSelector> createState() => _HorizontalDateSelectorState();
+}
+
+class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
+  ScrollController? _scrollController;
+  
+  // Item dimensions
+  static const double _dailyItemWidth = 55.0;
+  static const double _weeklyItemWidth = 130.0;
+  static const double _monthlyItemWidth = 110.0;
+  static const double _itemMargin = 4.0;
+  
+  // Optimized date range: 5 years back, 10 years forward from today
+  static final DateTime _baseDate = DateTime.now();
+  static final DateTime _dailyStartDate = DateTime(_baseDate.year - 5, 1, 1);
+  static final DateTime _dailyEndDate = DateTime(_baseDate.year + 10, 12, 31);
+  static final int _dailyItemCount = _dailyEndDate.difference(_dailyStartDate).inDays + 1;
+  
+  static final DateTime _weeklyStartDate = DateTime(_baseDate.year - 5, 1, 1);
+  static final DateTime _weeklyEndDate = DateTime(_baseDate.year + 10, 12, 31);
+  static final int _weeklyItemCount = (_weeklyEndDate.difference(_getStartOfWeekStatic(_weeklyStartDate)).inDays ~/ 7) + 1;
+  
+  static final DateTime _monthlyStartDate = DateTime(_baseDate.year - 5, 1, 1);
+  static final int _monthlyItemCount = (10 + 5 + 1) * 12; // 16 years * 12 months
+  
+  // Cached DateFormat instances for performance
+  static final DateFormat _dayNameFormat = DateFormat('E');
+  static final DateFormat _monthDayFormat = DateFormat('MMM d');
+  static final DateFormat _monthNameFormat = DateFormat('MMMM');
+  static final DateFormat _yearFormat = DateFormat('yyyy');
+
+  static DateTime _getStartOfWeekStatic(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initScrollController();
+  }
+
+  void _initScrollController() {
+    _scrollController?.dispose();
+    _scrollController = ScrollController();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _scrollToCurrentDate(animated: false);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(HorizontalDateSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // If budget type changed, recreate the scroll controller and scroll to current
+    if (oldWidget.budgetType != widget.budgetType) {
+      _initScrollController();
+      setState(() {}); // Force rebuild with new controller
+      return;
+    }
+    
+    // Only scroll if the selected date/week actually changed (not on every rebuild)
+    final dateChanged = oldWidget.selectedDate != widget.selectedDate;
+    final weekChanged = oldWidget.selectedWeek != widget.selectedWeek;
+    final weeklyMonthChanged = oldWidget.selectedWeeklyMonth != widget.selectedWeeklyMonth;
+    
+    if (dateChanged || weekChanged || weeklyMonthChanged) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scrollToSelected(animated: true);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController?.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls to the current date (today/this week/this month) - used on tab switch
+  void _scrollToCurrentDate({bool animated = true}) {
+    if (!mounted) return;
+    final controller = _scrollController;
+    if (controller == null || !controller.hasClients) {
+      // Retry after a short delay if controller not ready
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (mounted) _scrollToCurrentDate(animated: animated);
+      });
+      return;
+    }
+    
+    final now = DateTime.now();
+    double itemWidth;
+    int index;
+    
+    switch (widget.budgetType) {
+      case BudgetType.daily:
+        itemWidth = _dailyItemWidth;
+        index = now.difference(_dailyStartDate).inDays;
+        break;
+      case BudgetType.weekly:
+        itemWidth = _weeklyItemWidth;
+        final currentWeekStart = _getStartOfWeek(now);
+        final startOfWeekOne = _getStartOfWeek(_weeklyStartDate);
+        index = currentWeekStart.difference(startOfWeekOne).inDays ~/ 7;
+        break;
+      case BudgetType.monthly:
+        itemWidth = _monthlyItemWidth;
+        index = (now.year - _monthlyStartDate.year) * 12 + now.month - _monthlyStartDate.month;
+        break;
+    }
+    
+    _scrollToIndex(index, itemWidth, animated: animated);
+  }
+
+  /// Scrolls to the currently selected date/week/month - used when selection changes
+  void _scrollToSelected({bool animated = true}) {
+    if (!mounted) return;
+    final controller = _scrollController;
+    if (controller == null || !controller.hasClients) return;
+
+    double itemWidth;
+    int index;
+
+    switch (widget.budgetType) {
+      case BudgetType.daily:
+        itemWidth = _dailyItemWidth;
+        index = widget.selectedDate.difference(_dailyStartDate).inDays;
+        break;
+      case BudgetType.weekly:
+        itemWidth = _weeklyItemWidth;
+        final currentWeekStart = _getWeekStartDate(widget.selectedWeeklyMonth, widget.selectedWeek);
+        final startOfWeekOne = _getStartOfWeek(_weeklyStartDate);
+        index = currentWeekStart.difference(startOfWeekOne).inDays ~/ 7;
+        break;
+      case BudgetType.monthly:
+        itemWidth = _monthlyItemWidth;
+        index = (widget.selectedDate.year - _monthlyStartDate.year) * 12 + 
+                widget.selectedDate.month - _monthlyStartDate.month;
+        break;
+    }
+
+    _scrollToIndex(index, itemWidth, animated: animated);
+  }
+
+  void _scrollToIndex(int index, double itemWidth, {required bool animated}) {
+    final controller = _scrollController;
+    if (controller == null || !controller.hasClients) return;
+    
+    // Clamp index to valid range
+    final maxIndex = _getItemCount() - 1;
+    if (index < 0) index = 0;
+    if (index > maxIndex) index = maxIndex;
+    
+    final stride = itemWidth + (_itemMargin * 2);
+    final viewportWidth = controller.position.viewportDimension;
+    final offset = (index * stride) - (viewportWidth / 2) + (stride / 2);
+
+    // Clamp offset to valid range
+    final maxScroll = controller.position.maxScrollExtent;
+    final targetOffset = offset.clamp(0.0, maxScroll);
+
+    if (animated) {
+      final currentOffset = controller.offset;
+      // If the difference is large, jump instead of animating for responsiveness
+      if ((currentOffset - targetOffset).abs() > viewportWidth * 3) {
+        controller.jumpTo(targetOffset);
+      } else {
+        controller.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    } else {
+      controller.jumpTo(targetOffset);
+    }
+  }
+
+  int _getItemCount() {
+    switch (widget.budgetType) {
+      case BudgetType.daily:
+        return _dailyItemCount;
+      case BudgetType.weekly:
+        return _weeklyItemCount;
+      case BudgetType.monthly:
+        return _monthlyItemCount;
+    }
+  }
+
+  DateTime _getStartOfWeek(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  DateTime _getWeekStartDate(DateTime month, int week) {
+    final firstDayOfMonth = DateTime(month.year, month.month, 1);
+    final firstMonday = _getStartOfWeek(firstDayOfMonth);
+    return firstMonday.add(Duration(days: (week - 1) * 7));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = _scrollController;
+    if (controller == null) {
+      return const SizedBox(height: 70);
+    }
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
+      height: 70,
+      margin: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: onPrevious,
-            color: AppColors.gradientEnd,
-            tooltip: 'Previous',
-          ),
           Expanded(
-            child: Text(
-              periodText,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: AppColors.secondaryTextColorDark,
-              ),
+            child: ListView.builder(
+              key: ValueKey('date_selector_${widget.budgetType}'),
+              controller: controller,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _getItemCount(),
+              // Use itemExtent for better performance - ListView can skip layout calculations
+              itemExtent: _getItemExtent(),
+              itemBuilder: (context, index) {
+                return _buildItem(index);
+              },
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: onNext,
-            color: AppColors.gradientEnd,
-            tooltip: 'Next',
-          ),
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: onQuickJump,
-            color: AppColors.gradientEnd,
-            tooltip: 'Jump to date',
+          Container(
+            width: 40,
+            alignment: Alignment.center,
+            child: IconButton(
+              icon: const Icon(Icons.calendar_today, size: 20),
+              onPressed: widget.onCalendarTap,
+              color: AppColors.gradientEnd,
+              tooltip: 'Jump to date',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  double _getItemExtent() {
+    switch (widget.budgetType) {
+      case BudgetType.daily:
+        return _dailyItemWidth + (_itemMargin * 2);
+      case BudgetType.weekly:
+        return _weeklyItemWidth + (_itemMargin * 2);
+      case BudgetType.monthly:
+        return _monthlyItemWidth + (_itemMargin * 2);
+    }
+  }
+
+  Widget _buildItem(int index) {
+    switch (widget.budgetType) {
+      case BudgetType.daily:
+        return _buildDailyItem(index);
+      case BudgetType.weekly:
+        return _buildWeeklyItem(index);
+      case BudgetType.monthly:
+        return _buildMonthlyItem(index);
+    }
+  }
+
+  Widget _buildDailyItem(int index) {
+    final date = _dailyStartDate.add(Duration(days: index));
+    final isSelected = isSameDay(date, widget.selectedDate);
+    final isToday = isSameDay(date, DateTime.now());
+    
+    final dayName = _dayNameFormat.format(date);
+    final dayNum = date.day.toString();
+
+    return GestureDetector(
+      onTap: () => widget.onDateSelected(date),
+      child: Container(
+        width: _dailyItemWidth,
+        alignment: Alignment.center,
+        margin: const EdgeInsets.symmetric(horizontal: _itemMargin),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gradientEnd : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected 
+                ? AppColors.gradientEnd 
+                : (isToday ? AppColors.gradientStart : Colors.grey.shade200),
+            width: isToday && !isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected ? const [
+            BoxShadow(
+              color: Color(0x4D6366F1), // Hardcoded for performance
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            )
+          ] : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              dayName.toUpperCase(),
+              style: TextStyle(
+                color: isSelected ? Colors.white70 : Colors.grey.shade400,
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              dayNum,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyItem(int index) {
+    final startOfWeekOne = _getStartOfWeek(_weeklyStartDate);
+    final weekStart = startOfWeekOne.add(Duration(days: index * 7));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    
+    final currentSelectedStart = _getWeekStartDate(widget.selectedWeeklyMonth, widget.selectedWeek);
+    final isSelected = isSameDay(weekStart, currentSelectedStart);
+    
+    // Check if current week contains today
+    final now = DateTime.now();
+    final currentWeekStart = _getStartOfWeek(now);
+    final isCurrentWeek = isSameDay(weekStart, currentWeekStart);
+
+    final text = '${_monthDayFormat.format(weekStart)} - ${_monthDayFormat.format(weekEnd)}';
+    final year = weekStart.year.toString();
+
+    return GestureDetector(
+      onTap: () => widget.onDateSelected(weekStart),
+      child: Container(
+        width: _weeklyItemWidth,
+        alignment: Alignment.center,
+        margin: const EdgeInsets.symmetric(horizontal: _itemMargin),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gradientEnd : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected 
+                ? AppColors.gradientEnd 
+                : (isCurrentWeek ? AppColors.gradientStart : Colors.grey.shade200),
+            width: isCurrentWeek && !isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected ? const [
+            BoxShadow(
+              color: Color(0x4D6366F1),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            )
+          ] : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              year,
+              style: TextStyle(
+                color: isSelected ? Colors.white70 : Colors.grey.shade400,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthlyItem(int index) {
+    final date = DateTime(_monthlyStartDate.year, _monthlyStartDate.month + index);
+    final isSelected = date.year == widget.selectedDate.year && date.month == widget.selectedDate.month;
+    
+    // Check if this is the current month
+    final now = DateTime.now();
+    final isCurrentMonth = date.year == now.year && date.month == now.month;
+    
+    final monthName = _monthNameFormat.format(date);
+    final year = _yearFormat.format(date);
+
+    return GestureDetector(
+      onTap: () => widget.onDateSelected(date),
+      child: Container(
+        width: _monthlyItemWidth,
+        alignment: Alignment.center,
+        margin: const EdgeInsets.symmetric(horizontal: _itemMargin),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gradientEnd : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected 
+                ? AppColors.gradientEnd 
+                : (isCurrentMonth ? AppColors.gradientStart : Colors.grey.shade200),
+            width: isCurrentMonth && !isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected ? const [
+            BoxShadow(
+              color: Color(0x4D6366F1),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            )
+          ] : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              monthName,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              year,
+              style: TextStyle(
+                color: isSelected ? Colors.white70 : Colors.grey.shade400,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
